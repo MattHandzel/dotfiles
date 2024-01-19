@@ -1,0 +1,1 @@
+/home/matthandzel/.config/fish/
