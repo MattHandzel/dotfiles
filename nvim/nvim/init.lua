@@ -21,3 +21,14 @@ end
 --   })
 -- end
 customize_colorscheme()
+
+-- Set Vimtex options
+vim.g.vimtex_compiler_latexmk = {
+  ["options"] = {
+    "-shell-escape",
+    "-verbose",
+    "-file-line-error",
+    "-synctex=1",
+    "-interaction=nonstopmode",
+  },
+}

@@ -8,6 +8,7 @@
 -- Remap 'L' to '^' in normal mode
 -- vim.api.nvim_set_keymap("n", "H", "^", { noremap = true })
 --
+-- This is the real file
 vim.api.nvim_set_keymap("n", "<C-u>", "<C-u>zz", { noremap = true })
 vim.api.nvim_set_keymap("n", "<C-d>", "<C-d>zz", { noremap = true })
 vim.api.nvim_set_keymap("i", "<C-BS>", "<C-w>", { noremap = true })
@@ -15,12 +16,10 @@ vim.api.nvim_set_keymap("i", "<C-BS>", "<C-w>", { noremap = true })
 vim.api.nvim_set_keymap("n", "<C-a>", "gg<S-v>G", { noremap = true })
 vim.api.nvim_set_keymap("n", "N", "Nzzzv", { noremap = true })
 vim.api.nvim_set_keymap("n", "n", "nzzzv", { noremap = true })
-
 -- Enter will insetr a line and keep the user in normal mode
 vim.api.nvim_set_keymap("n", "<CR>", "o<Esc>", { noremap = true })
-
-vim.api.nvim_set_keymap("n", "d~", "<C-a>d", { noremap = true })
-
-vim.api.nvim_set_keymap("n", "<S-Enter>", "O<Esc>", { noremap = true })
+vim.api.nvim_set_keymap("n", "d.", "<C-a>d")
 -- ctrl + backspace is dw
--- vim.api.nvim_set_keymap("i", "<C-@>", "<C-\\><C-o>db", { noremap = true })
+vim.api.nvim_set_keymap("i", "<C-@>", "<C-\\><C-o>db", { noremap = true })
+vim.api.nvim_set_keymap("i", "<C-h>", "<Esc><C-h>", { noremap = true })
+vim.api.nvim_set_keymap("i", "^L", "<Esc><C-l>", { noremap = true })

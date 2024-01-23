@@ -99,11 +99,18 @@ require("lazy").setup({
       },
     },
     {
+      "kylechui/nvim-surround",
+      version = "*", -- Use for stability; omit to use `main` branch for the latest features
+      event = "VeryLazy",
+    },
+
+    {
       "folke/zen-mode.nvim",
       "ThePrimeagen/harpoon",
 
       "tpope/vim-fugitive",
       "lewis6991/gitsigns.nvim",
+      "terryma/vim-multiple-cursor",
 
       "navarasu/onedark.nvim", -- Theme inspired by Atom
       "nvim-lualine/lualine.nvim", -- Fancier statusline

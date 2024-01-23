@@ -4,19 +4,23 @@ if status is-interactive
     alias clipboard="xclip -selection clipboard"
     alias gitca="git commit -a -m"
     alias n="nvim"
+    alias py="python3"
     # Set the default editor
     export EDITOR=nvim
 
     # Set the default browser
     export BROWSER=brave-browser
 
-    # make it so that ctrl+alt+h,j,k,l move between words in the terminal
+    set -gx PATH $PATH ~/latexrun/
+    # make it so that ctrl+alt+h,j,k,l move between words in the termina
+    set -gx PATH $PATH ~/anaconda3/bin/pygmentize
 
     bind \b backward-word
     bind \f forward-word
     bind -k nul backward-kill-word
 
     fzf_key_bindings
+    fish_default_key_bindings
     # eval /home/matthandzel/anaconda3/bin/conda "shell.fish" hook $argv | source
 end
 # >>> conda initialize >>>
