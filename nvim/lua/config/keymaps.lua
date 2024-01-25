@@ -18,8 +18,14 @@ vim.api.nvim_set_keymap("n", "N", "Nzzzv", { noremap = true })
 vim.api.nvim_set_keymap("n", "n", "nzzzv", { noremap = true })
 -- Enter will insetr a line and keep the user in normal mode
 vim.api.nvim_set_keymap("n", "<CR>", "o<Esc>", { noremap = true })
-vim.api.nvim_set_keymap("n", "d.", "<C-a>d")
 -- ctrl + backspace is dw
 vim.api.nvim_set_keymap("i", "<C-@>", "<C-\\><C-o>db", { noremap = true })
 vim.api.nvim_set_keymap("i", "<C-h>", "<Esc><C-h>", { noremap = true })
-vim.api.nvim_set_keymap("i", "^L", "<Esc><C-l>", { noremap = true })
+
+vim.keymap.set("n", "<leader>r", ":RunCode<CR>", { noremap = true, silent = false })
+vim.keymap.set("n", "<leader>rf", ":RunFile<CR>", { noremap = true, silent = false })
+vim.keymap.set("n", "<leader>rft", ":RunFile tab<CR>", { noremap = true, silent = false })
+vim.keymap.set("n", "<leader>rp", ":RunProject<CR>", { noremap = true, silent = false })
+vim.keymap.set("n", "<leader>rc", ":RunClose<CR>", { noremap = true, silent = false })
+vim.keymap.set("n", "<leader>crf", ":CRFiletype<CR>", { noremap = true, silent = false })
+vim.keymap.set("n", "<leader>crp", ":CRProjects<CR>", { noremap = true, silent = false })

@@ -109,15 +109,40 @@ require("lazy").setup({
       end,
     },
     {
+      "nvim-neotest/neotest",
+      dependencies = {
+        "nvim-lua/plenary.nvim",
+        "antoinemadec/FixCursorHold.nvim",
+        "nvim-treesitter/nvim-treesitter",
+      },
+    },
+    {
+      "m4xshen/hardtime.nvim",
+      dependencies = { "MunifTanjim/nui.nvim", "nvim-lua/plenary.nvim" },
+      opts = {},
+    },
+    {
+      "gaborvecsei/usage-tracker.nvim",
+      "CRAG666/betterTerm.nvim",
       "folke/zen-mode.nvim",
-      "ThePrimeagen/harpoon",
+      "nvim-neotest/neotest-python",
+      "alfaix/neotest-gtest",
+      "mateuszwieloch/automkdir.nvim",
+      "jghauser/mkdir.nvim",
+      "CRAG666/code_runner.nvim",
+      "GCBallesteros/jupytext.nvim",
+      "ragnarok22/whereami.nvim",
+      "xiyaowong/link-visitor.nvim",
+      "kazhala/close-buffers.nvim",
+      "theprimeagen/harpoon",
       "lervag/vimtex",
       "tpope/vim-fugitive",
       "lewis6991/gitsigns.nvim",
-
-      "navarasu/onedark.nvim", -- Theme inspired by Atom
-      "nvim-lualine/lualine.nvim", -- Fancier statusline
-      "lukas-reineke/indent-blankline.nvim", -- Add indentation guides even on blank lines "mg979/vim-visual-multi",
+      "yorickpeterse/nvim-pqf",
+      "nvim-lua/plenary.nvim",
+      "navarasu/onedark.nvim", -- theme inspired by atom
+      "nvim-lualine/lualine.nvim", -- fancier statusline
+      "lukas-reineke/indent-blankline.nvim", -- add indentation guides even on blank lines "mg979/vim-visual-multi",
     },
     { "catppuccin/nvim", as = "catppuccin" },
     {
@@ -126,8 +151,8 @@ require("lazy").setup({
         dimming = {
           alpha = 0.25, -- amount of dimming
           -- we try to get the foreground from the highlight groups or fallback color
-          color = { "Normal", "#ffffff" },
-          term_bg = "#000000", -- if guibg=NONE, this will be used to calculate text color
+          color = { "normal", "#ffffff" },
+          term_bg = "#000000", -- if guibg=none, this will be used to calculate text color
           inactive = false, -- when true, other windows will be fully dimmed (unless they contain the same buffer)
         },
         context = 10, -- amount of lines we will try to show around the current line
@@ -163,7 +188,7 @@ require("lazy").setup({
           end,
         },
       },
-      ---@param opts cmp.ConfigSchema
+      ---@param opts cmp.configschema
       opts = function(_, opts)
         table.insert(opts.sources, 1, {
           name = "copilot",
@@ -173,19 +198,24 @@ require("lazy").setup({
       end,
     },
     {
+      "chomosuke/term-edit.nvim",
+      lazy = false, -- or ft = 'toggleterm' if you use toggleterm.nvim
+      version = "1.*",
+    },
+    {
       "epwalsh/obsidian.nvim",
       version = "*", -- recommended, use latest release instead of latest commit
       lazy = true,
       ft = "markdown",
-      -- Replace the above line with this if you only want to load obsidian.nvim for markdown files in your vault:
+      -- replace the above line with this if you only want to load obsidian.nvim for markdown files in your vault:
       -- event = {
-      --   -- If you want to use the home shortcut '~' here you need to call 'vim.fn.expand'.
-      --   -- E.g. "BufReadPre " .. vim.fn.expand "~" .. "/my-vault/**.md"
-      --   "BufReadPre path/to/my-vault/**.md",
-      --   "BufNewFile path/to/my-vault/**.md",
+      --   -- if you want to use the home shortcut '~' here you need to call 'vim.fn.expand'.
+      --   -- e.g. "bufreadpre " .. vim.fn.expand "~" .. "/my-vault/**.md"
+      --   "bufreadpre path/to/my-vault/**.md",
+      --   "bufnewfile path/to/my-vault/**.md",
       -- },
       dependencies = {
-        -- Required.
+        -- required.
         "nvim-lua/plenary.nvim",
 
         -- see below for full list of optional dependencies 👇
@@ -209,28 +239,28 @@ require("lazy").setup({
       "christoomey/vim-tmux-navigator",
       lazy = false,
       cmd = {
-        "TmuxNavigateLeft",
-        "TmuxNavigateDown",
-        "TmuxNavigateUp",
-        "TmuxNavigateRight",
-        "TmuxNavigatePrevious",
+        "tmuxnavigateleft",
+        "tmuxnavigatedown",
+        "tmuxnavigateup",
+        "tmuxnavigateright",
+        "tmuxnavigateprevious",
       },
       keys = {
-        { "<c-h>", "<cmd><C-U>TmuxNavigateLeft<cr>" },
-        { "<c-j>", "<cmd><C-U>TmuxNavigateDown<cr>" },
-        { "<c-k>", "<cmd><C-U>TmuxNavigateUp<cr>" },
-        { "<c-l>", "<cmd><C-U>TmuxNavigateRight<cr>" },
-        { "<c-\\>", "<cmd><C-U>TmuxNavigatePrevious<cr>" },
+        { "<c-h>", "<cmd><c-u>tmuxnavigateleft<cr>" },
+        { "<c-j>", "<cmd><c-u>tmuxnavigatedown<cr>" },
+        { "<c-k>", "<cmd><c-u>tmuxnavigateup<cr>" },
+        { "<c-l>", "<cmd><c-u>tmuxnavigateright<cr>" },
+        { "<c-\\>", "<cmd><c-u>tmuxnavigateprevious<cr>" },
       },
     },
     { import = "plugins" },
   },
   defaults = {
-    -- By default, only LazyVim plugins will be lazy-loaded. Your custom plugins will load during startup.
-    -- If you know what you're doing, you can set this to `true` to have all your custom plugins lazy-loaded by default.
+    -- by default, only lazyvim plugins will be lazy-loaded. your custom plugins will load during startup.
+    -- if you know what you're doing, you can set this to `true` to have all your custom plugins lazy-loaded by default.
     lazy = false,
-    -- It's recommended to leave version=false for now, since a lot the plugin that support versioning,
-    -- have outdated releases, which may break your Neovim install.
+    -- it's recommended to leave version=false for now, since a lot the plugin that support versioning,
+    -- have outdated releases, which may break your neovim install.
     version = false, -- always use the latest git commit
     -- version = "*", -- try installing the latest stable version for plugins that support semver
   },
@@ -243,11 +273,11 @@ require("lazy").setup({
         "gzip",
         -- "matchit",
         -- "matchparen",
-        -- "netrwPlugin",
-        "tarPlugin",
+        -- "netrwplugin",
+        "tarplugin",
         "tohtml",
         -- "tutor",
-        "zipPlugin",
+        "zipplugin",
       },
     },
   },

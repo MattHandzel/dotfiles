@@ -111,6 +111,7 @@ require("lazy").setup({
       "tpope/vim-fugitive",
       "lewis6991/gitsigns.nvim",
       "terryma/vim-multiple-cursor",
+      "nvim-lua/plenary.nvim",
 
       "navarasu/onedark.nvim", -- Theme inspired by Atom
       "nvim-lualine/lualine.nvim", -- Fancier statusline

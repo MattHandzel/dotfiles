@@ -31,4 +31,29 @@ vim.g.vimtex_compiler_latexmk = {
     "-synctex=1",
     "-interaction=nonstopmode",
   },
+function ApplyAllCodeActions()
+  local bufnr = vim.api.nvim_get_current_buf()
+  vim.lsp.buf_request(bufnr, 'textDocument/codeAction', {
+    textDocument = vim.lsp.util.make_text_document_params(),
+    range = { start = { line = 0, character = 0 }, ['end'] = { line = vim.fn.line("$"), character = 0 } },
+    context = {
+      diagnostics = vim.lsp.diagnostic.get_all()[bufnr],
+    },
+  }, function(err, _, actions)
+    if err then
+      print('Error when fetching code actions: ' .. err)
+    else
+      for _, action in pairs(actions or {}) do
+        if action.edit or type(action.command) == "table" then
+          if action.edit then
+            vim.lsp.util.apply_workspace_edit(action.edit)
+          end
+          if type(action.command) == "table" then
+            vim.lsp.buf.execute_command(action.command)
+          end
+        end
+      end
+    end
+  end)
+end
 }
