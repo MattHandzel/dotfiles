@@ -1,12 +1,12 @@
 -- bootstrap lazy.nvim, LazyVim and your plugins
 require("config.lazy")
-vim.cmd("colorscheme tokyonight-night")
+vim.cmd("colorscheme catppuccin")
 
 local function customize_colorscheme()
   -- Use Vim script syntax with vim.cmd
   vim.cmd([[
-    highlight LineNr ctermfg=White guifg=#d0d0d0
-    highlight CursorLineNr ctermfg=Yellow guifg=#d5b6ff
+    highlight LineNr ctermfg=White guifg=#d2d2d2
+    highlight CursorLineNr ctermfg=Yellow guifg=#d5bfff
     " Add more highlight modifications here
   ]])
 end
