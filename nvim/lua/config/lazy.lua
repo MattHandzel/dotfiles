@@ -117,10 +117,14 @@ require("lazy").setup({
       },
     },
     {
-      "m4xshen/hardtime.nvim",
-      dependencies = { "MunifTanjim/nui.nvim", "nvim-lua/plenary.nvim" },
-      opts = {},
+      "cbochs/grapple.nvim",
+      dependencies = { "nvim-lua/plenary.nvim" },
     },
+    -- {
+    --   "m4xshen/hardtime.nvim",
+    --   dependencies = { "MunifTanjim/nui.nvim", "nvim-lua/plenary.nvim" },
+    --   opts = {},
+    -- },
     {
       "gaborvecsei/usage-tracker.nvim",
       "CRAG666/betterTerm.nvim",
@@ -138,13 +142,48 @@ require("lazy").setup({
       "lervag/vimtex",
       "tpope/vim-fugitive",
       "lewis6991/gitsigns.nvim",
-      "yorickpeterse/nvim-pqf",
       "nvim-lua/plenary.nvim",
       "navarasu/onedark.nvim", -- theme inspired by atom
       "nvim-lualine/lualine.nvim", -- fancier statusline
       "lukas-reineke/indent-blankline.nvim", -- add indentation guides even on blank lines "mg979/vim-visual-multi",
     },
-    { "catppuccin/nvim", as = "catppuccin" },
+    {
+      "rcarriga/nvim-dap-ui",
+      event = "VeryLazy",
+      dependencies = "mfussenegger/nvim-dap",
+      config = function()
+        local dap = require("dap")
+        local dapui = require("dapui")
+        dapui.setup()
+        dap.listeners.after.event_initialized["dapui_config"] = function()
+          dapui.open()
+        end
+        dap.listeners.before.event_terminated["dapui_config"] = function()
+          dapui.close()
+        end
+        dap.listeners.before.event_exited["dapui_config"] = function()
+          dapui.close()
+        end
+      end,
+    },
+    {
+      "jay-babu/mason-nvim-dap.nvim",
+      event = "VeryLazy",
+      dependencies = {
+        "williamboman/mason.nvim",
+        "mfussenegger/nvim-dap",
+      },
+      opts = {
+        handlers = {},
+      },
+    },
+    {
+      "mfussenegger/nvim-dap",
+    },
+    {
+      "yorickpeterse/nvim-pqf",
+      event = "VeryLazy",
+    },
     {
       "folke/twilight.nvim",
       opts = {

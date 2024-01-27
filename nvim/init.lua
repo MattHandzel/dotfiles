@@ -84,5 +84,44 @@ require("code_runner").setup({
       "rustc $fileName &&",
       "$dir/$fileNameWithoutExt",
     },
+    c = {
+      "cd $dir &&",
+      "gcc $fileName",
+      "-o $fileNameWithoutExt &&",
+      "$dir/$fileNameWithoutExt",
+    },
+    cpp = {
+      "cd $dir &&",
+      "g++ $fileName",
+
+      "-o $fileNameWithoutExt &&",
+      "$dir/$fileNameWithoutExt",
+    },
+  },
+  projects = {
+    project = {
+      ["~/python/intel_2021_1"] = {
+        name = "Intel Course 2021",
+        description = "Simple python project",
+        file_name = "POO/main.py",
+      },
+      ["~/deno/example"] = {
+        name = "ExapleDeno",
+        description = "Project with deno using other command",
+        file_name = "http/main.ts",
+        command = "deno run --allow-net",
+      },
+      ["~/sp24_cs341_handzel4/extreme_edge_cases"] = {
+        name = "extreme_edge_cases",
+        description = "Project with make file",
+        command = "make debug && ./*debug",
+      },
+    },
   },
 })
+
+vim.cmd("highlight! HarpoonInactive guibg=NONE guifg=#63698c")
+vim.cmd("highlight! HarpoonActive guibg=NONE guifg=white")
+vim.cmd("highlight! HarpoonNumberActive guibg=NONE guifg=#7aa2f7")
+vim.cmd("highlight! HarpoonNumberInactive guibg=NONE guifg=#7aa2f7")
+vim.cmd("highlight! TabLineFill guibg=NONE guifg=white")
