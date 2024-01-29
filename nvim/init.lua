@@ -1,12 +1,28 @@
 -- bootstrap lazy.nvim, LazyVim and your plugins
 require("config.lazy")
 vim.cmd("colorscheme catppuccin")
+local lspconfig = require("lspconfig")
+lspconfig.ltex.setup({})
 
+vim.api.nvim_create_autocmd("User", {
+  callback = function()
+    local ok, buf = pcall(vim.api.nvim_win_get_buf, vim.g.coc_last_float_win)
+    if ok then
+      vim.keymap.set("n", "K", function()
+        require("link-visitor").link_under_cursor()
+      end, { buffer = buf })
+      vim.keymap.set("n", "L", function()
+        require("link-visitor").link_near_cursor()
+      end, { buffer = buf })
+    end
+  end,
+  pattern = "CocOpenFloat",
+})
 local function customize_colorscheme()
   -- Use Vim script syntax with vim.cmd
   vim.cmd([[
-    highlight LineNr ctermfg=White guifg=#d2d2d2
-    highlight CursorLineNr ctermfg=Yellow guifg=#d5bfff
+    highlight LineNr ctermfg=White guifg=#e2e2e2
+    highlight CursorLineNr ctermfg=Yellow guifg=#e5cfff
     " Add more highlight modifications here
   ]])
 end
@@ -64,11 +80,7 @@ require("betterTerm").setup({
 -- change 1 for other terminal id
 -- Change "get_filetype_command()" to "get_project_command().command" for running projects
 vim.keymap.set("n", "<leader>re", function()
-  require("betterTerm").send(
-    require("code_runner.commands").get_filetype_command(),
-    1,
-    { clean = false, interrupt = true }
-  )
+  require("betterTerm").send(require("code_runner.commands").get_filetype_command(), 1, { clean = false, interrupt = true })
 end, { desc = "Excute File" })
 require("code_runner").setup({
   filetype = {
@@ -125,3 +137,8 @@ vim.cmd("highlight! HarpoonActive guibg=NONE guifg=white")
 vim.cmd("highlight! HarpoonNumberActive guibg=NONE guifg=#7aa2f7")
 vim.cmd("highlight! HarpoonNumberInactive guibg=NONE guifg=#7aa2f7")
 vim.cmd("highlight! TabLineFill guibg=NONE guifg=white")
+
+-- vim.api.nvim_create_autocmd("BufWritePre", {
+--   pattern = "*.tex",
+--   command = "silent! execute '!latexindent' shellescape(@%, 1) '>' shellescape(@%, 1)",
+-- })

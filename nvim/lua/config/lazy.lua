@@ -17,6 +17,11 @@ require("lazy").setup({
     -- { import = "lazyvim.plugins.extras.ui.mini-animate" },
     -- import/override with your plugins
     {
+      "folke/which-key.nvim",
+      enabled = true,
+    },
+    {
+
       "hrsh7th/nvim-cmp",
       version = false, -- last release is way too old
       event = "InsertEnter",
@@ -126,6 +131,7 @@ require("lazy").setup({
     --   opts = {},
     -- },
     {
+      "mfussenegger/nvim-dap",
       "gaborvecsei/usage-tracker.nvim",
       "CRAG666/betterTerm.nvim",
       "folke/zen-mode.nvim",
@@ -136,6 +142,7 @@ require("lazy").setup({
       "CRAG666/code_runner.nvim",
       "GCBallesteros/jupytext.nvim",
       "ragnarok22/whereami.nvim",
+      "terryma/vim-multiple-cursors",
       "xiyaowong/link-visitor.nvim",
       "kazhala/close-buffers.nvim",
       "theprimeagen/harpoon",
@@ -176,9 +183,6 @@ require("lazy").setup({
       opts = {
         handlers = {},
       },
-    },
-    {
-      "mfussenegger/nvim-dap",
     },
     {
       "yorickpeterse/nvim-pqf",

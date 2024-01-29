@@ -17,7 +17,8 @@ vim.api.nvim_set_keymap("n", "<C-a>", "gg<S-v>G", { noremap = true })
 vim.api.nvim_set_keymap("n", "N", "Nzzzv", { noremap = true })
 vim.api.nvim_set_keymap("n", "n", "nzzzv", { noremap = true })
 -- Enter will insetr a line and keep the user in normal mode
-vim.api.nvim_set_keymap("n", "<CR>", "o<Esc>", { noremap = true })
+vim.api.nvim_set_keymap("n", "<M-o>", "o<Esc>", { noremap = true })
+vim.api.nvim_set_keymap("n", "<M-O>", "O<Esc>", { noremap = true })
 -- ctrl + backspace is dw
 vim.api.nvim_set_keymap("i", "<C-@>", "<C-\\><C-o>db", { noremap = true })
 vim.api.nvim_set_keymap("i", "<C-h>", "<Esc><C-h>", { noremap = true })
