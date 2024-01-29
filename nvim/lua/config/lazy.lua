@@ -185,6 +185,44 @@ require("lazy").setup({
       event = "VeryLazy",
     },
     {
+      "catppuccin/nvim",
+      name = "catppuccin",
+      opts = {
+        term_colors = true,
+        transparent_background = false,
+        styles = {
+          comments = {},
+          conditionals = {},
+          loops = {},
+          functions = {},
+          keywords = {},
+          strings = {},
+          variables = {},
+          numbers = {},
+          booleans = {},
+          properties = {},
+          types = {},
+        },
+        color_overrides = {
+          mocha = {
+            base = "#000000",
+            mantle = "#000000",
+            crust = "#000000",
+          },
+        },
+        integrations = {
+          telescope = {
+            enabled = true,
+            style = "nvchad",
+          },
+          dropbar = {
+            enabled = true,
+            color_mode = true,
+          },
+        },
+      },
+    },
+    {
       "folke/twilight.nvim",
       opts = {
         dimming = {
@@ -278,18 +316,18 @@ require("lazy").setup({
       "christoomey/vim-tmux-navigator",
       lazy = false,
       cmd = {
-        "tmuxnavigateleft",
-        "tmuxnavigatedown",
-        "tmuxnavigateup",
-        "tmuxnavigateright",
-        "tmuxnavigateprevious",
+        "Tmuxnavigateleft",
+        "Tmuxnavigatedown",
+        "Tmuxnavigateup",
+        "Tmuxnavigateright",
+        "Tmuxnavigateprevious",
       },
       keys = {
-        { "<c-h>", "<cmd><c-u>tmuxnavigateleft<cr>" },
-        { "<c-j>", "<cmd><c-u>tmuxnavigatedown<cr>" },
-        { "<c-k>", "<cmd><c-u>tmuxnavigateup<cr>" },
-        { "<c-l>", "<cmd><c-u>tmuxnavigateright<cr>" },
-        { "<c-\\>", "<cmd><c-u>tmuxnavigateprevious<cr>" },
+        { "<c-h>", "<cmd><c-u>Tmuxnavigateleft<cr>" },
+        { "<c-j>", "<cmd><c-u>Tmuxnavigatedown<cr>" },
+        { "<c-k>", "<cmd><c-u>Tmuxnavigateup<cr>" },
+        { "<c-l>", "<cmd><c-u>Tmuxnavigateright<cr>" },
+        { "<c-\\>", "<cmd><c-u>Tmuxnavigateprevious<cr>" },
       },
     },
     { import = "plugins" },
@@ -303,7 +341,7 @@ require("lazy").setup({
     version = false, -- always use the latest git commit
     -- version = "*", -- try installing the latest stable version for plugins that support semver
   },
-  install = { colorscheme = { "catpuccino", "habamax" } },
+  install = { colorscheme = { "catppuccin", "habamax" } },
   checker = { enabled = true }, -- automatically check for plugin updates
   performance = {
     rtp = {
