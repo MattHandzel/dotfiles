@@ -142,3 +142,7 @@ vim.cmd("highlight! TabLineFill guibg=NONE guifg=white")
 --   pattern = "*.tex",
 --   command = "silent! execute '!latexindent' shellescape(@%, 1) '>' shellescape(@%, 1)",
 -- })
+vim.keymap.set("i", "<C-k>", "<Esc>:TmuxNavigateUp<CR>i", { noremap = true, silent = true })
+vim.keymap.set("i", "<C-j>", "<Esc>:TmuxNavigateDown<CR>i", { noremap = true, silent = true })
+vim.keymap.set("i", "<C-h>", "<Esc>:TmuxNavigateLeft<CR>i", { noremap = true, silent = true })
+vim.keymap.set("i", "<C-l>", "<Esc>:TmuxNavigateRight<CR>i", { noremap = true, silent = true })
