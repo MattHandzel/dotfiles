@@ -3,6 +3,8 @@ if status is-interactive
     alias slack 'bash /home/matthandzel/.local/share/flatpak/app/com.slack.Slack/current/active/export/bin/com.slack.Slack'
     alias clipboard="xclip -selection clipboard"
     alias gitca="git commit -a -m"
+    alias gitaca="git add . && git commit -a -m"
+    alias gitacam="git add . && git commit -a -m 'This is a boilerplate git commit message'"
     alias n="nvim"
     alias py="python3"
     # Set the default editor
