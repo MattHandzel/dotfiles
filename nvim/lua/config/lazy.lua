@@ -131,6 +131,9 @@ require("lazy").setup({
     --   opts = {},
     -- },
     {
+      "monaqa/dial.nvim",
+    },
+    {
       "mfussenegger/nvim-dap",
       "gaborvecsei/usage-tracker.nvim",
       "CRAG666/betterTerm.nvim",
