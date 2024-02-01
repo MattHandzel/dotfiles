@@ -40,4 +40,6 @@ vim.keymap.set("n", "<leader>ha", require("harpoon.mark").add_file, { noremap = 
 vim.keymap.set("n", "<leader>ht", require("harpoon.ui").toggle_quick_menu, { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>hn", require("harpoon.ui").nav_next, { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>hp", require("harpoon.ui").nav_prev, { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>h1", '<cmd>lua require("harpoon.ui").nav_file(1)<CR>', { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>h2", '<cmd>lua require("harpoon.ui").nav_file(2)<CR>', { noremap = true, silent = true })
 -- vim.keymap.set("n", "<leader>m", require("grapple").toggle)

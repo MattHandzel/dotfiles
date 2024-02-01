@@ -83,6 +83,7 @@ vim.keymap.set("n", "<leader>re", function()
   require("betterTerm").send(require("code_runner.commands").get_filetype_command(), 1, { clean = false, interrupt = true })
 end, { desc = "Excute File" })
 require("code_runner").setup({
+
   filetype = {
     java = {
       "cd $dir &&",
@@ -110,24 +111,28 @@ require("code_runner").setup({
       "$dir/$fileNameWithoutExt",
     },
   },
-  projects = {
-    project = {
-      ["~/python/intel_2021_1"] = {
-        name = "Intel Course 2021",
-        description = "Simple python project",
-        file_name = "POO/main.py",
-      },
-      ["~/deno/example"] = {
-        name = "ExapleDeno",
-        description = "Project with deno using other command",
-        file_name = "http/main.ts",
-        command = "deno run --allow-net",
-      },
-      ["~/sp24_cs341_handzel4/extreme_edge_cases"] = {
-        name = "extreme_edge_cases",
-        description = "Project with make file",
-        command = "make debug && ./*debug",
-      },
+
+  project = {
+    ["~/python/intel_2021_1"] = {
+      name = "Intel Course 2021",
+      description = "Simple python project",
+      file_name = "POO/main.py",
+    },
+    ["~/deno/example"] = {
+      name = "ExapleDeno",
+      description = "Project with deno using other command",
+      file_name = "http/main.ts",
+      command = "deno run --allow-net",
+    },
+    ["~/sp24_cs341_handzel4/extreme_edge_cases"] = {
+      name = "extreme_edge_cases",
+      description = "Project with make file",
+      command = "make debug && ./*debug",
+    },
+    ["~/sp24_cs341_handzel4/vector"] = {
+      name = "extreme_edge_cases",
+      description = "Project with make file",
+      command = "gcc vector_test.c -o vector_test && ./vector_test",
     },
   },
 })
