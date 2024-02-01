@@ -4,7 +4,7 @@ if status is-interactive
     alias clipboard="xclip -selection clipboard"
     alias gitca="git commit -a -m"
     alias gitaca="git add . && git commit -a -m"
-    alias gitacam="git add . && git commit -a -m 'This is a boilerplate git commit message'"
+    alias gitacam="git add . && git commit -a -m 'This is a boilerplate git commit message' && git push"
     alias n="nvim"
     alias py="python3"
     # Set the default editor
