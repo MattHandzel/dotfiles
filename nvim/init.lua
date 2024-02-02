@@ -23,6 +23,8 @@ local function customize_colorscheme()
   vim.cmd([[
     highlight LineNr ctermfg=White guifg=#e2e2e2
     highlight CursorLineNr ctermfg=Yellow guifg=#e5cfff
+highlight Comment ctermfg=Gray guifg=#9898af
+
     " Add more highlight modifications here
   ]])
 end
