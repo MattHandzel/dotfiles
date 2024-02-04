@@ -85,58 +85,65 @@ vim.keymap.set("n", "<leader>re", function()
   require("betterTerm").send(require("code_runner.commands").get_filetype_command(), 1, { clean = false, interrupt = true })
 end, { desc = "Excute File" })
 require("code_runner").setup({
+  filetype_path = vim.fn.expand("~/.config/nvim/code_runner_filetypes.json"),
+  project_path = vim.fn.expand("~/.config/nvim/code_runner_projects.json"),
+  -- filetype = {
+  --   java = {
+  --     "cd $dir &&",
+  --     "javac $fileName &&",
+  --     "java $fileNameWithoutExt",
+  --   },
+  --   python = "python3 -u",
+  --   typescript = "deno run",
+  --   rust = {
+  --     "cd $dir &&",
+  --     "rustc $fileName &&",
+  --     "$dir/$fileNameWithoutExt",
+  --   },
+  -- c = {
+  --   "cd $dir &&",
+  --   "gcc $fileName",
+  --   "-o $fileNameWithoutExt &&",
+  --   "$dir/$fileNameWithoutExt",
+  -- },
+  -- cpp = {
+  --   "cd $dir &&",
+  --   "g++ $fileName",
+  --
+  --   "-o $fileNameWithoutExt &&",
+  --   "$dir/$fileNameWithoutExt",
+  -- },
+  -- },
 
-  filetype = {
-    java = {
-      "cd $dir &&",
-      "javac $fileName &&",
-      "java $fileNameWithoutExt",
-    },
-    python = "python3 -u",
-    typescript = "deno run",
-    rust = {
-      "cd $dir &&",
-      "rustc $fileName &&",
-      "$dir/$fileNameWithoutExt",
-    },
-    c = {
-      "cd $dir &&",
-      "gcc $fileName",
-      "-o $fileNameWithoutExt &&",
-      "$dir/$fileNameWithoutExt",
-    },
-    cpp = {
-      "cd $dir &&",
-      "g++ $fileName",
-
-      "-o $fileNameWithoutExt &&",
-      "$dir/$fileNameWithoutExt",
-    },
-  },
-
-  project = {
-    ["~/python/intel_2021_1"] = {
-      name = "Intel Course 2021",
-      description = "Simple python project",
-      file_name = "POO/main.py",
-    },
-    ["~/deno/example"] = {
-      name = "ExapleDeno",
-      description = "Project with deno using other command",
-      file_name = "http/main.ts",
-      command = "deno run --allow-net",
-    },
-    ["~/sp24_cs341_handzel4/extreme_edge_cases"] = {
-      name = "extreme_edge_cases",
-      description = "Project with make file",
-      command = "make debug && ./*debug",
-    },
-    ["~/sp24_cs341_handzel4/vector"] = {
-      name = "extreme_edge_cases",
-      description = "Project with make file",
-      command = "gcc vector_test.c -o vector_test && ./vector_test",
-    },
-  },
+  -- project = {
+  -- ["~/python/intel_2021_1"] = {
+  --   name = "Intel Course 2021",
+  --   description = "Simple python project",
+  --   file_name = "POO/main.py",
+  -- },
+  -- ["~/deno/example"] = {
+  --   name = "ExapleDeno",
+  --   description = "Project with deno using other command",
+  --   file_name = "http/main.ts",
+  --   command = "deno run --allow-net",
+  -- },
+  -- ["~/sp24_cs341_handzel4/extreme_edge_cases"] = {
+  --   name = "extreme_edge_cases",
+  --   description = "Project with make file",
+  --   command = "make debug && ./*debug",
+  -- },
+  -- ["~/sp24_cs341_handzel4/vector"] = {
+  --   name = "extreme_edge_cases",
+  --   description = "Project with make file",
+  --   command = "gcc vector_test.c -o vector_test && ./vector_test",
+  -- },
+  -- ["~/UIUC/CS341/sp24_cs341_handzel4/vector"] = {
+  --   name = "vector1",
+  --   description = "",
+  --   command = "make vector_test && ./vector_test",
+  -- },
+  -- },
+  -- project_path = "~/.config/nvim/code_runner_projects.json",
 })
 
 vim.cmd("highlight! HarpoonInactive guibg=NONE guifg=#63698c")
@@ -153,3 +160,10 @@ vim.keymap.set("i", "<C-k>", "<Esc>:TmuxNavigateUp<CR>i", { noremap = true, sile
 vim.keymap.set("i", "<C-j>", "<Esc>:TmuxNavigateDown<CR>i", { noremap = true, silent = true })
 vim.keymap.set("i", "<C-h>", "<Esc>:TmuxNavigateLeft<CR>i", { noremap = true, silent = true })
 vim.keymap.set("i", "<C-l>", "<Esc>:TmuxNavigateRight<CR>i", { noremap = true, silent = true })
+
+require("telescope").load_extension("harpoon")
+
+for i = 97, 122 do -- ASCII values for 'a' to 'z'
+  local mark = string.char(i)
+  vim.api.nvim_set_keymap("n", "dm" .. mark, "<cmd>delmarks " .. mark .. "<CR>", { noremap = true, silent = true })
+end

@@ -22,12 +22,19 @@ vim.api.nvim_set_keymap("n", "<M-O>", "O<Esc>", { noremap = true })
 -- ctrl + backspace is dw
 vim.api.nvim_set_keymap("i", "<C-@>", "<C-\\><C-o>db", { noremap = true })
 vim.api.nvim_set_keymap("i", "<C-h>", "<Esc><C-h>", { noremap = true })
+vim.api.nvim_set_keymap("n", "<leader>gD", "<leader>gDzz", { noremap = true })
+vim.api.nvim_set_keymap("n", "<leader>gd", "<leader>gdzz", { noremap = true })
+vim.api.nvim_set_keymap("n", "<leader>gI", "<leader>gIdzz", { noremap = true })
 
 vim.keymap.set("n", "<leader>r", ":RunCode<CR>", { noremap = true, silent = false })
 vim.keymap.set("n", "<leader>rf", ":RunFile<CR>", { noremap = true, silent = false })
 vim.keymap.set("n", "<leader>rft", ":RunFile tab<CR>", { noremap = true, silent = false })
 vim.keymap.set("n", "<leader>rp", ":RunProject<CR>", { noremap = true, silent = false })
 vim.keymap.set("n", "<leader>rc", ":RunClose<CR>", { noremap = true, silent = false })
+
+vim.keymap.set("n", "<leader>rrf", ":CRFiletype<CR>", { noremap = true, silent = false })
+vim.keymap.set("n", "<leader>rrp", ":CRProjects<CR>", { noremap = true, silent = false })
+
 vim.keymap.set("n", "<leader>ab", ":DapToggleBreakpoint<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>ai", ":DapStepInto<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>ao", ":DapStepOut<CR>", { noremap = true, silent = true })
