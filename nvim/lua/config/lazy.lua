@@ -362,6 +362,7 @@ require("lazy").setup({
         "tohtml",
         -- "tutor",
         "zipplugin",
+        "noice",
       },
     },
   },

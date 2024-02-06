@@ -83,3 +83,20 @@ vim.keymap.set("v", "<leader>-g", function()
   require("dial.map").manipulate("decrement", "gvisual")
 end)
 vim.keymap.set("n", "<leader>_", ":split<CR>", { noremap = true, silent = true })
+
+-- noetest
+-- require("neotest").run.run()
+-- require("neotest").run.run(vim.fn.expand("%"))
+-- require("neotest").run.run({strategy = "dap"})
+-- require("neotest").run.stop()
+-- require("neotest").run.attach()
+vim.keymap.set("n", "<leader>tr", "<cmd> lua require('neotest').run.run()<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>tf", "<cmd> lua require('neotest').run.run(vim.fn.expand('%'))<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>td", "<cmd> lua require('neotest').run.run({strategy = 'dap'})<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>tx", "<cmd> lua require('neotest').run.stop()<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>ta", "<cmd> lua require('neotest').run.attach()<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>tl", "<cmd> lua require('neotest').run.last()<CR>", { noremap = true, silent = true })
+-- status window
+
+vim.keymap.set("n", "<leader>ts", "<cmd> lua require('neotest').status.open()<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>tS", "<cmd> lua require('neotest').summary.open()<CR>", { noremap = true, silent = true })

@@ -14,5 +14,10 @@
     "name": "CS",
     "description": "Project with make file",
     "command": "make debug && ./vector_test-debug"
+  },
+  "~/UIUC/CS341/sp24_cs341_handzel4/utilities_unleashed": {
+    "name": "utilities_unleashed",
+    "description": "Project with make file",
+    "command": "make debug && g++ -std=c++14 -pthread time_test.cpp -isystem /home/matthandzel/googletest/googletest/include -L/home/matthandzel/googletest/build/lib -lgtest -lgtest_main -o time_test -g -DDEBUG && ./time_test"
   }
 }

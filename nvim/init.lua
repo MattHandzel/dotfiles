@@ -39,11 +39,15 @@ end
 --   })
 -- end
 customize_colorscheme()
+require("neodev").setup({
+  library = { plugins = { "neotest" }, types = true },
+  ...,
+})
 require("pqf").setup()
 require("neotest").setup({
   adapters = {
     require("neotest-python"),
-    require("neotest-gtest"),
+    require("neotest-gtest").setup({}),
   },
 })
 require("lazy").setup({
@@ -167,3 +171,33 @@ for i = 97, 122 do -- ASCII values for 'a' to 'z'
   local mark = string.char(i)
   vim.api.nvim_set_keymap("n", "dm" .. mark, "<cmd>delmarks " .. mark .. "<CR>", { noremap = true, silent = true })
 end
+
+-- anoyying nitification pop us
+-- vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(vim.lsp.diagnostic.on_publish_diagnostics, {
+--   -- Disable virtual_text (inline diagnostics)
+--   virtual_text = false,
+--   -- Keep the signs in the sign column
+--   signs = true,
+--   -- Disable the pop-up messages
+--   update_in_insert = false,
+-- })
+-- o
+-- vim.lsp.lsp_handlers["window/showMessage"] = vim.lsp.with(vim.lsp.handlers["window/showMessage"], { log = false, updates })
+--
+--
+
+-- Save the original vim.notify function
+local original_notify = vim.notify
+
+-- Override vim.notify with a custom function
+-- vim.notify = function(msg, log_level, opts)
+  -- Example condition to filter out notifications
+  -- This example ignores all notifications, but you can add custom logic
+  -- if log_level == vim.log.levels.INFO then
+    -- Ignore the notification
+    return
+  -- end
+
+  -- For all other notifications, use the original notify function
+  -- original_notify(msg, log_level, opts)
+-- end
