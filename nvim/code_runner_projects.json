@@ -29,5 +29,30 @@
     "name": "utilities_unleashed",
     "description": "Project with make file",
     "command": "g++ -c custom_utils.c -o custom_utils.o && make debug && g++ -std=c++14 -pthread tests.cpp -isystem /home/matthandzel/googletest/googletest/include -Icustom_utils.h -L/home/matthandzel/googletest/build/lib custom_utils.o -lgtest -lgtest_main -o tests -g -DDEBUG && ./tests"
+  },
+  "~/UIUC/CS341/sp24_cs341_handzel4/mini_memcheck": {
+    "name": "utilities_unleashed",
+    "description": "Project with make file",
+    "command": "g++ -c custom_utils.c -o custom_utils.o && make  && g++ -std=c++14 -pthread tests.cpp -isystem /home/matthandzel/googletest/googletest/include -Icustom_utils.h -L/home/matthandzel/googletest/build/lib custom_utils.o -lgtest -lgtest_main -o tests -g -DDEBUG && ./tests"
+  },
+  "~/sp24_cs341_handzel4/mini_memcheck": {
+    "name": "utilities_unleashed",
+    "description": "Project with make file",
+    "command": "g++ -c custom_utils.c -o custom_utils.o && make  && g++ -std=c++14 -pthread tests.cpp -isystem /home/matthandzel/googletest/googletest/include -Icustom_utils.h -L/home/matthandzel/googletest/build/lib custom_utils.o -lgtest -lgtest_main -o tests -g -DDEBUG && ./tests"
+  },
+  "~/UIUC/CS341/sp24_cs341_handzel4/teaching_threads": {
+    "name": "CS",
+    "description": "Project with make file",
+    "command": "g++ -c custom_utils.c -o custom_utils.o && make  && g++ -std=c++14 -pthread tests.cpp -isystem /home/matthandzel/googletest/googletest/include -Icustom_utils.h -L/home/matthandzel/googletest/build/lib custom_utils.o -lgtest -lgtest_main -o tests -g -DDEBUG && ./tests"
+  },
+  "~/UIUC/CS341/sp24_cs341_handzel4/malloc": {
+    "name": "CS",
+    "description": "Project with make file",
+    "command": "./run_all_mcontest.sh"
+  },
+  "~/Projects/Universum/ModelDevelopment": {
+    "name": "ModelDevelopment",
+    "description": "",
+    "file_name": "main.py"
   }
 }

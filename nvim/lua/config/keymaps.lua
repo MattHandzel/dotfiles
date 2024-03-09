@@ -22,9 +22,9 @@ vim.api.nvim_set_keymap("n", "<M-O>", "O<Esc>", { noremap = true })
 -- ctrl + backspace is dw
 vim.api.nvim_set_keymap("i", "<C-@>", "<C-\\><C-o>db", { noremap = true })
 vim.api.nvim_set_keymap("i", "<C-h>", "<Esc><C-h>", { noremap = true })
-vim.api.nvim_set_keymap("n", "<leader>gD", "<leader>gDzz", { noremap = true })
-vim.api.nvim_set_keymap("n", "<leader>gd", "<leader>gdzz", { noremap = true })
-vim.api.nvim_set_keymap("n", "<leader>gI", "<leader>gIdzz", { noremap = true })
+vim.api.nvim_set_keymap("n", "<leader>gD", "<leader>gDzt", { noremap = true })
+vim.api.nvim_set_keymap("n", "<leader>gd", "<leader>gdzt", { noremap = true })
+vim.api.nvim_set_keymap("n", "<leader>gI", "<leader>gIdzt", { noremap = true })
 
 vim.keymap.set("n", "<leader>r", ":RunCode<CR>", { noremap = true, silent = false })
 vim.keymap.set("n", "<leader>rf", ":RunFile<CR>", { noremap = true, silent = false })
@@ -42,7 +42,7 @@ vim.keymap.set("n", "<leader>ax", ":DapTerminate<CR>", { noremap = true, silent 
 vim.keymap.set("n", "<leader>as", ":DapStepOver<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>ar", ":DapContinue<CR>", { noremap = true, silent = true })
 
-vim.keymap.set("n", "<leader>m", require("grapple").toggle)
+-- vim.keymap.set("n", "<leader>m", require("grapple").toggle)
 vim.keymap.set("n", "<leader>ha", require("harpoon.mark").add_file, { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>ht", require("harpoon.ui").toggle_quick_menu, { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>hn", require("harpoon.ui").nav_next, { noremap = true, silent = true })
@@ -100,3 +100,7 @@ vim.keymap.set("n", "<leader>tl", "<cmd> lua require('neotest').run.last()<CR>",
 
 vim.keymap.set("n", "<leader>ts", "<cmd> lua require('neotest').status.open()<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>tS", "<cmd> lua require('neotest').summary.open()<CR>", { noremap = true, silent = true })
+
+vim.keymap.set("n", "<leader>re", function()
+  require("betterTerm").send(require("code_runner.commands").get_filetype_command(), 1, { clean = false, interrupt = true })
+end, { desc = "Excute File" })
