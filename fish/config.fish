@@ -22,8 +22,10 @@ if status is-interactive
     set -gx PATH $PATH ~/latexrun/
     # make it so that ctrl+alt+h,j,k,l move between words in the termina
     set -gx PATH $PATH ~/anaconda3/bin/pygmentize
+    set -gx PATH $PATH ~/yazi/target/release/
 
     bind \b backward-word
+
     bind \f forward-word
     bind -k nul backward-kill-word
     zoxide init --cmd cd fish | source
