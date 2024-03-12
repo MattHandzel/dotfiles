@@ -24,8 +24,13 @@ if status is-interactive
     set -gx PATH $PATH ~/anaconda3/bin/pygmentize
     set -gx PATH $PATH ~/yazi/target/release/
 
-    bind \b backward-word
+    bind \cf "~/tmux_sessionizer.sh"
+    bind \cn "yazi ."
 
+    bind \el "clear"
+
+
+    bind \b backward-word
     bind \f forward-word
     bind -k nul backward-kill-word
     zoxide init --cmd cd fish | source
