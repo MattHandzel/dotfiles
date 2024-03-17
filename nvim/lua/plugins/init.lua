@@ -17,6 +17,11 @@ return {
 			},
 		},
 	},
+{
+  "lervag/vimtex",
+  init = function()
+  end
+},
 
 	-- {
 	-- 	"filipdutescu/renamer.nvim",

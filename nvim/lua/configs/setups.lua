@@ -224,3 +224,9 @@ require("dressing").setup({
 		get_config = nil,
 	},
 })
+print("\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n\nHELLO\n")
+
+local lspconfig = require("lspconfig")
+lspconfig.ltex.setup({
+  checkfrequency = "save",
+})
