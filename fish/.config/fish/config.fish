@@ -14,6 +14,8 @@ if status is-interactive
     # Set the default editor
     export EDITOR=nvim
 
+    export TMUX_PLUGIN_MANAGER_PATH="~/.config/tmux/.tmux/"
+
     # Set the default browser
     export BROWSER=brave-browser
 
@@ -21,6 +23,7 @@ if status is-interactive
     # make it so that ctrl+alt+h,j,k,l move between words in the termina
     set -gx PATH $PATH ~/anaconda3/bin/pygmentize
     set -gx PATH $PATH ~/yazi/target/release/
+    set -gx PATH $PATH ~/dotfiles/nix-shells/
 
     # bind \cf "~/tmux_sessionizer.sh"
     bind \cn "yazi ."
