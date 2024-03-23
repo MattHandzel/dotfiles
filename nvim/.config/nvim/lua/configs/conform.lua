@@ -3,8 +3,8 @@ local options = {
 
 	formatters_by_ft = {
 		lua = { "stylua" },
-		cpp = { "clang-format" },
-		c = { "clang-format" },
+		cpp = { "clang_format" },
+		c = { "clang_format" },
 	},
 }
 
