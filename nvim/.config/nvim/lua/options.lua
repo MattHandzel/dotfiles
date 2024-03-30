@@ -94,3 +94,16 @@ highlight Comment ctermfg=Gray guifg=#9898af
   ]])
 end
 customize_colorscheme()
+
+vim.wo.spell = true
+vim.bo.spelllang = "en_us"
+-- Set Vimtex options
+vim.g.vimtex_compiler_latexmk = {
+  ["options"] = {
+    "-shell-escape",
+    "-verbose",
+    "-file-line-error",
+    "-synctex=1",
+    "-interaction=nonstopmode",
+  },
+}

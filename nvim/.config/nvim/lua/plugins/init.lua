@@ -284,7 +284,6 @@ return {
 		"lukas-reineke/indent-blankline.nvim", -- add indentation guides even on blank lines "mg979/vim-visual-multi",
 		"nvim-lua/plenary.nvim",
 		"tpope/vim-fugitive",
-		"lervag/vimtex",
 		"kazhala/close-buffers.nvim",
 		"xiyaowong/link-visitor.nvim",
 		"ragnarok22/whereami.nvim",

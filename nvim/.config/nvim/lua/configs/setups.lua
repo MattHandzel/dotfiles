@@ -229,3 +229,5 @@ local lspconfig = require("lspconfig")
 lspconfig.ltex.setup({
   checkfrequency = "save",
 })
+
+

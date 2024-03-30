@@ -126,7 +126,7 @@ vim.api.nvim_set_keymap("n", "dB", "xdB", { noremap = true })
 map({"n", "v"}, "gg", "ggzz", { noremap = true })
 map({"n", "v"}, "G", "Gzz", { noremap = true })
 map("v", "/", "y<Esc>/<C-r>\"", { noremap = true })
-
+map("v", "<M-r>", ":'<,'>s/<C-r>\"", { noremap = true })
 
 silent_no_remap = { silent = true, noremap = true }
 
