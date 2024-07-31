@@ -159,6 +159,13 @@ vim.api.nvim_set_keymap("n", "<leader>gI", "<leader>gIdzt", { noremap = true })
 vim.api.nvim_set_keymap("n", "<M-o>", "o<Esc>", { noremap = true })
 vim.api.nvim_set_keymap("n", "<M-O>", "O<Esc>", { noremap = true })
 
+vim.api.nvim_set_keymap('v', '<M-d>', '"_d', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('v', '<M-p>', '"_dP', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<M-d>d', '"_d', { noremap = true, silent = true })
+
+-- Map the function to a key combination in visual mode
+-- vim.api.nvim_set_keymap("n", "<M-p>", "p", { noremap = true })
+
 map("n", "j", "gj")
 map("n", "k", "gk")
 

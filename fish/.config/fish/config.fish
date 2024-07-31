@@ -8,6 +8,7 @@ if status is-interactive
     alias notetaker="./notetaker.sh"
     alias ls="lsd"
     alias lst="lsd --tree --depth 2"
+    alias nix-shell="nix-shell --run fish"
 
     alias n="nvim"
     alias py="python3"
@@ -18,6 +19,7 @@ if status is-interactive
 
     # Set the default browser
     export BROWSER=brave-browser
+    
 
     set -gx PATH $PATH ~/latexrun/
     # make it so that ctrl+alt+h,j,k,l move between words in the termina
@@ -38,9 +40,6 @@ if status is-interactive
     fish_default_key_bindings
     # eval /home/matthandzel/anaconda3/bin/conda "shell.fish" hook $argv | source
 end
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-# <<< conda initialize <<<
 # THEME PURE #
 set fish_function_path /home/matth/.config/fish/functions/theme-pure/functions/ $fish_function_path
 source /home/matth/.config/fish/functions/theme-pure/conf.d/pure.fish

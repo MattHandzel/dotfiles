@@ -65,23 +65,8 @@ vim.o.relativenumber = true
 
 -------------------------------------------------------------------------------------------------------------------------------------------------
 
--- add yours here!
-vim.api.nvim_create_autocmd("BufReadPre", {
-	pattern = { "*.pdf" },
-	callback = function()
-		-- Command to open the file in Zathura
-		vim.cmd("!zathura " .. vim.fn.expand("%:p") .. " &")
-		-- Close the buffer without saving
-		vim.cmd("bd")
-	end,
-})
+vim.g.maplocalleader = ","
 
-vim.api.nvim_create_autocmd("BufWritePre", {
-	pattern = "*",
-	callback = function(args)
-		require("conform").format({ bufnr = args.buf })
-	end,
-})
 
 local function customize_colorscheme()
   -- Use Vim script syntax with vim.cmd
@@ -99,11 +84,20 @@ vim.wo.spell = true
 vim.bo.spelllang = "en_us"
 -- Set Vimtex options
 vim.g.vimtex_compiler_latexmk = {
-  ["options"] = {
+  options = {
     "-shell-escape",
     "-verbose",
     "-file-line-error",
     "-synctex=1",
+    "-xelatex=\"xelatex -shell-escape\"",
     "-interaction=nonstopmode",
   },
+-- options = {
+--         "-pdflatex=pdflatex -shell-escape",
+--         "-pdf"
+--     }
 }
+
+
+vim.g.python3_host_prog = vim.fn.exepath 'python3'
+

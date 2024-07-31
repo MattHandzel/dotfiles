@@ -16,8 +16,12 @@ lspconfig.rust_analyzer.setup({
 
 	},
 })
+lspconfig.hls.setup({
+  filetypes = { 'haskell', 'lhaskell', 'cabal' },
+})
+
 lspconfig.clangd.setup({ capabilities = capabilities })
-lspconfig.deno.setup({})
+lspconfig.denols.setup({})
 
 
 

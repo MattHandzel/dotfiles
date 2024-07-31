@@ -3,7 +3,7 @@ require("betterTerm").setup({
 	prefix = "CRAG_",
 	startInserted = false,
 	position = "bot",
-	size = 25,
+	size = 18,
 })
 
 require("code_runner").setup({
@@ -229,5 +229,8 @@ local lspconfig = require("lspconfig")
 lspconfig.ltex.setup({
   checkfrequency = "save",
 })
+-- require("vimtex").setup({})
 
 
+-- require('magma-nvim').setup({})
+-- require("whereami").setup({})

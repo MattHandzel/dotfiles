@@ -17,10 +17,13 @@ return {
 			},
 		},
 	},
+  {'dccsillag/magma-nvim', lazy=false},
 {
   "lervag/vimtex",
   init = function()
+
   end
+  ,lazy=false
 },
 
 	-- {
@@ -184,7 +187,7 @@ return {
 		"rmagatti/auto-session",
 		config = function()
 			require("auto-session").setup({
-				log_level = "error",
+				log_level = "warning",
 				-- auto_session_suppress_dirs = { "~/", "~/Downloads", "/" },
 			})
 		end,
