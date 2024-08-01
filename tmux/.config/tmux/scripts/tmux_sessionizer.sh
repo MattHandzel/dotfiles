@@ -3,7 +3,7 @@
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-    selected=$(find ./ /etc/nixos ~/Projects  ~/ImportantFiles ~/Obsidian ~/Job ~/UIUC ~/Code ~/Code/Python ~/dotfiles/ ~/.config -mindepth 0 -maxdepth 4 -type d | fzf)
+    selected=$(find ./ ~/.config/ ~/Projects  ~/ImportantFiles ~/Obsidian ~/Job ~/UIUC ~/Code ~/Code/Python ~/dotfiles/ -mindepth 0 -maxdepth 4 -type d | fzf)
 fi
 
 if [[ -z $selected ]]; then

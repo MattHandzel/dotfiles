@@ -5,15 +5,12 @@
 { inputs, config, pkgs, system, ... }:
 let
 overlays = import ./overlays.nix;
-in 
 
-# let
-#   # Fetch the stable revision of Nixpkgs
-#   stablePkgs = import (builtins.fetchTarball {
-#     url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/master.tar.gz";
-#     sha256 = "1rz426pbw87b4rfdd9fsmwisj2xrmp28fnsca7whnw462rjp5glh";
-#   }) {inherit system;};
-# in
+
+# Custom scripts
+source-nix-files-after-cd = import ./scripts/source-nix-files-after-cd.nix {inherit pkgs; };
+
+in 
 
 {
 nixpkgs.config.allowUnfree = true;
@@ -23,6 +20,7 @@ nixpkgs.config.allowUnfree = true;
       inputs.home-manager.nixosModules.home-manager
 
     ];
+
     home-manager = {
     backupFileExtension = "backup";
       extraSpecialArgs = {
@@ -31,6 +29,15 @@ nixpkgs.config.allowUnfree = true;
       users = {
         matth = import ./home-manager/home.nix;
       };
+      
+      # services = {
+      #   activitywatch = {
+      #     enable = true;
+      #     };
+      #
+      #   };
+          
+
           };
     boot.initrd.kernelModules = [ "amdgpu" ];
     programs.nix-ld.enable = true;
@@ -55,6 +62,9 @@ nixpkgs.config.allowUnfree = true;
   environment.systemPackages = with pkgs; [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
 # software dev essentials
+
+source-nix-files-after-cd
+
 pkgs.python311
 bat
 chromedriver
@@ -260,8 +270,6 @@ services.dbus.packages = [
   pkgs.dbus.out
   config.system.path
 ];
-
-services.activitywatch.enable=true;
 
 
 ############################## POWER MANAGEMENT ############################## 
