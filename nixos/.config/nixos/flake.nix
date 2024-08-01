@@ -1,7 +1,6 @@
 {
-
 # Nixos flake
-description = "My favourite NixOS flake";
+description = "Home mannager configuration";
 
 inputs = {
   nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -16,6 +15,7 @@ inputs = {
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+  nix-colors.url = "github:misterio77/nix-colors";
 
 
 };
@@ -38,7 +38,6 @@ in
 
       modules = [
         ./configuration.nix
-
       ];
 
 

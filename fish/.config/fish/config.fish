@@ -1,6 +1,6 @@
 if status is-interactive
     # Commands to run in interactive sessions can go here
-    alias rebuild="nixos-rebuild switch --flake ~/dotfiles/nixos/.config/nixos/#main"
+    alias rebuild="sudo nixos-rebuild switch --flake ~/dotfiles/nixos/.config/nixos/#main"
     alias gitca="git commit -a -m"
     alias gitaca="git add . && git commit -a -m"
     alias gitacam="git add . && git commit -a -m 'This is a boilerplate git commit message' && git push"

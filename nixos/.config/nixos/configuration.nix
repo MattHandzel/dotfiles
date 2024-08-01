@@ -8,7 +8,7 @@ overlays = import ./overlays.nix;
 
 
 # Custom scripts
-source-nix-files-after-cd = import ./scripts/source-nix-files-after-cd.nix {inherit pkgs; };
+
 
 in 
 
@@ -18,6 +18,7 @@ nixpkgs.config.allowUnfree = true;
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
       inputs.home-manager.nixosModules.home-manager
+      inputs.nix-colors.homeManagerModules.default
 
     ];
 
@@ -63,7 +64,7 @@ nixpkgs.config.allowUnfree = true;
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
 # software dev essentials
 
-source-nix-files-after-cd
+# (import ./home-manager/source-nix-files-after-cd.nix {inherit pkgs; })
 
 pkgs.python311
 bat
@@ -494,5 +495,22 @@ hardware = {
       ibus.engines = with pkgs.ibus-engines; [ /* any engine you want, for example */ anthy ];
     };
 nix.settings.experimental-features = [ "nix-command" "flakes"];
+
+
+# Make some commands not need to take sudo
+security.sudo.wheelNeedsPassword = false; # This allows users in the 'wheel' group to run any command with sudo without a password.
+  
+  security.sudo.extraRules = [
+    {
+      users = [ "matth" ]; # Replace with your actual username
+      commands = [
+        {
+          command = "/run/current-system/sw/bin/nixos-rebuild"; 
+          options = [ "NOPASSWD" ];
+        }
+      ];
+    }
+  ];
+
 
 }

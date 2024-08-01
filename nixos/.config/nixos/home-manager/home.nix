@@ -1,9 +1,12 @@
-{ config, pkgs, ... }:
+{ pkgs, inputs, ... }:
 
 {
   imports =
     [
       ./spotify.nix
+      inputs.nix-colors.homeManagerModules.default
+      
+
     ];
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
@@ -126,4 +129,7 @@ xdg.mimeApps.defaultApplications = {
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
+
+
+  colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
 }
