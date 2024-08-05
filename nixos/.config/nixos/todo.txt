@@ -1,6 +1,7 @@
-Hey matt, here's a littlet todo.txt
-
-
+- add gammastep or alternative to decrease the brightness
 - Make sure activity-watcher is working correctly and do research on a bunch of different watchers to collect as much data as possible
 - See if you can figure out how to make it so the battery level doesn't go above 80%
-- Fix bluetooth connection for keyboard so its in real-time
+- add tmux supportc
+
+- make it so that apps can spawn on 2nd monitor
+

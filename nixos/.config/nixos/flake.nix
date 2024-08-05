@@ -1,48 +1,75 @@
 {
-# Nixos flake
-description = "Home mannager configuration";
+  description = "Matt's nixos configuration (based off FrostPhoenix)";
 
-inputs = {
-  nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nur.url = "github:nix-community/NUR";
+  
+    hypr-contrib.url = "github:hyprwm/contrib";
+    hyprpicker.url = "github:hyprwm/hyprpicker";
+  
+    alejandra.url = "github:kamadorueda/alejandra/3.0.0";
+  
+    nix-gaming.url = "github:fufexan/nix-gaming";
 
-  home-manager = {
-    url = "github:nix-community/home-manager";
-    inputs.nixpkgs.follows = "nixpkgs";
-  };
-
-  spicetify-nix = {
-      url = "github:Gerg-L/spicetify-nix";
+  
+    hyprland = {
+      type = "git";
+      url = "https://github.com/hyprwm/Hyprland";
+      submodules = true;
+    };
+  
+    home-manager = {
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-  nix-colors.url = "github:misterio77/nix-colors";
-
-
-};
-
-outputs = { self, nixpkgs, ... }@inputs:
-let
-  system = "x86_64-linux";
-  pkgs = import nixpkgs {
-    inherit system;
-    config = {
-      allowUnfree = true;
+    catppuccin-bat = {
+      url = "github:catppuccin/bat";
+      flake = false;
     };
+    catppuccin-cava = {
+      url = "github:catppuccin/cava";
+      flake = false;
+    };
+    catppuccin-starship = {
+      url = "github:catppuccin/starship";
+      flake = false;
+    };
+
+    spicetify-nix.url = "github:gerg-l/spicetify-nix";
+    spicetify-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
-in
-{
-  nixosConfigurations = {
-    main = nixpkgs.lib.nixosSystem {
+
+  outputs = { nixpkgs, self, ...} @ inputs:
+  let
+    username = "matth";
+    system = "x86_64-linux";
+    pkgs = import nixpkgs {
       inherit system;
-      specialArgs = { inherit inputs system; };
+      config.allowUnfree = true;
+    };
+    lib = nixpkgs.lib;
 
-      modules = [
-        ./configuration.nix
-      ];
-
-
-
+    sharedVariables = import ./shared-variables.nix;
+  in
+  {
+    nixosConfigurations = {
+      desktop = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [ (import ./hosts/desktop) ];
+        specialArgs = { host="desktop"; inherit self inputs username sharedVariables; };
+      };
+      laptop = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [ (import ./hosts/laptop) ];
+        specialArgs = { host="laptop"; inherit self inputs username sharedVariables; };
+      };
+       vm = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [ (import ./hosts/vm) ];
+        specialArgs = { host="vm"; inherit self inputs username sharedVariables; };
+      };
     };
   };
-};
 }
