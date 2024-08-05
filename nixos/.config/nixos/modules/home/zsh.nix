@@ -1,0 +1,136 @@
+{ hostname, config, pkgs, host, ...}: 
+{
+
+  home.packages = with pkgs ; [
+    direnv
+    lsd
+    thefuck
+  ];
+
+  programs.command-not-found.enable = true;
+
+  # setup direnvrc so that when we cd into a dir then we load some vars
+  home.file.".direnvrc".text = ''
+    use_nix() {
+      local shell_file="shell.nix"
+      if [[ -f "$shell_file" ]]; then
+        direnv load <(nix-shell --pure --command "direnv dump")
+      else
+        log_status "No shell.nix found."
+      fi
+    }
+
+    use_python_venv() {
+      if [ -d ".venv" ]; then
+        layout python-venv .venv
+      elif [ -f "Pipfile" ]; then
+        layout python-pipenv
+      elif [ -f "requirements.txt" ]; then
+        layout python
+      fi
+    }
+
+    # Combine use_nix and use_python_venv
+    load_env() {
+      use_nix
+      use_python_venv
+    }
+
+    layout_nix_python() {
+      load_env
+    }
+
+    load_env
+'';
+
+  programs.zsh = {
+    enable = true;
+    enableCompletion = true;
+    autosuggestion.enable = true;
+    syntaxHighlighting.enable = true;
+
+    oh-my-zsh = {
+      enable = true;
+      plugins = [ "git" "fzf" ];
+    };
+
+
+    initExtraFirst = ''
+      DISABLE_MAGIC_FUNCTIONS=true
+      export "MICRO_TRUECOLOR=1"
+    '';
+
+    initExtra = ''
+
+      eval $(thefuck --alias) # gets fuck command running
+    '';
+
+    shellAliases = {
+      record = "wf-recorder --audio=alsa_output.pci-0000_08_00.6.analog-stereo.monitor -f $HOME/Videos/$(date +'%Y%m%d%H%M%S_1.mp4')";
+
+      # Utils
+      c = "clear";
+      cd = "z";
+      tt = "gtrash put";
+      cat = "bat";
+      code = "codium";
+      py = "python";
+      icat = "kitten icat";
+      dsize = "du -hs";
+      findw = "grep -rl";
+      pdf = "tdf";
+      open = "xdg-open";
+      ls = "lsd";
+      lst = "lsd --tree --depth";
+
+      n = "nvim"; 
+
+      l = "eza --icons  -a --group-directories-first -1"; #EZA_ICON_SPACING=2
+      ll = "eza --icons  -a --group-directories-first -1 --no-user --long";
+      tree = "eza --icons --tree --group-directories-first";
+
+      # Nixos
+      # cdnix = "cd ~/nixos-config && codium ~/nixos-config";
+      ns = "nix-shell --run zsh";
+      nix-shell = "nix-shell --run zsh";
+
+      # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
+      rebuild = "git add . && sudo nixos-rebuild switch --flake ~/nixos-config#${host}";
+      rebuildu = "git add . && sudo nixos-rebuild switch --upgrade --flake ~/nixos-config#${host}";
+      nix-flake-update = "sudo nix flake update ~/nixos-config#";
+      nix-clean = "sudo nix-collect-garbage && sudo nix-collect-garbage -d && sudo rm /nix/var/nix/gcroots/auto/* && nix-collect-garbage && nix-collect-garbage -d";
+
+      
+
+
+      # Git
+      ga   = "git add";
+      gaa  = "git add --all";
+      gs   = "git status";
+      gb   = "git branch";
+      gm   = "git merge";
+      gpl  = "git pull";
+      gplo = "git pull origin";
+      gps  = "git push";
+      gpst = "git push --follow-tags";
+      gpso = "git push origin";
+      gc   = "git commit";
+      gcm  = "git commit -m";
+      gcma = "git add --all && git commit -m";
+      gtag = "git tag -ma";
+      gch  = "git checkout";
+      gchb = "git checkout -b";
+      gcoe = "git config user.email";
+      gcon = "git config user.name";
+
+      # python
+      piv = "python -m venv .venv";
+      psv = "source .venv/bin/activate";
+    };
+  };
+
+  programs.zoxide = {
+    enable = true;
+    enableZshIntegration = true;
+  };
+}
