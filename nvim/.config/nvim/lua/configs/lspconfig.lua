@@ -20,6 +20,9 @@ lspconfig.hls.setup({
   filetypes = { 'haskell', 'lhaskell', 'cabal' },
 })
 
+lspconfig.nixd.setup({})
+
+
 lspconfig.clangd.setup({ capabilities = capabilities })
 lspconfig.denols.setup({})
 

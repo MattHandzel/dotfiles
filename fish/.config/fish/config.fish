@@ -8,7 +8,7 @@ if status is-interactive
     alias gits="git status"
     alias notetaker="./notetaker.sh"
     alias ls="lsd"
-    alias lst="lsd --tree --depth 2"
+    alias lst="lsd --tree --depth"
     alias nix-shell="nix-shell --run fish"
 
     alias n="nvim"
