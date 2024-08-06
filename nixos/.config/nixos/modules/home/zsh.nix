@@ -94,8 +94,8 @@ in
       nix-shell = "nix-shell --run zsh";
 
       # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
-      rebuild = "sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host}";
-      rebuildu = "sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}.#${host}";
+      rebuild = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host}";
+      rebuildu = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}.#${host}";
       testing =  "echo \"sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host}\"";
       # rebuild = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}#${host}";
       # rebuildu = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}#${host}";

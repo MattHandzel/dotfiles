@@ -1,4 +1,8 @@
 { ... }:
+let 
+  sharedVariables = import ../../../shared_variables.nix;
+
+in
 {
   home.sessionVariables = {
     NIXOS_OZONE_WL = "1";
@@ -23,6 +27,7 @@
     XDG_SESSION_TYPE = "wayland";
     SDL_VIDEODRIVER = "wayland";
     CLUTTER_BACKEND = "wayland";
-    GTK_THEME = "Dracula";
+    GTK_THEME = "catpuccin";
+    NIXOS_ROOT_DIR = sharedVariables.rootDirectory;
   };
 }

@@ -14,6 +14,8 @@
     marksman
     yaml-language-server
     nixd
+    bash-language-server
+
 
 
     ];

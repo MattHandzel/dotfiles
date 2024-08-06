@@ -202,7 +202,7 @@ hide_on_key_press = true;
         "$mainMod, T, exec, kitty"
         "$mainMod SHIFT, T, exec, kitty --title float_kitty"
         # "$mainMod SHIFT, T, exec, kitty --start-as=fullscreen -o 'font_size=16'"
-        "$mainMod, Q, killactive,"
+        "$mainMod, Q, exec, hyprctl dispatch killactive"
         "$mainMod, F, fullscreen, 0"
         "$mainMod SHIFT, F, fullscreen, 1"
         "$mainMod, Space, togglefloating,"
@@ -235,10 +235,10 @@ hide_on_key_press = true;
         "$mainMod, k, movefocus, u"
         "$mainMod, j, movefocus, d"
 
-        "$mainMod SHIFT , h, movewindow, l"
-        "$mainMod SHIFT , l, movewindow, r"
-        "$mainMod SHIFT , k, movewindow, u"
-        "$mainMod SHIFT , j, movewindow, d"
+        "$mainMod SHIFT , h, exec, hyprctl dispatch movewindow l"
+        "$mainMod SHIFT , l, exec, hyprtcl dispatch movewindow r"
+        "$mainMod SHIFT , k, exec, hyprtcl dispatch movewindow u"
+        "$mainMod SHIFT , j, exec, hyprtcl dispatch movewindow d"
 
         # Switch workspaces relative to the active workspace with mainMod + CTRL + [←→]
         "$mainMod CTRL, right, workspace, r+1" 
@@ -326,8 +326,8 @@ hide_on_key_press = true;
         "SHIFT,XF86MonBrightnessDown, exec, brightness -d 10"
         "CONTROL,XF86MonBrightnessUp, exec, wlr-randr --output DP-1 --on && wlr-randr --output eDP-1 --on" # turn displays off
         "CONTROL,XF86MonBrightnessDown, exec, wlr-randr --output DP-1 --off && wlr-randr --output eDP-1 --on"
-        "SHIFT CONTROL ALT,XF86MonBrightnessUp, exec, secondary_monitor_update"
-        "SHIFT CONTROL ALT,XF86MonBrightnessDown, exec, secondary_monitor_update"
+        "SHIFT CONTROL ALT,XF86MonBrightnessUp, exec, secondary-monitor-update"
+        "SHIFT CONTROL ALT,XF86MonBrightnessDown, exec, secondary-monitor-update"
         "$mainMod, XF86MonBrightnessUp, exec, brightness -s 100"
         "$mainMod, XF86MonBrightnessDown, exec, brightness -s 0"
 

@@ -58,7 +58,7 @@ in {
       set -g pane-active-border-style 'fg=magenta,bg=default'
       set -g pane-border-style 'fg=brightblack,bg=default'
 
-      bind-key -n M-n new-window  "tmux_sessionizer"
+      bind-key -n M-n new-window  "tmux-sessionizer"
       bind-key -n M-Tab last-window
 
       # Plugins

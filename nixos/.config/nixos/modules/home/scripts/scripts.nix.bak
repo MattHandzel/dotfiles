@@ -1,0 +1,27 @@
+{ pkgs, ... }:
+
+let
+  # Function to create a script package
+  createScriptPackage = scriptFile: let
+    scriptName = builtins.baseNameOf scriptFile;
+  in pkgs.writeShellScriptBin scriptName (builtins.readFile scriptFile);
+
+  # Get the list of all scripts in the ./scripts/ directory
+  scriptFiles = builtins.filter
+    (file: builtins.match ".*\\.sh" file != null)
+    (builtins.attrValues (builtins.readDir ./scripts));
+
+  # Create packages for all scripts
+  scriptPackages = builtins.map createScriptPackage scriptFiles;
+
+  tracedScriptPackages = builtins.trace "scriptPackages: ${builtins.toJSON scriptPackages}" scriptPackages;
+in {
+
+  # Add all script packages to home.packages
+  home.packages = with pkgs; [
+    bc
+    ddcutil
+    gum
+  ] ++ tracedScriptPackages;
+}
+
