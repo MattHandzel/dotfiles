@@ -26,12 +26,13 @@
 
   brightness = pkgs.writeScriptBin "brightness" (builtins.readFile ./scripts/brightness.sh);
   secondary_monitor_update = pkgs.writeScriptBin "secondary_monitor_update" (builtins.readFile ./scripts/secondary_monitor_update.sh);
-
   tmux_sessionizer = pkgs.writeScriptBin "tmux_sessionizer" (builtins.readFile ./scripts/tmux_sessionizer.sh);
+
   focus_app = pkgs.writeScriptBin "focus_app" (builtins.readFile ./scripts/focus_app.sh);
 
   run-nix-shell-on-new-tmux-session = pkgs.writeScriptBin "run-nix-shell-on-new-tmux-session" (builtins.readFile ./scripts/run-nix-shell-on-new-tmux-session.sh);
 
+  notify-if-command-is-successful = pkgs.writeScriptBin "notify-if-command-is-successful" (builtins.readFile ./scripts/notify-if-command-is-successful.sh);
 
 in {
   home.packages = with pkgs; [
@@ -71,6 +72,7 @@ in {
     focus_app # foucses and creates apps if not already existing
      run-nix-shell-on-new-tmux-session   
     gum # run-nix-shell-on-new-tmux-session requires this
-      
+     notify-if-command-is-successful  
   ];
+
 }

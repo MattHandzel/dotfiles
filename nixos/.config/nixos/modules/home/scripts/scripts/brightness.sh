@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-main_monitor_brightnesses=(0.0 0.0275 0.12 0.20 0.30 0.37)
-external_monitor_brightnesses=(0.13 0.20 0.40 0.60 0.80 1.00)
+main_monitor_brightnesses=(0.0 0.03 0.14 0.23 0.34 0.40)
+external_monitor_brightnesses=(0.05 0.20 0.40 0.60 0.80 1.00)
 max_brightness_for_external_monitor=100
 
 # Function to interpolate

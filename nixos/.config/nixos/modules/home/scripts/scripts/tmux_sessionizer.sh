@@ -3,7 +3,7 @@
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-  selected=$(((find ~/ -mindepth 0 -maxdepth 2 ; find ~/ ~/nixos-config ./ ~/.config/ ~/Projects  ~/ImportantFiles ~/Obsidian ~/Job ~/UIUC ~/Code ~/Code/Python ~/dotfiles/ -mindepth 0 -maxdepth 4 -type d) ; zoxide query --list ; tmux list-sessions -F "#{session_name}") | awk '!seen[$0]++' | fzf --height 60% --reverse --border-label ' sessionizer ' --border --prompt '⚡  ')
+  selected=$(((find ~/ -mindepth 0 -maxdepth 2 ; find ~/ ./ ~/.config/ ~/Projects  ~/ImportantFiles ~/Obsidian ~/Job ~/UIUC ~/Code ~/Code/Python ~/dotfiles/ -mindepth 0 -maxdepth 4 -type d) ; zoxide query --list ; tmux list-sessions -F "#{session_name}") | awk '!seen[$0]++' | fzf --height 60% --reverse --border-label ' sessionizer ' --border --prompt '⚡  ')
 fi
 
 if [[ -z $selected ]]; then

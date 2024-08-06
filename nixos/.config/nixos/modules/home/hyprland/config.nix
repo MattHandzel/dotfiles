@@ -217,6 +217,8 @@ hide_on_key_press = true;
         "$mainMod, W,exec, wallpaper-picker"
         "$mainMod SHIFT, W, exec, vm-start"
 
+        "$mainMod SHIFT, R, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\" && rebuild && notify-if-command-is-successful rebuild"
+
 
         ",XF86AudioLowerVolume, exec, pamixer --decrease 5"
         ",XF86AudioRaiseVolume, exec, pamixer --increase 5"

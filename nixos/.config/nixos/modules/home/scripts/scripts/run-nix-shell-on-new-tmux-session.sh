@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 # Check for shell.nix in the current directory
 if [[ -f "shell.nix" ]]; then

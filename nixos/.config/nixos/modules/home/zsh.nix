@@ -1,10 +1,14 @@
 { hostname, config, pkgs, host, ...}: 
+let 
+  sharedVariables = import ../../shared_variables.nix;
+in
 {
 
   home.packages = with pkgs ; [
     direnv
     lsd
     thefuck
+    tldr
   ];
 
   programs.command-not-found.enable = true;
@@ -85,23 +89,18 @@
 
       n = "nvim"; 
 
-      l = "eza --icons  -a --group-directories-first -1"; #EZA_ICON_SPACING=2
-      ll = "eza --icons  -a --group-directories-first -1 --no-user --long";
-      tree = "eza --icons --tree --group-directories-first";
-
       # Nixos
-      # cdnix = "cd ~/nixos-config && codium ~/nixos-config";
       ns = "nix-shell --run zsh";
       nix-shell = "nix-shell --run zsh";
 
       # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
-      rebuild = "git add . && sudo nixos-rebuild switch --flake ~/nixos-config#${host}";
-      rebuildu = "git add . && sudo nixos-rebuild switch --upgrade --flake ~/nixos-config#${host}";
-      nix-flake-update = "sudo nix flake update ~/nixos-config#";
+      rebuild = "sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host}";
+      rebuildu = "sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}.#${host}";
+      testing =  "echo \"sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host}\"";
+      # rebuild = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}#${host}";
+      # rebuildu = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}#${host}";
+      nix-flake-update = "sudo nix flake update ${sharedVariables.rootDirectory}#";
       nix-clean = "sudo nix-collect-garbage && sudo nix-collect-garbage -d && sudo rm /nix/var/nix/gcroots/auto/* && nix-collect-garbage && nix-collect-garbage -d";
-
-      
-
 
       # Git
       ga   = "git add";

@@ -72,6 +72,7 @@ in
     inputs.alejandra.defaultPackage.${system}
 
     brave # 
+    slack 
     wofi-emoji
 
     gammastep
