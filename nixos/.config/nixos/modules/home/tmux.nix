@@ -69,7 +69,7 @@ in {
       sensible
       better-mouse-mode
       fuzzback
-      # tmux-yank
+      yank
       prefix-highlight
       {
         plugin = tmux-thumbs;

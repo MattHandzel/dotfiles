@@ -1,9 +1,0 @@
-- add gammastep or alternative to decrease the brightness
-- Make sure activity-watcher is working correctly and do research on a bunch of different watchers to collect as much data as possible
-- See if you can figure out how to make it so the battery level doesn't go above 80%
-- add tmux plugins
-
-- make it so that apps can spawn on 2nd monitor
-- switch to mako
-- setup geoclue
-

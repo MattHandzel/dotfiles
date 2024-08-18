@@ -83,6 +83,9 @@ in
     ddcutil # for talking with external monitors
     wlr-randr # for wayland monitor management
 
+
+    pandoc # markdown to pdf, norg to pdf
+
 ntfs3g
 pika-backup
 helvetica-neue-lt-std
@@ -138,6 +141,11 @@ stylua
 
 vimPlugins.nvchad
 vimPlugins.nvchad-ui
+
+
+    prusa-slicer # prusa-slicer 
+
+openssh
 #
 #
 # gnumake42

@@ -234,3 +234,6 @@ lspconfig.ltex.setup({
 
 -- require('magma-nvim').setup({})
 -- require("whereami").setup({})
+--
+--
+--

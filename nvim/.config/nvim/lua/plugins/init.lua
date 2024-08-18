@@ -5,6 +5,36 @@ return {
 			require("configs.conform")
 		end,
 	},
+
+
+  {
+    "nvim-neorg/neorg",
+    build = ":Neorg sync-parsers",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    lazy=false,
+    config = function()
+      require("neorg").setup {
+        load = {
+          ["core.defaults"] = {},  -- Loads default behaviour
+          ["core.concealer"] = {}, -- Adds pretty icons to your documents
+          ["core.completion"] = {  -- Enables completion
+            config = {
+              engine = "nvim-cmp",
+            },
+          },
+          ["core.dirman"] = { -- Manages Neorg workspaces
+            config = {
+              workspaces = {
+                notes = "~/notes",
+              },
+            },
+          },
+        },
+      }
+    end,
+
+  },
+
 	{
 		"chrisgrieser/cmp_yanky",
 		opts = {
@@ -40,6 +70,9 @@ return {
 					["vim.lsp.util.stylize_markdown"] = true,
 					["cmp.entry.get_documentation"] = true,
 				},
+        signature = {
+          enable = false,
+        },
 			},
 			routes = {
 				{

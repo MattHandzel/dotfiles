@@ -22,11 +22,8 @@ lspconfig.hls.setup({
 
 lspconfig.nixd.setup({})
 
-
 lspconfig.clangd.setup({ capabilities = capabilities })
 lspconfig.denols.setup({})
-
-
 
 
 

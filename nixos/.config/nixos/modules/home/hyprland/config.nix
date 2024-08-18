@@ -9,6 +9,7 @@ let
     thunderbird= "M";
     slack= "K";
     morgen = "C";
+    notetaker = "N";
     };
 
 in
@@ -57,6 +58,9 @@ let
 in
 {
   wayland.windowManager.hyprland = {
+    systemd = {
+      variables = ["--all" ];
+      };
     settings = {
       
       # autostart
@@ -71,7 +75,9 @@ in
         "poweralertd &"
         "waybar &"
         "swaync &"
+        "syncthing &"
         "wl-paste --watch cliphist store &"
+        "gammastep -b 1:.4 &"
         "hyprlock"
       ];
 
@@ -84,6 +90,15 @@ in
         touchpad = {
           natural_scroll = true;
         };
+
+        # "device" = { 
+        #   "dell0a78:00-27c6:0d42-touchpad" = {
+        #     tap-to-click = true;
+        #     natural-scroll = true;
+        #     scroll-method = "two-finger";
+        #     # other options...
+        #   };
+        # };
       };
 
       general = {
@@ -202,7 +217,7 @@ hide_on_key_press = true;
         "$mainMod, T, exec, kitty"
         "$mainMod SHIFT, T, exec, kitty --title float_kitty"
         # "$mainMod SHIFT, T, exec, kitty --start-as=fullscreen -o 'font_size=16'"
-        "$mainMod, Q, exec, hyprctl dispatch killactive"
+        "$mainMod, Q, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch killactive' 'kill-window-and-switch'"
         "$mainMod, F, fullscreen, 0"
         "$mainMod SHIFT, F, fullscreen, 1"
         "$mainMod, Space, togglefloating,"
@@ -234,11 +249,12 @@ hide_on_key_press = true;
         "$mainMod, l, movefocus, r"
         "$mainMod, k, movefocus, u"
         "$mainMod, j, movefocus, d"
+        # "$mainMod, Q, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch killactive' 'kill-window-and-switch'"
 
-        "$mainMod SHIFT , h, exec, hyprctl dispatch movewindow l"
-        "$mainMod SHIFT , l, exec, hyprtcl dispatch movewindow r"
-        "$mainMod SHIFT , k, exec, hyprtcl dispatch movewindow u"
-        "$mainMod SHIFT , j, exec, hyprtcl dispatch movewindow d"
+        "$mainMod SHIFT , h, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow l' 'switch-workspace-to-other-monitor'"
+        "$mainMod SHIFT , l, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow r' 'switch-workspace-to-other-monitor'"
+        "$mainMod SHIFT , k, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow u' 'switch-workspace-to-other-monitor'"
+        "$mainMod SHIFT , j, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow d' 'switch-workspace-to-other-monitor'"
 
         # Switch workspaces relative to the active workspace with mainMod + CTRL + [←→]
         "$mainMod CTRL, right, workspace, r+1" 

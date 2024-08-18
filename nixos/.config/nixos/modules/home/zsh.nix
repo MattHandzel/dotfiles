@@ -67,6 +67,7 @@ in
     initExtra = ''
 
       eval $(thefuck --alias) # gets fuck command running
+      alias notetaker="neovim ~/notes/"
     '';
 
     shellAliases = {
@@ -93,9 +94,12 @@ in
       ns = "nix-shell --run zsh";
       nix-shell = "nix-shell --run zsh";
 
+      note = "nvim \"$(readlink -f ~/notes)\"";
+      notetaker = "kitty --title notetaker --name notetaker --start-as=fullscreen";
+
       # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
-      rebuild = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host}";
-      rebuildu = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}.#${host}";
+      rebuild = "pushd ${sharedVariables.rootDirectory} && git add --all . && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host} && popd";
+      rebuildu = "pushd ${sharedVariables.rootDirectory} && git add --all . && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}.#${host} && popd";
       testing =  "echo \"sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host}\"";
       # rebuild = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}#${host}";
       # rebuildu = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}#${host}";

@@ -25,17 +25,17 @@ in
         # "disk"
         "pulseaudio" 
         "battery"
-        # "network"
+        "network"
         "custom/notification"
     ];
     clock= {
         calendar = {
           format = { today = "<span color='#b4befe'><b><u>{}</u></b></span>"; };
         };
-        format = " {:%H:%M}";
+        format = " {:%Y-%m-%d %H:%M}";
         tooltip= "true";
         tooltip-format= "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>";
-        format-alt= " {:%d/%m}";
+        format-alt= " {:%Y-%m-%d %H:%M}";
     };
     "hyprland/workspaces"= {
         active-only= false;
@@ -47,10 +47,10 @@ in
             "11"= "󰈹";
             "2"= "";
             "12"= "";
-            "3"= "󰘙";
-            "4"= "󰙯";
-            "5"= "";
-            "6"= "";
+            # "3"= "󰘙";
+            # "4"= "󰙯";
+            # "5"= "";
+            # "6"= "";
             "10.5" = "|";
             "discord" = "󰙯";
             "spotify" = "";
@@ -64,6 +64,7 @@ in
             # "3"= [];
             # "4"= [];
             # "5"= [];
+            "10.5" = [];
         };
     };
     memory= {

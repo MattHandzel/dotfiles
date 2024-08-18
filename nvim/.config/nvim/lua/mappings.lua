@@ -233,35 +233,37 @@ vim.keymap.set("n", "<M-6>", '<cmd>lua require("harpoon.ui").nav_file(6)<CR>', {
 vim.keymap.set("n", "<M-7>", '<cmd>lua require("harpoon.ui").nav_file(7)<CR>', { noremap = true, silent = true })
 vim.keymap.set("n", "<M-8>", '<cmd>lua require("harpoon.ui").nav_file(8)<CR>', { noremap = true, silent = true })
 vim.keymap.set("n", "<M-9>", '<cmd>lua require("harpoon.ui").nav_file(9)<CR>', { noremap = true, silent = true })
+--
+-- vim.keymap.set("n", "<leader>tr", "<cmd> lua require('neotest').run.run()<CR>", { noremap = true, silent = true })
+-- vim.keymap.set(
+-- 	"n",
+-- 	"<leader>tf",
+-- 	"<cmd> lua require('neotest').run.run(vim.fn.expand('%'))<CR>",
+-- 	{ noremap = true, silent = true }
+-- )
+-- vim.keymap.set(
+-- 	"n",
+-- 	"<leader>td",
+-- 	"<cmd> lua require('neotest').run.run({strategy = 'dap'})<CR>",
+-- 	{ noremap = true, silent = true }
+-- )
+-- vim.keymap.set("n", "<leader>tx", "<cmd> lua require('neotest').run.stop()<CR>", { noremap = true, silent = true })
+-- vim.keymap.set("n", "<leader>ta", "<cmd> lua require('neotest').run.attach()<CR>", { noremap = true, silent = true })
+-- vim.keymap.set("n", "<leader>tl", "<cmd> lua require('neotest').run.last()<CR>", { noremap = true, silent = true })
+-- -- status window
+--
+-- vim.keymap.set("n", "<leader>ts", "<cmd> lua require('neotest').status.open()<CR>", { noremap = true, silent = true })
+-- vim.keymap.set("n", "<leader>tS", "<cmd> lua require('neotest').summary.open()<CR>", { noremap = true, silent = true })
+--
+-- vim.keymap.set("n", "<leader>re", function()
+-- 	require("betterTerm").send(
+-- 		require("code_runner.commands").get_filetype_command(),
+-- 		1,
+-- 		{ clean = false, interrupt = true }
+-- 	)
+-- end, { desc = "Excute File" })
+--
 
-vim.keymap.set("n", "<leader>tr", "<cmd> lua require('neotest').run.run()<CR>", { noremap = true, silent = true })
-vim.keymap.set(
-	"n",
-	"<leader>tf",
-	"<cmd> lua require('neotest').run.run(vim.fn.expand('%'))<CR>",
-	{ noremap = true, silent = true }
-)
-vim.keymap.set(
-	"n",
-	"<leader>td",
-	"<cmd> lua require('neotest').run.run({strategy = 'dap'})<CR>",
-	{ noremap = true, silent = true }
-)
-vim.keymap.set("n", "<leader>tx", "<cmd> lua require('neotest').run.stop()<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<leader>ta", "<cmd> lua require('neotest').run.attach()<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<leader>tl", "<cmd> lua require('neotest').run.last()<CR>", { noremap = true, silent = true })
--- status window
-
-vim.keymap.set("n", "<leader>ts", "<cmd> lua require('neotest').status.open()<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<leader>tS", "<cmd> lua require('neotest').summary.open()<CR>", { noremap = true, silent = true })
-
-vim.keymap.set("n", "<leader>re", function()
-	require("betterTerm").send(
-		require("code_runner.commands").get_filetype_command(),
-		1,
-		{ clean = false, interrupt = true }
-	)
-end, { desc = "Excute File" })
 
 local betterTerm = require("betterTerm")
 

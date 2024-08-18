@@ -14,8 +14,24 @@
     ++ [ (import ./wayland.nix) ]
     ++ [ (import ./virtualization.nix) ]
     ++ [ (import ./bluetooth.nix) ]
-
-
+    ++ [ (import ./home-assistant.nix) ]
     ;
+
+  
+services.geoclue2 = {
+  enable = true;
+#   providers = {
+#     modem-gps = {
+#       enabled = false;
+#     };
+#     host-ip = {
+#       enabled = true;
+#     };
+#     wifi = {
+#       enabled = true;
+#     };
+#   };
+};
+  location.provider = "geoclue2";
 
 }
