@@ -12,7 +12,7 @@
   boot.loader.grub.enable = true;
   boot.loader.grub.device = "/dev/vda";
   boot.loader.grub.useOSProber = false;
-  boot.loader.timeout = 1
+  boot.loader.timeout = 1;
 
   # allow local remote access to make it easier to toy around with the system
   services.openssh = {
