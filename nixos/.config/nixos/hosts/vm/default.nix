@@ -24,4 +24,9 @@
       PermitRootLogin = "yes";
     };
   };
+
+
+# i need this stuff so that it can be a server
+services.nginx.enable = true;
+services.postgresql.enable = true;
 }
