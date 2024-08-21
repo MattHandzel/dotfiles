@@ -42,6 +42,7 @@ in {
     ddcutil # for brightness script
     gum # run-nix-shell-on-new-tmux-session requires this
     jq
+    nmap # for looking at devices on the wifi
   ];
 }
 

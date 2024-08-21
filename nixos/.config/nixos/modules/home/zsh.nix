@@ -125,6 +125,7 @@ in
       gchb = "git checkout -b";
       gcoe = "git config user.email";
       gcon = "git config user.name";
+      glazy = "git add --all ; git commit -am \"This is an automated commit by $USER because they were too lazy\" ; git pull && git push";
 
       # python
       piv = "python -m venv .venv";
