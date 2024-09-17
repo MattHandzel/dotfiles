@@ -1,6 +1,8 @@
-{ config, pkgs, ... }:
-
-let
+{
+  config,
+  pkgs,
+  ...
+}: let
   inherit (pkgs) tmuxPlugins;
 in {
   programs.tmux = {
@@ -59,7 +61,19 @@ in {
       set -g pane-border-style 'fg=brightblack,bg=default'
 
       bind-key -n M-n new-window  "tmux-sessionizer"
-      bind-key -n M-Tab last-window
+      # bind-key -n M-Tab switch-client -1
+      bind C-t choose-tree
+      set-option -g automatic-rename on
+      set-option -g automatic-rename-format '#{b:pane_current_path}'
+
+      set -g @thumbs-command 'echo -n {} | wl-copy'
+      set -g @thumbs-alphabet dvorak-homerow
+      set -g @thumbs-reverse enabled
+      set -g @thumbs-regexp-1 '[\w-\.]+@([\w-]+\.)+[\w-]{2,4}' # Match emails
+      set -g @thumbs-regexp-2 '[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:' # Match MAC addresses
+
+
+      # set -g @thumbs-upcase-command 'tmux set-buffer -- {} && tmux paste-buffer | wl-copy'
 
       # Plugins
       run '~/.tmux/plugins/tpm/tpm'
@@ -84,7 +98,7 @@ in {
         extraConfig = "set -g @fzf-url-command 'fzf --reverse'";
       }
       {
-        plugin = catppuccin; 
+        plugin = catppuccin;
         extraConfig = ''
           set -g @catppuccin_flavour 'mocha'
           set -g @catppuccin_window_left_separator ""

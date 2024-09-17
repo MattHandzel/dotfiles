@@ -33,20 +33,21 @@ end, { desc = "Buffer Close" })
 map("n", "<leader>e", "<cmd>Neotree toggle<CR>", { desc = "Neotree Toggle window" })
 
 -- telescope
+local telescope_builtin = require("telescope.builtin")
 map("n", "<leader>fw", "<cmd>Telescope live_grep<CR>", { desc = "Telescope Live grep" })
 map("n", "<leader>fb", "<cmd>Telescope buffers<CR>", { desc = "Telescope Find buffers" })
 map("n", "<leader>fh", "<cmd>Telescope help_tags<CR>", { desc = "Telescope Help page" })
-
+map("n", "<leader>fs", telescope_builtin.lsp_document_symbols, { desc = "Telescope Help page" })
 map("n", "<leader>fo", "<cmd>Telescope oldfiles<CR>", { desc = "Telescope Find oldfiles" })
 map("n", "<leader>fz", "<cmd>Telescope current_buffer_fuzzy_find<CR>", { desc = "Telescope Find in current buffer" })
-map("n", "<leader>fc", "<cmd>Telescope git_commits<CR>", { desc = "Telescope Git commits" })
-map("n", "<leader>fs", "<cmd>Telescope git_status<CR>", { desc = "Telescope Git status" })
-map("n", "<leader>ft", "<cmd>Telescope terms<CR>", { desc = "Telescope Pick hidden term" })
+map("n", "<leader>fgc", "<cmd>Telescope git_commits<CR>", { desc = "Telescope Git commits" })
+map("n", "<leader>fgs", "<cmd>Telescope git_status<CR>", { desc = "Telescope Git status" })
+-- map("n", "<leader>ft", "<cmd>Telescope terms<CR>", { desc = "Telescope Pick hidden term" })
 -- map("n", "<leader>th", "<cmd>Telescope themes<CR>", { desc = "Telescope Nvchad themes" })
-map("n", "<leader>ff", "<cmd>Telescope find_files<cr>", { desc = "Telescope Find files" })
+map("n", "<leader>fa", "<cmd>Telescope find_files<cr>", { desc = "Telescope Find files" })
 map(
 	"n",
-	"<leader>fa",
+	"<leader>ff",
 	"<cmd>Telescope find_files follow=true no_ignore=true hidden=true<CR>",
 	{ desc = "Telescope Find all files" }
 )
@@ -123,12 +124,12 @@ vim.api.nvim_set_keymap("i", "<C-BS>", "<C-w>", { noremap = true })
 vim.api.nvim_set_keymap("n", "<C-a>", "gg<S-v>G", { noremap = true })
 vim.api.nvim_set_keymap("n", "db", "xdb", { noremap = true })
 vim.api.nvim_set_keymap("n", "dB", "xdB", { noremap = true })
-map({"n", "v"}, "gg", "ggzz", { noremap = true })
-map({"n", "v"}, "G", "Gzz", { noremap = true })
-map("v", "/", "y<Esc>/<C-r>\"", { noremap = true })
+map({ "n", "v" }, "gg", "ggzz", { noremap = true })
+map({ "n", "v" }, "G", "Gzz", { noremap = true })
+map("v", "/", 'y<Esc>/<C-r>"', { noremap = true })
 map("v", "<M-r>", ":'<,'>s/<C-r>\"", { noremap = true })
 
-silent_no_remap = { silent = true, noremap = true }
+local silent_no_remap = { silent = true, noremap = true }
 
 map("n", "<M-j>", "<cmd>m .+1<CR>==", { desc = "Move line down" })
 map("n", "<M-k>", "<cmd>m .-2<CR>==", { desc = "Move line up" })
@@ -159,9 +160,9 @@ vim.api.nvim_set_keymap("n", "<leader>gI", "<leader>gIdzt", { noremap = true })
 vim.api.nvim_set_keymap("n", "<M-o>", "o<Esc>", { noremap = true })
 vim.api.nvim_set_keymap("n", "<M-O>", "O<Esc>", { noremap = true })
 
-vim.api.nvim_set_keymap('v', '<M-d>', '"_d', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('v', '<M-p>', '"_dP', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<M-d>d', '"_d', { noremap = true, silent = true })
+vim.api.nvim_set_keymap("v", "<M-d>", '"_d', { noremap = true, silent = true })
+vim.api.nvim_set_keymap("v", "<M-p>", '"_dP', { noremap = true, silent = true })
+vim.api.nvim_set_keymap("n", "<M-d>d", '"_d', { noremap = true, silent = true })
 
 -- Map the function to a key combination in visual mode
 -- vim.api.nvim_set_keymap("n", "<M-p>", "p", { noremap = true })
@@ -224,16 +225,34 @@ vim.keymap.set("n", "<leader>ha", require("harpoon.mark").add_file, { noremap = 
 vim.keymap.set("n", "<leader>ht", require("harpoon.ui").toggle_quick_menu, { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>hn", require("harpoon.ui").nav_next, { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>hp", require("harpoon.ui").nav_prev, { noremap = true, silent = true })
-vim.keymap.set("n", "<M-1>", '<cmd>lua require("harpoon.ui").nav_file(1)<CR>', { noremap = true, silent = true })
-vim.keymap.set("n", "<M-2>", '<cmd>lua require("harpoon.ui").nav_file(2)<CR>', { noremap = true, silent = true })
-vim.keymap.set("n", "<M-3>", '<cmd>lua require("harpoon.ui").nav_file(3)<CR>', { noremap = true, silent = true })
-vim.keymap.set("n", "<M-4>", '<cmd>lua require("harpoon.ui").nav_file(4)<CR>', { noremap = true, silent = true })
-vim.keymap.set("n", "<M-5>", '<cmd>lua require("harpoon.ui").nav_file(5)<CR>', { noremap = true, silent = true })
-vim.keymap.set("n", "<M-6>", '<cmd>lua require("harpoon.ui").nav_file(6)<CR>', { noremap = true, silent = true })
-vim.keymap.set("n", "<M-7>", '<cmd>lua require("harpoon.ui").nav_file(7)<CR>', { noremap = true, silent = true })
-vim.keymap.set("n", "<M-8>", '<cmd>lua require("harpoon.ui").nav_file(8)<CR>', { noremap = true, silent = true })
-vim.keymap.set("n", "<M-9>", '<cmd>lua require("harpoon.ui").nav_file(9)<CR>', { noremap = true, silent = true })
---
+vim.keymap.set("n", "<M-1>", function()
+	require("harpoon.ui").nav_file(1)
+end, { noremap = true, silent = true })
+vim.keymap.set("n", "<M-2>", function()
+	require("harpoon.ui").nav_file(2)
+end, { noremap = true, silent = true })
+vim.keymap.set("n", "<M-3>", function()
+	require("harpoon.ui").nav_file(3)
+end, { noremap = true, silent = true })
+vim.keymap.set("n", "<M-4>", function()
+	require("harpoon.ui").nav_file(4)
+end, { noremap = true, silent = true })
+vim.keymap.set("n", "<M-5>", function()
+	require("harpoon.ui").nav_file(5)
+end, { noremap = true, silent = true })
+vim.keymap.set("n", "<M-6>", function()
+	require("harpoon.ui").nav_file(6)
+end, { noremap = true, silent = true })
+vim.keymap.set("n", "<M-7>", function()
+	require("harpoon.ui").nav_file(7)
+end, { noremap = true, silent = true })
+vim.keymap.set("n", "<M-8>", function()
+	require("harpoon.ui").nav_file(8)
+end, { noremap = true, silent = true })
+vim.keymap.set("n", "<M-9>", function()
+	require("harpoon.ui").nav_file(9)
+end, { noremap = true, silent = true })
+
 -- vim.keymap.set("n", "<leader>tr", "<cmd> lua require('neotest').run.run()<CR>", { noremap = true, silent = true })
 -- vim.keymap.set(
 -- 	"n",
@@ -254,21 +273,19 @@ vim.keymap.set("n", "<M-9>", '<cmd>lua require("harpoon.ui").nav_file(9)<CR>', {
 --
 -- vim.keymap.set("n", "<leader>ts", "<cmd> lua require('neotest').status.open()<CR>", { noremap = true, silent = true })
 -- vim.keymap.set("n", "<leader>tS", "<cmd> lua require('neotest').summary.open()<CR>", { noremap = true, silent = true })
---
--- vim.keymap.set("n", "<leader>re", function()
--- 	require("betterTerm").send(
--- 		require("code_runner.commands").get_filetype_command(),
--- 		1,
--- 		{ clean = false, interrupt = true }
--- 	)
--- end, { desc = "Excute File" })
---
 
+vim.keymap.set("n", "<leader>re", function()
+	require("betterTerm").send(
+		require("code_runner.commands").get_filetype_command(),
+		1,
+		{ clean = false, interrupt = true }
+	)
+end, { desc = "Excute File" })
 
 local betterTerm = require("betterTerm")
+vim.keymap.set({ "n", "t" }, "<C-;>", betterTerm.open, { desc = "Open terminal" })
 
 -- toggle firts term
-vim.keymap.set({ "n", "t" }, "<C-;>", betterTerm.open, { desc = "Open terminal" })
 -- Select term focus
 vim.keymap.set({ "n" }, "<leader>tt", betterTerm.select, { desc = "Select terminal" })
 -- Create new term
@@ -310,5 +327,12 @@ vim.keymap.set({ "n", "x" }, "gP", "<Plug>(YankyGPutBefore)")
 
 vim.keymap.set("n", "<leader>p", ":YankyRingHistory<CR>")
 
+vim.keymap.set("n", "<leader>c?", require("CopilotChat").toggle)
+
 -- vim.keymap.set("n", "<c-p>", "<Plug>(YankyPreviousEntry)")
 -- vim.keymap.set("n", "<c-n>", "<Plug>(YankyNextEntry)")
+--
+--
+--#region
+--
+--

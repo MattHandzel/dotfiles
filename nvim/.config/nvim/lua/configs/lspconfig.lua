@@ -2,9 +2,7 @@
 local lspconfig = require("lspconfig")
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities.offsetEncoding = { "utf-16" }
-lspconfig.pyright.setup({
-  
-})
+lspconfig.pyright.setup({})
 lspconfig.tsserver.setup({})
 lspconfig.ltex.setup({
 	checkfrequency = "save",
@@ -13,20 +11,16 @@ lspconfig.rust_analyzer.setup({
 	-- Server-specific settings. See `:help lspconfig-setup`
 	settings = {
 		["rust-analyzer"] = {},
-
 	},
 })
 lspconfig.hls.setup({
-  filetypes = { 'haskell', 'lhaskell', 'cabal' },
+	filetypes = { "haskell", "lhaskell", "cabal" },
 })
 
 lspconfig.nixd.setup({})
 
 lspconfig.clangd.setup({ capabilities = capabilities })
 lspconfig.denols.setup({})
-
-
-
 
 -- Global mappings.
 -- See `:help vim.diagnostic.*` for documentation on any of the below functions
@@ -57,7 +51,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		vim.keymap.set("n", "gd", run_zz_after_running_the_argument(vim.lsp.buf.definition), opts)
 		vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
 		vim.keymap.set("n", "gi", run_zz_after_running_the_argument(vim.lsp.buf.implementation), opts)
-		vim.keymap.set("n", "<C-k>", vim.lsp.buf.signature_help, opts)
+		vim.keymap.set("n", "<M-K>", vim.lsp.buf.signature_help, opts)
 		vim.keymap.set("n", "<leader>wa", vim.lsp.buf.add_workspace_folder, opts)
 		vim.keymap.set("n", "<leader>wr", vim.lsp.buf.remove_workspace_folder, opts)
 		vim.keymap.set("n", "<leader>wl", function()

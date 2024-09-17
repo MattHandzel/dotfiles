@@ -53,9 +53,13 @@ in
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
 
+    history = {
+      size = 100000;
+      };
+
     oh-my-zsh = {
       enable = true;
-      plugins = [ "git" "fzf" ];
+      plugins = [ "git" "fzf" "colored-man-pages"];
     };
 
 
@@ -65,7 +69,12 @@ in
     '';
 
     initExtra = ''
-
+      function note(){
+        take-note "$*"
+        }
+      function notec(){
+        take-note -c "$*"
+        }
       eval $(thefuck --alias) # gets fuck command running
       alias notetaker="neovim ~/notes/"
     '';
@@ -94,7 +103,6 @@ in
       ns = "nix-shell --run zsh";
       nix-shell = "nix-shell --run zsh";
 
-      note = "nvim \"$(readlink -f ~/notes)\"";
       notetaker = "kitty --title notetaker --name notetaker --start-as=fullscreen";
 
       # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it

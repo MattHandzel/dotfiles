@@ -1,7 +1,7 @@
 { pkgs, ... }: 
 {
   networking = {
-    hostName = "nixos";
+    hostName = "matts-computer";
     networkmanager.enable = true;
     nameservers = [ "1.1.1.1" ];
     firewall = {
@@ -13,9 +13,16 @@
         # { from = 8000; to = 8010; }
       # ];
     };
+    extraHosts = ''
+      76.191.29.250 local-server
+    '';
   };
 
   environment.systemPackages = with pkgs; [
     networkmanagerapplet
   ];
+
+
+
+
 }

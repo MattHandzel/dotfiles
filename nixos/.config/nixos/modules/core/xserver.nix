@@ -3,7 +3,8 @@
   services = {
     xserver = {
       enable = true;
-      xkb.layout = "us,fr";
+      xkb.layout = "us";
+      xkbOptions = "fn:fnmode";
       exportConfiguration = true;
     };
 
@@ -19,6 +20,10 @@
         scrollMethod = "twofinger";
 
         };
+      # keyboard = {
+      #   options = "fk:2";
+      #
+      #         };
       # tapping = true;
       # naturalScrolling = false;
       # mouse = {

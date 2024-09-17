@@ -66,6 +66,7 @@ in
     poweralertd
     qalculate-gtk                     # calculator
     unzip
+    zip
     wget
     xdg-utils
     xxd
@@ -146,6 +147,20 @@ vimPlugins.nvchad-ui
     prusa-slicer # prusa-slicer 
 
 openssh
+
+zoom # Classes and meetings
+
+zathura
+calcurse # Calendar in the terminal
+
+sshfs
+zoom
+fastfetch
+whatsapp-for-linux
+
+
+inputs.zen-browser.packages."${system}".default # This is for zen-browser
+
 #
 #
 # gnumake42

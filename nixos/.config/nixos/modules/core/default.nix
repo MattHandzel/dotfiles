@@ -14,7 +14,7 @@
     ++ [ (import ./wayland.nix) ]
     ++ [ (import ./virtualization.nix) ]
     ++ [ (import ./bluetooth.nix) ]
-    ++ [ (import ./home-assistant.nix) ]
+#    ++ [ (import ./home-assistant.nix) ]
     ;
 
   

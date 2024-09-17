@@ -1,9 +1,9 @@
 require("neo-tree").setup()
 require("betterTerm").setup({
-	prefix = "CRAG_",
+	prefix = "term-",
 	startInserted = false,
 	position = "bot",
-	size = 18,
+	size = 15,
 })
 
 require("code_runner").setup({
@@ -227,10 +227,9 @@ require("dressing").setup({
 
 local lspconfig = require("lspconfig")
 lspconfig.ltex.setup({
-  checkfrequency = "save",
+	checkfrequency = "save",
 })
 -- require("vimtex").setup({})
-
 
 -- require('magma-nvim').setup({})
 -- require("whereami").setup({})

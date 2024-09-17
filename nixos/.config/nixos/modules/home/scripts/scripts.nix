@@ -31,6 +31,10 @@ makeShellScriptBin = script: pkgs.writeShellScriptBin ((removeShExtension (built
     ./scripts/switch-workspace-to-other-monitor.sh
     ./scripts/run-command-based-on-type-of-workspace.sh
     ./scripts/kill-window-and-switch.sh
+    ./scripts/take-note.sh
+    ./scripts/calendar.sh
+    ./scripts/quick-capture.sh
+    ./scripts/copy-to-clipboard.sh
   ];
 
   # Create shell script bins
@@ -43,6 +47,20 @@ in {
     gum # run-nix-shell-on-new-tmux-session requires this
     jq
     nmap # for looking at devices on the wifi
+
+    calcurse # for calendar script
+    vdirsyncer # for calendar script
+
+
+
+    # quick capture
+    zenity
+    wl-clipboard
+    grim
+    wf-recorder
+    alsa-utils  # for arecord
+    ffmpeg
+
   ];
 }
 

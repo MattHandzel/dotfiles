@@ -4,36 +4,72 @@ return {
 		config = function()
 			require("configs.conform")
 		end,
+		lazy = false,
 	},
 
+	{
+		"nvim-neorg/neorg",
+		build = ":Neorg sync-parsers",
+		dependencies = { "nvim-lua/plenary.nvim" },
+		lazy = false,
+		config = function()
+			require("neorg").setup({
+				load = {
+					["core.defaults"] = {}, -- Loads default behaviour
+					["core.concealer"] = {}, -- Adds pretty icons to your documents
+					["core.completion"] = { -- Enables completion
+						config = {
+							engine = "nvim-cmp",
+						},
+					},
+					["core.dirman"] = { -- Manages Neorg workspaces
+						config = {
+							workspaces = {
+								notes = "~/notes",
+							},
+						},
+					},
+				},
+			})
+		end,
+	},
 
-  {
-    "nvim-neorg/neorg",
-    build = ":Neorg sync-parsers",
-    dependencies = { "nvim-lua/plenary.nvim" },
-    lazy=false,
-    config = function()
-      require("neorg").setup {
-        load = {
-          ["core.defaults"] = {},  -- Loads default behaviour
-          ["core.concealer"] = {}, -- Adds pretty icons to your documents
-          ["core.completion"] = {  -- Enables completion
-            config = {
-              engine = "nvim-cmp",
-            },
-          },
-          ["core.dirman"] = { -- Manages Neorg workspaces
-            config = {
-              workspaces = {
-                notes = "~/notes",
-              },
-            },
-          },
-        },
-      }
-    end,
+	{
+		"iamcco/markdown-preview.nvim",
+		cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
+		build = "cd app && yarn install",
+		lazy = false,
+		init = function()
+			vim.g.mkdp_filetypes = { "markdown" }
+		end,
+		config = function()
+			-- require("markdown-preview").setup({
+			-- 	open_browser = {
+			-- 		app = "brave",
+			-- 	},
+			-- })
+			-- require("markdown-preview").setup({
+			-- 	open_browser = {
+			-- 		app = "brave",
+			-- 	},
+			-- })
+		end,
+		ft = { "markdown" },
+	},
 
-  },
+	{
+		"MeanderingProgrammer/render-markdown.nvim",
+		opts = {},
+		config = function()
+			require("render-markdown").setup({
+				-- Options go here
+			})
+		end,
+		event = "VeryLazy",
+		-- dependencies = { "nvim-treesitter/nvim-treesitter", "echasnovski/mini.nvim" }, -- if you use the mini.nvim suite
+		-- dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.icons' }, -- if you use standalone mini plugins
+		dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" }, -- if you prefer nvim-web-devicons
+	},
 
 	{
 		"chrisgrieser/cmp_yanky",
@@ -47,14 +83,36 @@ return {
 			},
 		},
 	},
-  {'dccsillag/magma-nvim', lazy=false},
-{
-  "lervag/vimtex",
-  init = function()
+	{ "dccsillag/magma-nvim", event = "VeryLazy" },
+	{
+		"lervag/vimtex",
+		init = function() end,
+		event = "VeryLazy",
+	},
 
-  end
-  ,lazy=false
-},
+	{
+
+		"epwalsh/obsidian.nvim",
+		event = "VeryLazy",
+		-- config = function()
+		-- 	require("obsidian").setup({
+		-- 		-- your configuration comes here
+		-- 	})
+		-- end,
+
+		ft = { "markdown" },
+		dependencies = { "nvim-lua/plenary.nvim", "nvim-telescope/telescope.nvim", "nvim-treesitter/nvim-treesitter" },
+		opts = {
+			workspaces = {
+				{
+					name = "main",
+					path = "~/Obsidian/Main",
+				},
+			},
+
+			--     -- your configuration comes here
+		},
+	},
 
 	-- {
 	-- 	"filipdutescu/renamer.nvim",
@@ -70,9 +128,9 @@ return {
 					["vim.lsp.util.stylize_markdown"] = true,
 					["cmp.entry.get_documentation"] = true,
 				},
-        signature = {
-          enable = false,
-        },
+				signature = {
+					enable = false,
+				},
 			},
 			routes = {
 				{
@@ -94,16 +152,16 @@ return {
 				inc_rename = true,
 			},
 		},
-  -- stylua: ignore
-  keys = {
-    { "<S-Enter>", function() require("noice").redirect(vim.fn.getcmdline()) end, mode = "c", desc = "Redirect Cmdline" },
-    { "<leader>snl", function() require("noice").cmd("last") end, desc = "Noice Last Message" },
-    { "<leader>snh", function() require("noice").cmd("history") end, desc = "Noice History" },
-    { "<leader>sna", function() require("noice").cmd("all") end, desc = "Noice All" },
-    { "<leader>snd", function() require("noice").cmd("dismiss") end, desc = "Dismiss All" },
-    { "<c-f>", function() if not require("noice.lsp").scroll(4) then return "<c-f>" end end, silent = true, expr = true, desc = "Scroll forward", mode = {"i", "n", "s"} },
-    { "<c-b>", function() if not require("noice.lsp").scroll(-4) then return "<c-b>" end end, silent = true, expr = true, desc = "Scroll backward", mode = {"i", "n", "s"}},
-  },
+    -- stylua: ignore
+    keys = {
+      { "<S-Enter>",   function() require("noice").redirect(vim.fn.getcmdline()) end,                 mode = "c",                 desc = "Redirect Cmdline" },
+      { "<leader>snl", function() require("noice").cmd("last") end,                                   desc = "Noice Last Message" },
+      { "<leader>snh", function() require("noice").cmd("history") end,                                desc = "Noice History" },
+      { "<leader>sna", function() require("noice").cmd("all") end,                                    desc = "Noice All" },
+      { "<leader>snd", function() require("noice").cmd("dismiss") end,                                desc = "Dismiss All" },
+      { "<c-f>",       function() if not require("noice.lsp").scroll(4) then return "<c-f>" end end,  silent = true,              expr = true,              desc = "Scroll forward",  mode = { "i", "n", "s" } },
+      { "<c-b>",       function() if not require("noice.lsp").scroll(-4) then return "<c-b>" end end, silent = true,              expr = true,              desc = "Scroll backward", mode = { "i", "n", "s" } },
+    },
 	},
 	{
 		"stevearc/dressing.nvim",
@@ -125,7 +183,7 @@ return {
 		},
 		keys = {
 			{ -- lazy style key map
-				"<leader>u",
+				"<leader>fu",
 				"<cmd>Telescope undo<cr>",
 				desc = "undo history",
 			},
@@ -310,10 +368,34 @@ return {
 
 	{
 
+		"CRAG666/code_runner.nvim",
+		config = function()
+			require("code_runner").setup({
+				filetype_path = vim.fn.expand("~/.config/nvim/code_runner_filetypes.json"),
+				project_path = vim.fn.expand("~/.config/nvim/code_runner_projects.json"),
+				mode = "toggleterm",
+			})
+		end,
+	},
+
+	{
+		event = "VeryLazy",
+		"CopilotC-Nvim/CopilotChat.nvim",
+		branch = "canary",
+		dependencies = {
+			{ "zbirenbaum/copilot.lua" }, -- or github/copilot.vim
+			{ "nvim-lua/plenary.nvim" }, -- for curl, log wrapper
+		},
+		build = "make tiktoken", -- Only on MacOS or Linux
+		opts = {
+			debug = true, -- Enable debugging
+		},
+	},
+	{
+
 		"CRAG666/betterTerm.nvim",
 		"mateuszwieloch/automkdir.nvim",
 		"jghauser/mkdir.nvim",
-		"CRAG666/code_runner.nvim",
 		"GCBallesteros/jupytext.nvim",
 
 		"theprimeagen/harpoon",
@@ -514,11 +596,11 @@ return {
 		opts = {},
     -- stylua: ignore
     keys = {
-      { "s", mode = { "n", "x", "o" }, function() require("flash").jump() end, desc = "Flash" },
-      { "S", mode = { "n", "o", "x" }, function() require("flash").treesitter() end, desc = "Flash Treesitter" },
-      { "r", mode = "o", function() require("flash").remote() end, desc = "Remote Flash" },
-      { "R", mode = { "o", "x" }, function() require("flash").treesitter_search() end, desc = "Treesitter Search" },
-      { "<c-s>", mode = { "c" }, function() require("flash").toggle() end, desc = "Toggle Flash Search" },
+      { "s",     mode = { "n", "x", "o" }, function() require("flash").jump() end,              desc = "Flash" },
+      { "S",     mode = { "n", "o", "x" }, function() require("flash").treesitter() end,        desc = "Flash Treesitter" },
+      { "r",     mode = "o",               function() require("flash").remote() end,            desc = "Remote Flash" },
+      { "R",     mode = { "o", "x" },      function() require("flash").treesitter_search() end, desc = "Treesitter Search" },
+      { "<c-s>", mode = { "c" },           function() require("flash").toggle() end,            desc = "Toggle Flash Search" },
     },
 		{
 			"nvim-telescope/telescope.nvim",
@@ -591,12 +673,12 @@ return {
 		config = true,
     -- stylua: ignore
     keys = {
-      { "]t", function() require("todo-comments").jump_next() end, desc = "Next todo comment" },
-      { "[t", function() require("todo-comments").jump_prev() end, desc = "Previous todo comment" },
-      { "<leader>xt", "<cmd>TodoTrouble<cr>", desc = "Todo (Trouble)" },
-      { "<leader>xT", "<cmd>TodoTrouble keywords=TODO,FIX,FIXME<cr>", desc = "Todo/Fix/Fixme (Trouble)" },
-      { "<leader>st", "<cmd>TodoTelescope<cr>", desc = "Todo" },
-      { "<leader>sT", "<cmd>TodoTelescope keywords=TODO,FIX,FIXME<cr>", desc = "Todo/Fix/Fixme" },
+      { "]t",         function() require("todo-comments").jump_next() end, desc = "Next todo comment" },
+      { "[t",         function() require("todo-comments").jump_prev() end, desc = "Previous todo comment" },
+      { "<leader>xt", "<cmd>TodoTrouble<cr>",                              desc = "Todo (Trouble)" },
+      { "<leader>xT", "<cmd>TodoTrouble keywords=TODO,FIX,FIXME<cr>",      desc = "Todo/Fix/Fixme (Trouble)" },
+      { "<leader>st", "<cmd>TodoTelescope<cr>",                            desc = "Todo" },
+      { "<leader>sT", "<cmd>TodoTelescope keywords=TODO,FIX,FIXME<cr>",    desc = "Todo/Fix/Fixme" },
     },
 	},
 }
