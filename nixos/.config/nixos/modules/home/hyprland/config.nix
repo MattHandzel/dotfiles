@@ -73,26 +73,40 @@ in {
         "poweralertd &"
         "waybar &"
         "swaync &"
-        "syncthing &"
-        "wl-paste --watch copy-to-clipboard &"
-        "gammastep -l  50.1047:-110.2062 -t 5700:1500 -b 1:.6  &"
+        "wl-paste --watch cliphist store &"
+        "gammastep -l  50.1047:-110.2062 -t 5700:1500 -b 1:.5 &"
         "hyprlock"
         "sudo chmod 666 /dev/i2c-*"
       ];
 
+      "device" = {
+        "name" = ''          wingcool-inc.-touchscreen-1
+                    output = DP-1
+        '';
+      };
       input = {
         kb_layout = "us,fr";
         kb_options = "grp:alt_caps_toggle";
         numlock_by_default = true;
         follow_mouse = 1;
-        sensitivity = 0.7;
+        sensitivity = 0.3;
         touchpad = {
           natural_scroll = true;
+          tap-to-click = true;
+          drag_lock = true;
+          middle_button_emulation = true;
+          scroll_factor = 0.5;
         };
+
         touchdevice = {
           output = "eDP-1";
           # name = "04f31234:00-1fd2:8008";
         };
+        # "device" = [
+        #   {
+        #     output = "DP-1";
+        #   }
+        # ];
         # {
         #   output = "DP-1";
         #   name = "wingcool-inc.-touchscreen-1";
@@ -242,6 +256,7 @@ in {
           "$mainMod, C ,exec, hyprpicker -a"
           "$mainMod, W,exec, wallpaper-picker"
           "$mainMod SHIFT, W, exec, vm-start"
+          "$mainMod, B, exec, zen"
 
           "$mainMod SHIFT, R, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\" && rebuild && notify-if-command-is-successful rebuild"
 
@@ -269,9 +284,10 @@ in {
           "$mainMod SHIFT , k, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow u' 'switch-workspace-to-other-monitor'"
           "$mainMod SHIFT , j, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow d' 'switch-workspace-to-other-monitor'"
 
-          # Switch workspaces relative to the active workspace with mainMod + CTRL + [←→]
-          "$mainMod CTRL, right, workspace, r+1"
-          "$mainMod CTRL, left, workspace, r-1"
+          "$mainMod SHIFT , right, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow l' 'switch-workspace-to-other-monitor'"
+          "$mainMod SHIFT , left, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow r' 'switch-workspace-to-other-monitor'"
+          "$mainMod SHIFT , up, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow u' 'switch-workspace-to-other-monitor'"
+          "$mainMod SHIFT , down, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow d' 'switch-workspace-to-other-monitor'"
 
           # switch workspace
           "$mainMod, 1, workspace, 1"
@@ -437,12 +453,15 @@ in {
     };
 
     extraConfig = "
-# tablet mode
-      # monitor=eDP-1,preferred,0x0,1.0
-      # monitor=DP-1,1920x1080,0x1080,auto
+
+# # # tablet mode
+#       monitor=eDP-1,preferred,0x0,1.0
+#       # monitor=DP-1,1920x1080,0x1080,auto, transform, 2
+#       monitor=DP-1,preferred,0x1080,1.0
+
 # monitor mode
-      monitor=eDP-1,preferred,1920x0,1.0
-      monitor=DP-1,1920x1080,0x0,auto
+      monitor=eDP-1,preferred,0x0,1.0
+      monitor=DP-1,preferred,1920x0,1.0
 
       workspace=1, monitor:eDP-1
       workspace=2, monitor:eDP-1
@@ -478,6 +497,66 @@ in {
       # workspace=20, monitor:HDMI-A-1
 
 
+gestures {
+  workspace_swipe = true
+  workspace_swipe_cancel_ratio = 0.15
+}
+
+    plugin:touch_gestures {
+  # The default sensitivity is probably too low on tablet screens,
+  # I recommend turning it up to 4.0
+  sensitivity = 2.0
+
+  # must be >= 3
+  workspace_swipe_fingers = 3
+
+  # switching workspaces by swiping from an edge, this is separate from workspace_swipe_fingers
+  # and can be used at the same time
+  # possible values: l, r, u, or d
+  # to disable it set it to anything else
+  workspace_swipe_edge = d
+
+  # in milliseconds
+  long_press_delay = 400
+
+  # in pixels, the distance from the edge that is considered an edge
+  edge_margin = 15
+
+  experimental {
+    # send proper cancel events to windows instead of hacky touch_up events,
+    # NOT recommended as it crashed a few times, once it's stabilized I'll make it the default
+    send_cancel = 0
+  }
+}
+
+      
+plugin:touch_gestures {
+    # swipe left from right edge
+    hyprgrass-bind = , edge:r:l, workspace, +1
+    hyprgrass-bind = , edge:l:r, workspace, -1
+
+    # swipe up from bottom edge
+    hyprgrass-bind = , edge:d:u, exec, firefox
+
+    # swipe down from left edge
+    hyprgrass-bind = , edge:l:d, exec, pactl set-sink-volume @DEFAULT_SINK@ -4%
+
+    # swipe down with 4 fingers
+    # NOTE: swipe events only trigger for finger count of >= 3
+    hyprgrass-bind = , swipe:4:d, killactive
+
+    # swipe diagonally left and down with 3 fingers
+    # l (or r) must come before d and u
+    hyprgrass-bind = , swipe:3:ld, exec, foot
+
+    # tap with 3 fingers
+    # NOTE: tap events only trigger for finger count of >= 3
+    hyprgrass-bind = , tap:3, exec, foot
+
+    # longpress can trigger mouse binds:
+    hyprgrass-bindm = , longpress:2, movewindow
+    hyprgrass-bindm = , longpress:3, resizewindow
+}
     ";
   };
 }

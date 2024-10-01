@@ -1,0 +1,7 @@
+0000000000000000000000000000000000000000 5780accb6c6ef45988e225ea9b572532d0d44407 MattHandzel <matthewwalkosz@gmail.com> 1722482773 -0500	clone: from https://github.com/Frost-Phoenix/nixos-config
+5780accb6c6ef45988e225ea9b572532d0d44407 7b7cf5dd1bb5925fc7629d07799f80a29c9743a0 MattHandzel <matthewwalkosz@gmail.com> 1722570713 -0500	commit: adding thunderbird
+7b7cf5dd1bb5925fc7629d07799f80a29c9743a0 cc4ca155e1b93ec445c066e0d174cfabb02af4c9 MattHandzel <matthewwalkosz@gmail.com> 1722573412 -0500	commit: adding my old packages
+cc4ca155e1b93ec445c066e0d174cfabb02af4c9 f8e04c87ae0332a98084b49336700c310fbb363a MattHandzel <matthewwalkosz@gmail.com> 1722703500 -0500	commit: Woohoo, made script for dual monitor brightness management
+f8e04c87ae0332a98084b49336700c310fbb363a 61160b481e531a32cc6cb81e5ec40c50860c092a MattHandzel <matthewwalkosz@gmail.com> 1722747890 -0500	commit: I coded my very own scripts for my config! i can go to any application with a single key combination and its in its own workspace
+61160b481e531a32cc6cb81e5ec40c50860c092a 19f317aeac77577136b6ad084a3310650bafbc0c MattHandzel <matthewwalkosz@gmail.com> 1722834103 -0500	commit: new scripts
+19f317aeac77577136b6ad084a3310650bafbc0c 4bee5573c09c856ad7ff3a98c221b9b0d9f19408 MattHandzel <matthewwalkosz@gmail.com> 1726598118 -0500	commit: Added zen browser, made some changes for new browser

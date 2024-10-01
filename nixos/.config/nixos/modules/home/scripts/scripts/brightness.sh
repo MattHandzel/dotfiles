@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-main_monitor_brightnesses=(0.0 0.15 0.30 0.45 0.60 0.75)
+main_monitor_brightnesses=(0.0 0.20 0.40 0.60 0.80 1)
 external_monitor_brightnesses=(0.00 0.20 0.40 0.60 0.80 1.00)
 max_brightness_for_external_monitor=100
 

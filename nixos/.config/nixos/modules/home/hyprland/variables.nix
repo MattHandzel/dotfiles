@@ -1,9 +1,6 @@
-{ ... }:
-let 
+{...}: let
   sharedVariables = import ../../../shared_variables.nix;
-
-in
-{
+in {
   home.sessionVariables = {
     NIXOS_OZONE_WL = "1";
     __GL_GSYNC_ALLOWED = "0";
@@ -29,5 +26,6 @@ in
     CLUTTER_BACKEND = "wayland";
     GTK_THEME = "catpuccin";
     NIXOS_ROOT_DIR = sharedVariables.rootDirectory;
+    BROWSER = "zen";
   };
 }

@@ -43,6 +43,13 @@
     #     };
     #   };
     # };
+
+    syncthing = {
+      enable = true;
+      user = "matth";
+      dataDir = "/home/matth/.config/syncthing/";
+    };
+    thermald.enable = true;
   };
 
   services.tlp = {

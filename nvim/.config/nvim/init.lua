@@ -12,7 +12,6 @@ end
 vim.opt.rtp:prepend(lazypath)
 local lazy_config = require("configs.lazy")
 
-
 -- load plugins
 require("lazy").setup({
 	{
@@ -136,7 +135,7 @@ local options = {
 		["<C-e>"] = cmp.mapping.close(),
 		["<CR>"] = nil,
 
-		["<Tab>"] = cmp.mapping.confirm({
+		["<C-Tab>"] = cmp.mapping.confirm({
 			behavior = cmp.ConfirmBehavior.Insert,
 			select = true,
 		}),

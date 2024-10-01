@@ -28,12 +28,16 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 		local filetype = vim.fn.fnamemodify(filename, ":e") -- Get file extension
 
 		-- Define the filetypes and corresponding programs with flags
-		local filetypes = { "pdf", "wav", "wav", "zip" }
+		local filetypes = { "pdf", "wav", "wav", "zip", "jpg", "png", "gif", "jpeg" }
 		local programs = {
 			{ program = "zathura", pre_flags = "", post_flags = " &" }, -- For PDFs
 			{ program = "mpv", pre_flags = "", post_flags = " &" }, -- For WAVs
 			{ program = "mp3", pre_flags = "", post_flags = " &" }, -- For MP3s
 			{ program = "unzip", pre_flags = "", post_flags = " &" }, -- For ZIP files
+			{ program = "feh", pre_flags = "", post_flags = " &" },
+			{ program = "feh", pre_flags = "", post_flags = " &" },
+			{ program = "feh", pre_flags = "", post_flags = " &" },
+			{ program = "feh", pre_flags = "", post_flags = " &" },
 		}
 
 		-- Check if the filetype is handled by an external program

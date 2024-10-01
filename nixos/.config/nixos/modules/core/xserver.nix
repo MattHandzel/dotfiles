@@ -1,5 +1,11 @@
-{ pkgs, username, ... }: 
 {
+  pkgs,
+  username,
+  ...
+}: {
+  environment.systemPackages = with pkgs; [
+    libinput
+  ];
   services = {
     xserver = {
       enable = true;
@@ -18,8 +24,9 @@
         naturalScrolling = true;
         tapping = true;
         scrollMethod = "twofinger";
-
-        };
+        middleEmulation = true;
+        disableWhileTyping = true;
+      };
       # keyboard = {
       #   options = "fk:2";
       #

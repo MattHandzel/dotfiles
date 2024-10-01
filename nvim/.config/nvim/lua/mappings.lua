@@ -336,3 +336,5 @@ vim.keymap.set("n", "<leader>c?", require("CopilotChat").toggle)
 --#region
 --
 --
+--
+vim.keymap.set("i", "C-Z", "<Esc>ui", { noremap = true })
