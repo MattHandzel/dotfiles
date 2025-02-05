@@ -107,6 +107,8 @@ local options = {
 		{ name = "copilot" },
 		{ name = "copilot.vim" },
 		{ name = "cmp_yanky" },
+		{ name = "render-markdown" },
+		{ name = "obsidian" },
 	},
 }
 

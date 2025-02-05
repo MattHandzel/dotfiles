@@ -26,8 +26,8 @@
     };
     # enableNvidiaPatches = false;
     systemd.enable = true;
-    plugins = [
-      pkgs.hyprlandPlugins.hyprgrass
-    ];
+    # plugins = [
+    #   pkgs.hyprlandPlugins.hyprgrass
+    # ];
   };
 }

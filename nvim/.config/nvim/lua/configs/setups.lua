@@ -1,9 +1,9 @@
 require("neo-tree").setup()
 require("betterTerm").setup({
 	prefix = "term-",
-	startInserted = false,
+	startInserted = true,
 	position = "bot",
-	size = 15,
+	size = 12,
 })
 
 require("code_runner").setup({
@@ -228,6 +228,7 @@ require("dressing").setup({
 local lspconfig = require("lspconfig")
 lspconfig.ltex.setup({
 	checkfrequency = "save",
+	use_spellfile = true,
 })
 -- require("vimtex").setup({})
 

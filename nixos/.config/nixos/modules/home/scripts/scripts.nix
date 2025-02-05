@@ -1,9 +1,7 @@
-{ pkgs, ... }: 
-let
+{pkgs, ...}: let
   # Helper function to create a shell script bin
-
-removeShExtension = str: builtins.replaceStrings [".sh"] [""] str;
-makeShellScriptBin = script: pkgs.writeShellScriptBin ((removeShExtension (builtins.baseNameOf script)) ) (builtins.readFile script);
+  removeShExtension = str: builtins.replaceStrings [".sh"] [""] str;
+  makeShellScriptBin = script: pkgs.writeShellScriptBin (removeShExtension (builtins.baseNameOf script)) (builtins.readFile script);
 
   # List of shell scripts
   shellScripts = [
@@ -35,32 +33,33 @@ makeShellScriptBin = script: pkgs.writeShellScriptBin ((removeShExtension (built
     ./scripts/calendar.sh
     ./scripts/quick-capture.sh
     ./scripts/copy-to-clipboard.sh
+    ./scripts/record-lecture.sh
   ];
 
   # Create shell script bins
   shellScriptBins = map makeShellScriptBin shellScripts;
-
 in {
-  home.packages = with pkgs; shellScriptBins ++ [
-    bc # for brightness script
-    ddcutil # for brightness script
-    gum # run-nix-shell-on-new-tmux-session requires this
-    jq
-    nmap # for looking at devices on the wifi
+  home.packages = with pkgs;
+    shellScriptBins
+    ++ [
+      bc # for brightness script
+      ddcutil # for brightness script
+      gum # run-nix-shell-on-new-tmux-session requires this
+      jq
+      nmap # for looking at devices on the wifi
 
-    calcurse # for calendar script
-    vdirsyncer # for calendar script
+      calcurse # for calendar script
+      vdirsyncer # for calendar script
 
-
-
-    # quick capture
-    zenity
-    wl-clipboard
-    grim
-    wf-recorder
-    alsa-utils  # for arecord
-    ffmpeg
-
-  ];
+      # quick capture
+      zenity
+      wl-clipboard
+      grim
+      wf-recorder
+      alsa-utils # for arecord
+      ffmpeg
+    ]
+    ++ [
+      (import ./scripts/ocr-screenshot/default.nix {inherit pkgs;})
+    ];
 }
-

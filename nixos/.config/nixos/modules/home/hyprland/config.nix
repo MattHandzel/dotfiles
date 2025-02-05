@@ -1,13 +1,16 @@
 {lib, ...}: let
   sharedVariables = import ../../../shared_variables.nix;
   appKeyboardShortcuts = {
+    anki = "A";
     spotify = "S";
     discord = "D";
     obsidian = "O";
     thunderbird = "M";
     slack = "K";
     morgen = "C";
-    nautilus = "F";
+    yazi = "F";
+    whatsapp-for-linux = "W";
+    "io.github.alainm23.planify" = "T";
   };
 in let
   makeStringToIncaseSensitiveRegex = str: let
@@ -18,7 +21,7 @@ in let
     builtins.concatStringsSep "" (map charToClass (lib.strings.stringToCharacters str));
 
   singleton_windows = sharedVariables.singletonApplications;
-  floating_windows = ["imv" "mpv" ".blueman-manager-wrapped" "Volume Control"];
+  floating_windows = ["imv" "mpv" ".blueman-manager-wrapped" "Volume Control" "SpeedCrunch"];
   generateFloatingRules = floating_window: [
     "float,${floating_window}"
     "center,${floating_window}"
@@ -73,10 +76,15 @@ in {
         "poweralertd &"
         "waybar &"
         "swaync &"
-        "wl-paste --watch cliphist store &"
-        "gammastep -l  50.1047:-110.2062 -t 5700:1500 -b 1:.5 &"
+        "wl-paste --watch cliphist store --max-items 1000000 &"
+        "gammastep -l  0.1047:-110.2062 -t 5700:1500 -b 1:.5 &"
+        "sudo chmod 666 /dev/i2c-* &"
+        "io.github.alainm23.planify &"
+
+        "aw-server & "
+        "aw-watcher-window > /home/matth/log_for_aw.txt"
+        "aw-watcher-afk > /home/matth/log_for_aw1.txt"
         "hyprlock"
-        "sudo chmod 666 /dev/i2c-*"
       ];
 
       "device" = {
@@ -85,7 +93,7 @@ in {
         '';
       };
       input = {
-        kb_layout = "us,fr";
+        kb_layout = "pl,us";
         kb_options = "grp:alt_caps_toggle";
         numlock_by_default = true;
         follow_mouse = 1;
@@ -102,25 +110,6 @@ in {
           output = "eDP-1";
           # name = "04f31234:00-1fd2:8008";
         };
-        # "device" = [
-        #   {
-        #     output = "DP-1";
-        #   }
-        # ];
-        # {
-        #   output = "DP-1";
-        #   name = "wingcool-inc.-touchscreen-1";
-        # }
-
-        # ];
-        # "device" = {
-        #   "dell0a78:00-27c6:0d42-touchpad" = {
-        #     tap-to-click = true;
-        #     natural-scroll = true;
-        #     scroll-method = "two-finger";
-        #     # other options...
-        #   };
-        # };
       };
 
       general = {
@@ -152,7 +141,7 @@ in {
       };
 
       dwindle = {
-        no_gaps_when_only = true;
+        # no_gaps_when_only = true;
         force_split = 0;
         special_scale_factor = 1.0;
         split_width_multiplier = 1.0;
@@ -164,7 +153,7 @@ in {
       master = {
         new_status = "master";
         special_scale_factor = 1;
-        no_gaps_when_only = false;
+        # no_gaps_when_only = false;
       };
 
       decoration = {
@@ -188,13 +177,12 @@ in {
           xray = true;
         };
 
-        drop_shadow = true;
-
-        shadow_ignore_window = true;
-        shadow_offset = "0 2";
-        shadow_range = 20;
-        shadow_render_power = 3;
-        "col.shadow" = "rgba(00000055)";
+        shadow = {
+          ignore_window = true;
+          offset = "0 2";
+          range = 20;
+          render_power = 3;
+        };
       };
 
       animations = {
@@ -263,9 +251,11 @@ in {
           ",XF86AudioLowerVolume, exec, pamixer --decrease 5"
           ",XF86AudioRaiseVolume, exec, pamixer --increase 5"
 
+          ", XF86Calculator, exec, speedcrunch"
+
           # screenshot
-          "ALT, Print, exec, grimblast --notify --cursor --freeze save area ~/Pictures/$(date +'%Y-%m-%d-At-%Ih%Mm%Ss').png"
-          ",Print, exec, grimblast --notify --cursor --freeze copy area"
+          "ALT, Print, exec, ocr-screenshot && wl-paste -t text/plain > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').txt"
+          ",Print, exec, grimblast --notify --cursor --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
 
           "$mainMod, N, exec, quick-capture"
           "$mainMod ALT, N, exec, quick-capture"
@@ -369,8 +359,8 @@ in {
           ",XF86MonBrightnessDown, exec, brightness -d 1"
           "SHIFT,XF86MonBrightnessUp, exec, brightness -i 10"
           "SHIFT,XF86MonBrightnessDown, exec, brightness -d 10"
-          "CONTROL,XF86MonBrightnessUp, exec, wlr-randr --output DP-1 --on && wlr-randr --output eDP-1 --on" # turn displays off
-          "CONTROL,XF86MonBrightnessDown, exec, wlr-randr --output DP-1 --off && wlr-randr --output eDP-1 --off"
+          "CONTROL,XF86MonBrightnessUp, exec, hyprctl dispatch dpms on" # turn displays on
+          "CONTROL,XF86MonBrightnessDown, exec, hyprctl dispatch dpms off"
           "SHIFT CONTROL ALT,XF86MonBrightnessUp, exec, secondary-monitor-update"
           "SHIFT CONTROL ALT,XF86MonBrightnessDown, exec, secondary-monitor-update"
           "$mainMod, XF86MonBrightnessUp, exec, brightness -s 100"
@@ -459,10 +449,13 @@ in {
 #       # monitor=DP-1,1920x1080,0x1080,auto, transform, 2
 #       monitor=DP-1,preferred,0x1080,1.0
 
-# monitor mode
+# monitor mod ffe
       monitor=eDP-1,preferred,0x0,1.0
       monitor=DP-1,preferred,1920x0,1.0
 
+      # this
+
+      # workslpaces 1-10 on primary minotir
       workspace=1, monitor:eDP-1
       workspace=2, monitor:eDP-1
       workspace=3, monitor:eDP-1
@@ -474,6 +467,18 @@ in {
       workspace=9, monitor:eDP-1
       workspace=10, monitor:eDP-1
 
+
+      # # all workspaces on secondary monitor
+      # workspace=1, monitor:DP-1
+      # workspace=2, monitor:DP-1
+      # workspace=3, monitor:DP-1
+      # workspace=4, monitor:DP-1
+      # workspace=5, monitor:DP-1
+      # workspace=6, monitor:DP-1
+      # workspace=7, monitor:DP-1
+      # workspace=8, monitor:DP-1
+      # workspace=9, monitor:DP-1
+      # workspace=10, monitor:DP-1
 
       workspace=11, monitor:DP-1
       workspace=12, monitor:DP-1

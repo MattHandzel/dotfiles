@@ -28,7 +28,7 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 		local filetype = vim.fn.fnamemodify(filename, ":e") -- Get file extension
 
 		-- Define the filetypes and corresponding programs with flags
-		local filetypes = { "pdf", "wav", "wav", "zip", "jpg", "png", "gif", "jpeg" }
+		local filetypes = { "pdf", "wav", "wav", "zip", "jpg", "png", "gif", "jpeg", "xcf" }
 		local programs = {
 			{ program = "zathura", pre_flags = "", post_flags = " &" }, -- For PDFs
 			{ program = "mpv", pre_flags = "", post_flags = " &" }, -- For WAVs
@@ -38,13 +38,14 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 			{ program = "feh", pre_flags = "", post_flags = " &" },
 			{ program = "feh", pre_flags = "", post_flags = " &" },
 			{ program = "feh", pre_flags = "", post_flags = " &" },
+			{ program = "gimp", pre_flags = "", post_flags = " &" },
 		}
 
 		-- Check if the filetype is handled by an external program
 		for _, ft in ipairs(filetypes) do
 			if filetype == ft then
 				-- Delete the buffer before opening with external program
-				vim.api.nvim_buf_delete(buf, { force = true })
+				vim.api.nvim_buf_delete(buf, { force = false })
 				open_with_external_program(filetypes, programs, filename, filetype)
 				return
 			end

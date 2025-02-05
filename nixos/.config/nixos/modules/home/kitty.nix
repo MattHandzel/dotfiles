@@ -1,22 +1,21 @@
-{ pkgs, ... }: 
-{
+{pkgs, ...}: {
   programs.kitty = {
     enable = true;
 
     theme = "Catppuccin-Mocha";
-    
+
     font = {
       name = "JetBrainsMono Nerd Font";
       size = 11;
     };
-settings = {
+    settings = {
       confirm_os_window_close = 0;
-      background_opacity = "0.95";  
+      background_opacity = "0.95";
       window_padding_width = 10;
       scrollback_lines = 10000;
       enable_audio_bell = false;
       mouse_hide_wait = 60;
-      
+
       ## Aesthetics
       # background_image = "/path/to/your/image.png";
       # background_image_layout = "scaled";
@@ -66,10 +65,10 @@ settings = {
       shell = "tmux";
     };
 
-    keybindings = {  
+    keybindings = {
       "ctrl+backspace" = "send_text all \\x17";
       "ctrl+shift+backspace" = "send_text all \\x15";
-      "ctrl+delete" = "send_text all  \\x1b[3;5~";
+      "ctrl+delete" = "send_text all  \x1b[3;5~";
       # "ctrl+left" = "send_text all \\x01";
       # "ctrl+right" = "send_text all \\x05;
 

@@ -71,7 +71,10 @@ in {
       set -g @thumbs-reverse enabled
       # set -g @thumbs-regexp-1 '[\w-\.]+@([\w-]+\.)+[\w-]{2,4}' # Match emails
       # set -g @thumbs-regexp-2 '[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:' # Match MAC addresses
+      set -g @plugin 'akohlbecker/aw-watcher-tmux'
 
+      set -gq allow-passthrough on
+      set -g visual-activity off
 
       # set -g @thumbs-upcase-command 'tmux set-buffer -- {} && tmux paste-buffer | wl-copy'
 

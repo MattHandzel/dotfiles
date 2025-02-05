@@ -3,6 +3,11 @@
   config,
   ...
 }: {
+  nixpkgs.config.allowUnfree = true;
+  nixpkgs.config.permittedInsecurePackages = [
+    "electron-28.3.3"
+    "electron-30.5.1"
+  ];
   imports = [
     ./hardware-configuration.nix
     ./../../modules/core
@@ -11,7 +16,6 @@
   environment.systemPackages = with pkgs; [
     acpi
     brightnessctl
-    cpupower-gui
     powertop
     fprintd
     pam
@@ -27,7 +31,7 @@
       percentageLow = 20;
       percentageCritical = 5;
       percentageAction = 3;
-      criticalPowerAction = "PowerOff";
+      criticalPowerAction = "Hibernate";
     };
 
     # auto-cpufreq = {
@@ -52,6 +56,11 @@
     thermald.enable = true;
   };
 
+  services.udev.packages = [
+    pkgs.platformio-core
+    pkgs.openocd
+  ];
+
   services.tlp = {
     enable = true;
     settings = {
@@ -74,6 +83,8 @@
       RESTORE_DEVICE_STATE_ON_STARTUP = 1;
     };
   };
+
+  powerManagement.enable = true;
   powerManagement.cpuFreqGovernor = "performance";
 
   boot = {
@@ -89,7 +100,7 @@
   # services.printing.enable = true;
   # services.printing.drivers = [ pkgs.printer-drivers ];
 
-  home-manager.backupFileExtension = "backup";
+  home-manager.backupFileExtension = "backup1";
 
   services.fprintd.enable = true;
 }

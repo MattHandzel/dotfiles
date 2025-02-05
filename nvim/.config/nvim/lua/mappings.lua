@@ -118,6 +118,7 @@ vim.api.nvim_set_keymap("n", "N", "Nzzzv", { noremap = true })
 vim.api.nvim_set_keymap("n", "n", "nzzzv", { noremap = true })
 -- vim.api.nvim_set_keymap("n", "<leader>gD", "<leader>gDzt", { noremap = true })
 -- vim.api.nvim_set_keymap("n", "<leader>gd", "<leader>gdzt", { noremap = true })
+--
 
 -- Keymaps that should be there imo
 vim.api.nvim_set_keymap("i", "<C-BS>", "<C-w>", { noremap = true })
@@ -140,6 +141,8 @@ map("n", "<C-i>", "<C-i>zz", { noremap = true })
 map("n", "<S-H>", ":bprev<CR>", silent_no_remap)
 map("n", "<S-L>", ":bnext<CR>", silent_no_remap)
 map("n", "<leader>qq", "<cmd>Neotree close<CR><cmd>qa<CR>")
+map("n", "<leader>qw", "<cmd>Neotree close<CR><cmd>wqa<CR>")
+map("n", "<leader>q!", "<cmd>Neotree close<CR><cmd>qa!<CR>")
 map("n", "<C-Up>", "<cmd>resize +2<cr>", { desc = "Increase window height" })
 map("n", "<C-Down>", "<cmd>resize -2<cr>", { desc = "Decrease window height" })
 map("n", "<C-Left>", "<cmd>vertical resize -2<cr>", { desc = "Decrease window width" })
@@ -167,8 +170,18 @@ vim.api.nvim_set_keymap("n", "<M-d>d", '"_d', { noremap = true, silent = true })
 -- Map the function to a key combination in visual mode
 -- vim.api.nvim_set_keymap("n", "<M-p>", "p", { noremap = true })
 
-map("n", "j", "gj")
-map("n", "k", "gk")
+local function smart_movement(key)
+	return function()
+		if vim.v.count == 0 then
+			return "g" .. key
+		else
+			return key
+		end
+	end
+end
+
+vim.keymap.set("n", "j", smart_movement("j"), { expr = true })
+vim.keymap.set("n", "k", smart_movement("k"), { expr = true })
 
 map("n", "<leader>ww", "<C-W>p", { desc = "Other window", remap = true })
 map("n", "<leader>wd", "<C-W>c", { desc = "Delete window", remap = true })
@@ -338,3 +351,83 @@ vim.keymap.set("n", "<leader>c?", require("CopilotChat").toggle)
 --
 --
 vim.keymap.set("i", "C-Z", "<Esc>ui", { noremap = true })
+
+-- Obsidian
+--
+vim.keymap.set("n", "<leader>gl", "<cmd>ObsidianFollowLink<CR>", { noremap = true })
+vim.keymap.set("n", "<leader>od", "<cmd>ObsidianDailies<CR>", { noremap = true })
+
+local function getCurrentWeekNumber()
+	local current_date = os.date("*t")
+	local week_number = os.date("%W", os.time(current_date))
+	return tonumber(week_number) + 1
+end
+
+local week_number = getCurrentWeekNumber()
+local title = string.format("2025-W%d", week_number)
+
+vim.keymap.set("n", "<leader>ow", function()
+	vim.api.nvim_command(string.format(":ObsidianNewFromTemplate %s", "./notes/dailies/" .. title .. ".md"))
+end, { noremap = true })
+
+vim.keymap.set("n", "<leader>ot", ":ObsidianTemplate<CR>")
+
+map("n", "<leader>of", "<cmd>ObsidianSearch<CR>", { desc = "Obsidian Find" })
+
+-- text-case
+--<CMD>lua require('textcase').current_word('to_snake_case')<CR>
+--
+-- enabled_methods = {
+--    "to_upper_case",
+--    "to_lower_case",
+--    "to_snake_case",
+--    "to_dash_case",
+--    "to_title_dash_case",
+--    "to_constant_case",
+--    "to_dot_case",
+--    "to_comma_case",
+--    "to_phrase_case",
+--    "to_camel_case",
+--    "to_pascal_case",
+--    "to_title_case",
+--    "to_path_case",
+--    "to_upper_phrase_case",
+--    "to_lower_phrase_case",
+--  },
+
+local text_case_mappings = {
+	to_upper_case = "gaU",
+	to_lower_case = "gaL",
+	to_snake_case = "ga_",
+	to_dash_case = "ga-",
+	to_title_dash_case = "ga=",
+	to_constant_case = "gaC",
+	to_dot_case = "ga.",
+	to_comma_case = "ga,",
+	to_phrase_case = "gaP",
+	to_camel_case = "gaC",
+	to_pascal_case = "gaP",
+	to_title_case = "gaT",
+	to_path_case = "ga/",
+	to_upper_phrase_case = "gau",
+	to_lower_phrase_case = "gal",
+}
+
+for method, keymap in pairs(text_case_mappings) do
+	vim.keymap.set(
+		"n",
+		keymap,
+		string.format("<cmd>lua require('textcase').current_word('%s')<CR>", method),
+		{ noremap = true }
+	)
+	vim.keymap.set(
+		"x",
+		keymap,
+		string.format("<cmd>lua require('textcase').current_word('%s')<CR>", method),
+		{ noremap = true }
+	)
+end
+
+vim.keymap.set("n", "ga?", "<cmd>TextCaseOpenTelescope<CR>", { noremap = true })
+
+vim.keymap.set("n", "<leader>nl", "<cmd>SemanticSearch<CR>", { noremap = true })

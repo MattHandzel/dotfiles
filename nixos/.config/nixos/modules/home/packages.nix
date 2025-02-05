@@ -29,7 +29,6 @@ in {
     nitch # systhem fetch util
     nix-prefetch-github
     pipes # terminal screensaver
-    prismlauncher # minecraft launcher
     ripgrep # grep replacement
     soundwireserver # pass audio to android phone
     tdf # cli pdf viewer
@@ -48,6 +47,7 @@ in {
 
     # Python
     python3
+    conda
 
     bleachbit # cache cleaner
     cmatrix
@@ -136,9 +136,7 @@ in {
     #
     #
     stylua
-
-    vimPlugins.nvchad
-    vimPlugins.nvchad-ui
+    luarocks-nix
 
     prusa-slicer # prusa-slicer
 
@@ -155,7 +153,16 @@ in {
     tigervnc
     espanso-wayland
 
-    google-chrome
+    planify
+    speedcrunch
+    ntfy-sh
+
+    xdg-desktop-portal
+    firefox
+
+    # xdg-desktop-port-kde
+    # zulu # thinkorswim
+
     #
     #
     # gnumake42
@@ -165,5 +172,18 @@ in {
     # openconnect_openssl
     # ninja
     # gh
+
+    inputs.notion-repackaged.packages.x86_64-linux.notion-repackaged
+    kdePackages.kdenlive
+    qbittorrent-enhanced
+    platformio
+
+    docker
+    vdhcoapp # for browser extensio
+
+    go
+    gopls
+    delve
+    gcc
   ];
 }

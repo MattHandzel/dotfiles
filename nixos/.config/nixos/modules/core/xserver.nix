@@ -10,7 +10,7 @@
     xserver = {
       enable = true;
       xkb.layout = "us";
-      xkbOptions = "fn:fnmode";
+      xkb.options = "fn:fnmode";
       exportConfiguration = true;
     };
 

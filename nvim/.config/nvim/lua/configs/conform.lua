@@ -9,6 +9,10 @@ local options = {
 		python = { "black" },
 		py = { "black" },
 		nix = { "alejandra" },
+		javascript = { "prettier" },
+		typescript = { "prettier" },
+		json = { "prettier" },
+		go = { "gofmt" },
 	},
 }
 

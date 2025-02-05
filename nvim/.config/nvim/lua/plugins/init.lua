@@ -8,10 +8,110 @@ return {
 	},
 
 	{
+		"ActivityWatch/aw-watcher-vim",
+		event = "VeryLazy",
+		config = function()
+			vim.cmd("AWStart")
+			-- require("aw-watcher-vim").start()
+		end,
+	},
+	-- {
+	-- 	"vhyrro/luarocks.nvim",
+	-- 	priority = 1001, -- this plugin needs to run before anything else
+	-- 	opts = {
+	-- 		rocks = { "magick" },
+	-- 	},
+	-- },
+	{
+		"3rd/image.nvim",
+		event = "VeryLazy",
+		config = function()
+			require("image").setup({
+				backend = "kitty",
+				processor = "magick_rock", -- or "magick_cli"
+				integrations = {
+					markdown = {
+						enabled = true,
+						clear_in_insert_mode = false,
+						download_remote_images = true,
+						only_render_image_at_cursor = false,
+						filetypes = { "markdown", "vimwiki" },
+					},
+					neorg = {
+						enabled = true,
+						filetypes = { "norg" },
+					},
+					typst = {
+						enabled = true,
+						filetypes = { "typst" },
+					},
+					html = {
+						enabled = false,
+					},
+					css = {
+						enabled = false,
+					},
+				},
+				max_width = nil,
+				max_height = nil,
+				max_width_window_percentage = nil,
+				max_height_window_percentage = 50,
+				window_overlap_clear_enabled = false, -- toggles images when windows are overlapped
+				window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
+				editor_only_render_when_focused = false, -- auto show/hide images when the editor gains/looses focus
+				tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
+				hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" }, -- render image files as images when opened
+			})
+		end,
+	},
+	{
+		"nvim-treesitter/nvim-treesitter",
+	},
+	-- config = function()
+	-- 	require("image").setup({
+	-- 		backend = "kitty",
+	-- 		processor = "magick_rock", -- or "magick_cli"
+	-- 		integrations = {
+	-- 			markdown = {
+	-- 				enabled = true,
+	-- 				clear_in_insert_mode = false,
+	-- 				download_remote_images = true,
+	-- 				only_render_image_at_cursor = false,
+	-- 				filetypes = { "markdown", "vimwiki" }, -- markdown extensions (ie. quarto) can go here
+	-- 			},
+	-- 			neorg = {
+	-- 				enabled = true,
+	-- 				filetypes = { "norg" },
+	-- 			},
+	-- 			typst = {
+	-- 				enabled = true,
+	-- 				filetypes = { "typst" },
+	-- 			},
+	-- 			html = {
+	-- 				enabled = false,
+	-- 			},
+	-- 			css = {
+	-- 				enabled = false,
+	-- 			},
+	-- 		},
+	-- 		max_width = nil,
+	-- 		max_height = nil,
+	-- 		max_width_window_percentage = nil,
+	-- 		max_height_window_percentage = 50,
+	-- 		window_overlap_clear_enabled = false, -- toggles images when windows are overlapped
+	-- 		window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
+	-- 		editor_only_render_when_focused = false, -- auto show/hide images when the editor gains/looses focus
+	-- 		tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
+	-- 		hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" }, -- render image files as images when opened
+	-- 	})
+	-- end,
+	-- },
+
+	{
 		"nvim-neorg/neorg",
 		build = ":Neorg sync-parsers",
 		dependencies = { "nvim-lua/plenary.nvim" },
-		lazy = false,
+		event = "VeryLazy",
 		config = function()
 			require("neorg").setup({
 				load = {
@@ -62,13 +162,112 @@ return {
 		opts = {},
 		config = function()
 			require("render-markdown").setup({
+				heading = {
+					-- Turn on / off heading icon & background rendering
+					enabled = true,
+					-- Turn on / off any sign column related rendering
+					sign = true,
+					-- Determines how icons fill the available space:
+					--  right:   '#'s are concealed and icon is appended to right side
+					--  inline:  '#'s are concealed and icon is inlined on left side
+					--  overlay: icon is left padded with spaces and inserted on left hiding any additional '#'
+					position = "inline",
+					-- Replaces '#+' of 'atx_h._marker'
+					-- The number of '#' in the heading determines the 'level'
+					-- The 'level' is used to index into the list using a cycle
+					icons = { "󰲡 ", "󰲣 ", "󰲥 ", "󰲧 ", "󰲩 ", "󰲫 " },
+					-- Added to the sign column if enabled
+					-- The 'level' is used to index into the list using a cycle
+					signs = { "󰫎 " },
+					-- Width of the heading background:
+					--  block: width of the heading text
+					--  full:  full width of the window
+					-- Can also be a list of the above values in which case the 'level' is used
+					-- to index into the list using a clamp
+					width = "block",
+					-- Amount of margin to add to the left of headings
+					-- If a floating point value < 1 is provided it is treated as a percentage of the available window space
+					-- Margin available space is computed after accounting for padding
+					-- Can also be a list of numbers in which case the 'level' is used to index into the list using a clamp
+					left_margin = 0.00,
+					-- Amount of padding to add to the left of headings
+					-- If a floating point value < 1 is provided it is treated as a percentage of the available window space
+					-- Can also be a list of numbers in which case the 'level' is used to index into the list using a clamp
+					left_pad = 0,
+					-- Amount of padding to add to the right of headings when width is 'block'
+					-- If a floating point value < 1 is provided it is treated as a percentage of the available window space
+					-- Can also be a list of numbers in which case the 'level' is used to index into the list using a clamp
+					right_pad = 0,
+					-- Minimum width to use for headings when width is 'block'
+					-- Can also be a list of integers in which case the 'level' is used to index into the list using a clamp
+					min_width = 0,
+					-- Determines if a border is added above and below headings
+					-- Can also be a list of booleans in which case the 'level' is used to index into the list using a clamp
+					border = false,
+					-- Always use virtual lines for heading borders instead of attempting to use empty lines
+					border_virtual = true,
+					-- Highlight the start of the border using the foreground highlight
+					border_prefix = true,
+					-- Used above heading for border
+					above = "▄",
+					-- Used below heading for border
+					below = "▀",
+					-- The 'level' is used to index into the list using a clamp
+					-- Highlight for the heading icon and extends through the entire line
+					backgrounds = {
+						"RenderMarkdownH1Bg",
+						"RenderMarkdownH2Bg",
+						"RenderMarkdownH3Bg",
+						"RenderMarkdownH4Bg",
+						"RenderMarkdownH5Bg",
+						"RenderMarkdownH6Bg",
+					},
+					-- The 'level' is used to index into the list using a clamp
+					-- Highlight for the heading and sign icons
+					foregrounds = {
+						"RenderMarkdownH1",
+						"RenderMarkdownH2",
+						"RenderMarkdownH3",
+						"RenderMarkdownH4",
+						"RenderMarkdownH5",
+						"RenderMarkdownH6",
+					},
+				},
+				checkbox = {
+					enabled = true,
+					position = "inline",
+					unchecked = {
+						icon = "󰄱 ",
+						highlight = "rendermarkdownunchecked",
+						scope_highlight = nil,
+					},
+					checked = {
+						icon = "󰱒 ",
+						highlight = "rendermarkdownchecked",
+						scope_highlight = nil,
+					},
+					custom = {
+						important = {
+							raw = "[!]",
+							rendered = " ",
+							highlight = "DiagnosticError",
+							scope_highlight = nil,
+						},
+						pending = {
+							raw = "[>]",
+							rendered = "󰥔 ",
+							highlight = "rendermarkdowntodo",
+							scope_highlight = nil,
+						},
+					},
+				},
 				-- Options go here
 			})
 		end,
 		event = "VeryLazy",
 		-- dependencies = { "nvim-treesitter/nvim-treesitter", "echasnovski/mini.nvim" }, -- if you use the mini.nvim suite
-		-- dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.icons' }, -- if you use standalone mini plugins
-		dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" }, -- if you prefer nvim-web-devicons
+		dependencies = { "nvim-treesitter/nvim-treesitter", "echasnovski/mini.icons" }, -- if you use standalone mini plugins
+		-- dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" }, -- if you prefer nvim-web-devicons
 	},
 
 	{
@@ -89,6 +288,23 @@ return {
 		init = function() end,
 		event = "VeryLazy",
 	},
+	{
+		"rareitems/anki.nvim",
+		-- lazy -- don't lazy it, it tries to be as lazy possible and it needs to add a filetype association
+		event = "VeryLazy",
+		opts = {
+			{
+				-- this function will add support for associating '.anki' extension with both 'anki' and 'tex' filetype.
+				tex_support = true,
+				models = {
+					-- Here you specify which notetype should be associated with which deck
+					NoteType = "PathToDeck",
+					["Basic"] = "Deck",
+					["Super Basic"] = "Deck::ChildDeck",
+				},
+			},
+		},
+	},
 
 	{
 
@@ -101,17 +317,314 @@ return {
 		-- end,
 
 		ft = { "markdown" },
-		dependencies = { "nvim-lua/plenary.nvim", "nvim-telescope/telescope.nvim", "nvim-treesitter/nvim-treesitter" },
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+			"nvim-telescope/telescope.nvim",
+			"nvim-treesitter/nvim-treesitter",
+			"hrsh7th/nvim-cmp",
+		},
 		opts = {
+			ui = {
+				enable = false, -- set to false to disable all additional syntax features
+				checkboxes = {
+					-- NOTE: the 'char' value has to be a single character, and the highlight groups are defined below.
+					[" "] = { char = "󰄱", hl_group = "ObsidianTodo" },
+					["x"] = { char = "", hl_group = "ObsidianDone" },
+					[">"] = { char = "", hl_group = "ObsidianRightArrow" },
+					["!"] = { char = "", hl_group = "ObsidianImportant" },
+					-- Replace the above with this if you don't have a patched font:
+					-- [" "] = { char = "☐", hl_group = "ObsidianTodo" },
+					-- ["x"] = { char = "✔", hl_group = "ObsidianDone" },
+
+					-- You can also add more custom ones...
+				},
+			},
 			workspaces = {
 				{
 					name = "main",
 					path = "~/Obsidian/Main",
 				},
 			},
+			daily_notes = {
+				-- Optional, if you keep daily notes in a separate directory.
+				folder = "notes/dailies",
+				-- Optional, if you want to change the date format for the ID of daily notes.
+				date_format = "%Y-%m-%d",
+				-- Optional, if you want to change the date format of the default alias of daily notes.
+				alias_format = "%B %-d, %Y",
+				-- Optional, default tags to add to each new daily note created.
+				default_tags = { "daily-notes" },
+				-- Optional, if you want to automatically insert a template from your template directory like 'daily.md'
+				template = "daily note",
+			},
+			templates = {
+				folder = "templates",
+				date_format = "%Y-%m-%d",
+				time_format = "%H:%M",
+				-- A map for custom variables, the key should be the variable and the value a function
+				substitutions = {},
+			},
+
+			-- Optional, by default when you use `:ObsidianFollowLink` on a link to an external
+			-- URL it will be ignored but you can customize this behavior here.
+			---@param url string
+			follow_url_func = function(url)
+				-- Open the URL in the default web browser.
+				vim.fn.jobstart({ "xdg-open", url }) -- linux
+				-- vim.cmd(':silent exec "!start ' .. url .. '"') -- Windows
+				-- vim.ui.open(url) -- need Neovim 0.10.0+
+			end,
+
+			-- Optional, by default when you use `:ObsidianFollowLink` on a link to an image
+			-- file it will be ignored but you can customize this behavior here.
+			---@param img string
+			follow_img_func = function(img)
+				vim.fn.jobstart({ "xdg-open", img }) -- linux
+				-- vim.cmd(':silent exec "!start ' .. url .. '"') -- Windows
+			end,
 
 			--     -- your configuration comes here
+			completion = {
+				-- Set to false to disable completion.
+				nvim_cmp = true,
+				-- Trigger completion at 2 chars.
+				min_chars = 2,
+			},
+			note_frontmatter_func = function(note)
+				-- List of articles to exclude from capitalization
+				local articles = {
+					["a"] = true,
+					["an"] = true,
+					["the"] = true,
+					["and"] = true,
+					["or"] = true,
+					["but"] = true,
+					["of"] = true,
+					["in"] = true,
+					["on"] = true,
+					["with"] = true,
+					["to"] = true,
+					["for"] = true,
+				}
+
+				-- Helper function to capitalize words, excluding articles
+				local function capitalize_title_simple(title)
+					local words = {}
+					local first_word = true
+
+					for _, word in ipairs(vim.split(title, " ", { plain = true })) do
+						word = word:lower()
+						if first_word or not articles[word] then
+							table.insert(words, word:sub(1, 1):upper() .. word:sub(2)) -- Capitalize first letter
+						else
+							table.insert(words, word) -- Keep articles lowercase
+						end
+						first_word = false
+					end
+
+					return table.concat(words, " ")
+				end
+
+				-- Add the title of the note as an alias
+				if note.title == nil and note.id then
+					note.title = capitalize_title_simple(note.id:gsub("%-", " "))
+					print("We are setting the title to", note.id)
+				end
+
+				if note.title then
+					note:add_alias(note.title)
+					local formatted_name = note.title:lower():gsub("%s", "-")
+					if formatted_name ~= note.title:lower() then
+						note:add_alias(formatted_name)
+					end
+					-- formatted_name = capitalize_title_simple(note.title:gsub("%-", " "))
+					-- if formatted_name ~= note.title then
+					-- 	note:add_alias(formatted_name)
+					-- end
+				end
+
+				-- Add current date to metadata
+				local current_date = os.date("%Y-%m-%d") -- Format: YYYY-MM-DD
+				if note.metadata == nil then
+					note.metadata = {}
+				end
+
+				if note.metadata.created_date == nil then
+					note.metadata.created_date = current_date
+				end
+				note.metadata.last_edited_date = current_date
+
+				local out = { id = note.id, aliases = note.aliases, tags = note.tags }
+
+				-- Ensure manually added fields in the frontmatter are kept
+				if note.metadata ~= nil and not vim.tbl_isempty(note.metadata) then
+					for k, v in pairs(note.metadata) do
+						out[k] = v
+					end
+				end
+
+				return out
+			end,
 		},
+	},
+	{
+		default_keymappings_enabled = false,
+		"johmsalas/text-case.nvim",
+		dependencies = { "nvim-telescope/telescope.nvim" },
+		config = function()
+			require("textcase").setup({})
+			require("telescope").load_extension("textcase")
+		end,
+		prefix = "ga",
+		keys = {
+			"ga", -- Default invocation prefix
+			{ "ga?", "<cmd>TextCaseOpenTelescope<CR>", mode = { "n", "x" }, desc = "Telescope" },
+		},
+		cmd = {
+			-- NOTE: The Subs command name can be customized via the option "substitude_command_name"
+			"Subs",
+			"TextCaseOpenTelescope",
+			"TextCaseOpenTelescopeQuickChange",
+			"TextCaseOpenTelescopeLSPChange",
+			"TextCaseStartReplacingCommand",
+		},
+		-- If you want to use the interactive feature of the `Subs` command right away, text-case.nvim
+		-- has to be loaded on startup. Otherwise, the interactive feature of the `Subs` will only be
+		-- available after the first executing of it or after a keymap of text-case.nvim has been used.
+		lazy = false,
+	},
+
+	{
+		"s1n7ax/nvim-window-picker",
+		name = "window-picker",
+		event = "VeryLazy",
+		version = "2.*",
+		config = function()
+			require("window-picker").setup({
+				-- type of hints you want to get
+				-- following types are supported
+				-- 'statusline-winbar' | 'floating-big-letter' | 'floating-letter'
+				-- 'statusline-winbar' draw on 'statusline' if possible, if not 'winbar' will be
+				-- 'floating-big-letter' draw big letter on a floating window
+				-- 'floating-letter' draw letter on a floating window
+				-- used
+				hint = "statusline-winbar",
+
+				-- when you go to window selection mode, status bar will show one of
+				-- following letters on them so you can use that letter to select the window
+				selection_chars = "AOEIHTNSUD",
+
+				-- This section contains picker specific configurations
+				picker_config = {
+					statusline_winbar_picker = {
+						-- You can change the display string in status bar.
+						-- It supports '%' printf style. Such as `return char .. ': %f'` to display
+						-- buffer file path. See :h 'stl' for details.
+						selection_display = function(char, windowid)
+							return "%=" .. char .. "%="
+						end,
+
+						-- whether you want to use winbar instead of the statusline
+						-- "always" means to always use winbar,
+						-- "never" means to never use winbar
+						-- "smart" means to use winbar if cmdheight=0 and statusline if cmdheight > 0
+						use_winbar = "never", -- "always" | "never" | "smart"
+					},
+
+					floating_big_letter = {
+						-- window picker plugin provides bunch of big letter fonts
+						-- fonts will be lazy loaded as they are being requested
+						-- additionally, user can pass in a table of fonts in to font
+						-- property to use instead
+
+						font = "ansi-shadow", -- ansi-shadow |
+					},
+				},
+
+				-- whether to show 'Pick window:' prompt
+				show_prompt = true,
+
+				-- prompt message to show to get the user input
+				prompt_message = "Pick window: ",
+
+				-- if you want to manually filter out the windows, pass in a function that
+				-- takes two parameters. You should return window ids that should be
+				-- included in the selection
+				-- EX:-
+				-- function(window_ids, filters)
+				--    -- folder the window_ids
+				--    -- return only the ones you want to include
+				--    return {1000, 1001}
+				-- end
+				filter_func = nil,
+
+				-- following filters are only applied when you are using the default filter
+				-- defined by this plugin. If you pass in a function to "filter_func"
+				-- property, you are on your own
+				filter_rules = {
+					-- when there is only one window available to pick from, use that window
+					-- without prompting the user to select
+					autoselect_one = true,
+
+					-- whether you want to include the window you are currently on to window
+					-- selection or not
+					include_current_win = false,
+
+					-- whether to include windows marked as unfocusable
+					include_unfocusable_windows = false,
+
+					-- filter using buffer options
+					bo = {
+						-- if the file type is one of following, the window will be ignored
+						filetype = { "NvimTree", "neo-tree", "notify", "snacks_notif" },
+
+						-- if the file type is one of following, the window will be ignored
+						buftype = { "terminal" },
+					},
+
+					-- filter using window options
+					wo = {},
+
+					-- if the file path contains one of following names, the window
+					-- will be ignored
+					file_path_contains = {},
+
+					-- if the file name contains one of following names, the window will be
+					-- ignored
+					file_name_contains = {},
+				},
+
+				-- You can pass in the highlight name or a table of content to set as
+				-- highlight
+				highlights = {
+					enabled = true,
+					statusline = {
+						focused = {
+							fg = "#ededed",
+							bg = "#e35e4f",
+							bold = true,
+						},
+						unfocused = {
+							fg = "#ededed",
+							bg = "#44cc41",
+							bold = true,
+						},
+					},
+					winbar = {
+						focused = {
+							fg = "#ededed",
+							bg = "#e35e4f",
+							bold = true,
+						},
+						unfocused = {
+							fg = "#ededed",
+							bg = "#44cc41",
+							bold = true,
+						},
+					},
+				},
+			})
+		end,
 	},
 
 	-- {
@@ -121,6 +634,7 @@ return {
 	{
 		"folke/noice.nvim",
 		event = "VeryLazy",
+
 		opts = {
 			lsp = {
 				override = {
@@ -136,6 +650,14 @@ return {
 				{
 					filter = {
 						event = "msg_show",
+						kind = "",
+						find = "line", -- filter out the filename/path notification on exiting insert mode
+					},
+					opts = { skip = true },
+				},
+				{
+					filter = {
+						event = "msg_show",
 						any = {
 							{ find = "%d+L, %d+B" },
 							{ find = "; after #%d+" },
@@ -144,6 +666,15 @@ return {
 					},
 					view = "mini",
 				},
+				-- routes = {
+				-- 	{
+				-- 		filter = {
+				-- 			event = "msg_showmode",
+				-- 			-- find = "line %d+ of %d+",
+				-- 		},
+				-- 		opts = { skip = true },
+				-- 	},
+				-- },
 			},
 			presets = {
 				bottom_search = true,
@@ -167,6 +698,51 @@ return {
 		"stevearc/dressing.nvim",
 		opts = {},
 	},
+
+	{
+
+		event = "VeryLazy",
+		"TobinPalmer/pastify.nvim",
+		cmd = { "Pastify", "PastifyAfter" },
+		config = function()
+			-- require("pastify").setup({
+			-- 	opts = {
+			-- 		absolute_path = false, -- use absolute or relative path to the working directory
+			-- 		apikey = "", -- Api key, required for online saving
+			-- 		local_path = "/assets/imgs/", -- The path to put local files in, ex <cwd>/assets/images/<filename>.png
+			-- 		save = "local", -- Either 'local' or 'online' or 'local_file'
+			-- 		filename = "", -- The file name to save the image as, if empty pastify will ask for a name
+			-- 		-- Example function for the file name that I like to use:
+			-- 		-- filename = function() return vim.fn.expand("%:t:r") .. '_' .. os.date("%Y-%m-%d_%H-%M-%S") end,
+			-- 		-- Example result: 'file_2021-08-01_12-00-00'
+			-- 		default_ft = "markdown", -- Default filetype to use
+			-- 	},
+			-- 	ft = { -- Custom snippets for different filetypes, will replace $IMG$ with the image url
+			-- 		html = '<img src="$IMG$" alt="">',
+			-- 		markdown = "![]($IMG$)",
+			-- 		tex = [[\includegraphics[width=\linewidth]{$IMG$}]],
+			-- 		css = 'background-image: url("$IMG$");',
+			-- 		js = 'const img = new Image(); img.src = "$IMG$";',
+			-- 		xml = '<image src="$IMG$" />',
+			-- 		php = '<?php echo "<img src="$IMG$" alt="">"; ?>',
+			-- 		python = "# $IMG$",
+			-- 		java = "// $IMG$",
+			-- 		c = "// $IMG$",
+			-- 		cpp = "// $IMG$",
+			-- 		swift = "// $IMG$",
+			-- 		kotlin = "// $IMG$",
+			-- 		go = "// $IMG$",
+			-- 		typescript = "// $IMG$",
+			-- 		ruby = "# $IMG$",
+			-- 		vhdl = "-- $IMG$",
+			-- 		verilog = "// $IMG$",
+			-- 		systemverilog = "// $IMG$",
+			-- 		lua = "-- $IMG$",
+			-- 	},
+			-- })
+		end,
+	},
+
 	{
 		"gbprod/yanky.nvim",
 		opts = function()
@@ -279,7 +855,8 @@ return {
 		config = function()
 			require("auto-session").setup({
 				log_level = "warning",
-				-- auto_session_suppress_dirs = { "~/", "~/Downloads", "/" },
+
+				auto_session_suppress_dirs = { "~/", "~/Downloads", "/", "~/notes" },
 			})
 		end,
 	},
@@ -314,28 +891,28 @@ return {
 			-- end)
 		end,
 	},
-	-- {
-	-- 	"nvim-cmp",
-	-- 	dependencies = {
-	-- 		{
-	-- 			"zbirenbaum/copilot-cmp",
-	-- 			dependencies = "copilot.lua",
-	-- 			opts = {},
-	-- 			config = function(_, opts)
-	-- 				local copilot_cmp = require("copilot_cmp")
-	-- 				copilot_cmp.setup(opts)
-	--
-	-- 				-- attach cmp source whenever copilot attaches
-	-- 				-- fixes lazy-loading issues with the copilot cmp source
-	-- 				-- require("lazyvim.util").lsp.on_attach(function(client)
-	-- 				-- 	if client.name == "copilot" then
-	-- 				-- 		copilot_cmp._on_insert_enter({})
-	-- 				-- 	end
-	-- 				-- end)
-	-- 			end,
-	-- 		},
-	-- 	},
-	-- },
+	{
+		"nvim-cmp",
+		dependencies = {
+			{
+				"zbirenbaum/copilot-cmp",
+				dependencies = "copilot.lua",
+				opts = {},
+				config = function(_, opts)
+					local copilot_cmp = require("copilot_cmp")
+					copilot_cmp.setup(opts)
+
+					-- attach cmp source whenever copilot attaches
+					-- fixes lazy-loading issues with the copilot cmp source
+					-- require("lazyvim.util").lsp.on_attach(function(client)
+					-- 	if client.name == "copilot" then
+					-- 		copilot_cmp._on_insert_enter({})
+					-- 	end
+					-- end)
+				end,
+			},
+		},
+	},
 
 	{
 		"neovim/nvim-lspconfig",
@@ -355,6 +932,8 @@ return {
 				"stylua",
 				"clangd",
 				"clang-format",
+				"markdown",
+				"markdown_inline",
 			},
 		},
 	},
@@ -442,6 +1021,42 @@ return {
 		lazy = false, -- or ft = 'toggleterm' if you use toggleterm.nvim
 		version = "1.*",
 	},
+	{
+		event = "VeryLazy",
+		"pocco81/auto-save.nvim",
+		config = function()
+			require("auto-save").setup({
+				enabled = true, -- start auto-save when the plugin is loaded (i.e. when your package manager loads it)
+				execution_message = {
+					message = function() -- message to print on save
+						return ("AutoSave: saved at " .. vim.fn.strftime("%H:%M:%S"))
+					end,
+					dim = 0.18, -- dim the color of `message`
+					cleaning_interval = 1250, -- (milliseconds) automatically clean MsgArea after displaying `message`. See :h MsgArea
+				},
+				trigger_events = { "InsertLeave", "TextChanged" }, -- vim events that trigger auto-save. See :h events
+				condition = function(buf)
+					local fn = vim.fn
+					local utils = require("auto-save.utils.data")
+
+					if fn.getbufvar(buf, "&modifiable") == 1 and utils.not_in(fn.getbufvar(buf, "&filetype"), {}) then
+						return true -- met condition(s), can save
+					end
+					return false -- can't save
+				end,
+				write_all_buffers = false, -- write all buffers when the current one meets `condition`
+				debounce_delay = 1000, -- saves the file at most every `debounce_delay` milliseconds
+				callbacks = { -- functions to be executed at different intervals
+					enabling = nil, -- ran when enabling auto-save
+					disabling = nil, -- ran when disabling auto-save
+					before_asserting_save = nil, -- ran before checking `condition`
+					before_saving = nil, -- ran before doing the actual save
+					after_saving = nil, -- ran after doing the actual save
+				},
+			})
+		end,
+	},
+
 	{
 		"nvim-pack/nvim-spectre",
 		build = false,
@@ -681,4 +1296,92 @@ return {
       { "<leader>sT", "<cmd>TodoTelescope keywords=TODO,FIX,FIXME<cr>",    desc = "Todo/Fix/Fixme" },
     },
 	},
+
+	-- Plug 'romgrk/todoist.nvim', { 'do': ':TodoistInstall' }
+	{
+		"romgrk/todoist.nvim",
+		run = ":TodoistInstall",
+		event = "VeryLazy",
+	},
+	{ -- required by autolink my plan
+		"MunifTanjim/nui.nvim",
+		requires = { "nvim-lua/plenary.nvim" },
+	},
+	{
+		"MattHandzel/semantic-search-nvim",
+
+		event = "VeryLazy",
+
+		config = function()
+			-- require("semantic-search-nvim").setup({
+			-- 	threshold = 0.6,
+			-- }) -- custom command
+		end,
+	},
+
+	{
+		"3rd/diagram.nvim",
+		event = "VeryLazy",
+		dependencies = { "3rd/image.nvim" },
+		config = function()
+			require("diagram").setup({
+				default_engine = "mermaid",
+				filetypes = {
+					markdown = "mermaid",
+					plantuml = "plantuml",
+					norg = "mermaid",
+				},
+			})
+		end,
+	},
+	{
+		"Groveer/plantuml.nvim",
+		event = "VeryLazy",
+		config = function()
+			require("plantuml").setup({ renderer = "text" })
+		end,
+	},
+
+	{ "mfussenegger/nvim-dap", event = "VeryLazy" },
+	-- {
+	-- 	"olexsmir/gopher.nvim",
+	-- 	ft = "go",
+	-- 	config = function()
+	-- 		require("gopher").setup({
+	-- 			commands = {
+	-- 				go = "go",
+	-- 				gomodifytags = "gomodifytags",
+	-- 				gotests = "gotests",
+	-- 				impl = "impl",
+	-- 				iferr = "iferr",
+	-- 				dlv = "dlv",
+	-- 			},
+	-- 			gotests = {
+	-- 				-- gotests doesn't have template named "default" so this plugin uses "default" to set the default template
+	-- 				template = "default",
+	-- 				-- path to a directory containing custom test code templates
+	-- 				template_dir = nil,
+	-- 				-- switch table tests from using slice to map (with test name for the key)
+	-- 				-- works only with gotests installed from develop branch
+	-- 				named = false,
+	-- 			},
+	-- 			gotag = {
+	-- 				transform = "snakecase",
+	-- 			},
+	-- 		})
+	-- 	end,
+	-- 	-- branch = "develop", -- if you want develop branch
+	-- 	-- keep in mind, it might break everything
+	-- 	dependencies = {
+	-- 		"nvim-lua/plenary.nvim",
+	-- 		"nvim-treesitter/nvim-treesitter",
+	-- 		"mfussenegger/nvim-dap", -- (optional) only if you use `gopher.dap`
+	-- 	},
+	-- 	-- (optional) will update plugin's deps on every update
+	-- 	build = function()
+	-- 		vim.cmd.GoInstallDeps()
+	-- 	end,
+	-- 	---@type gopher.Config
+	-- 	opts = {},
+	-- },
 }

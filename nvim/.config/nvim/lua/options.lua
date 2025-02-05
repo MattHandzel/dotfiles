@@ -52,10 +52,14 @@ opt.whichwrap:append("<>[]hl")
 -- g.mapleader = " "
 
 -- disable some default providers
-vim.g["loaded_node_provider"] = 0
-vim.g["loaded_python3_provider"] = 0
-vim.g["loaded_perl_provider"] = 0
-vim.g["loaded_ruby_provider"] = 0
+vim.o.sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
+vim.g.python3_host_prog = vim.fn.exepath("python3")
+vim.g.node_host_prog = "/run/current-system/sw/bin/node"
+-- vim.g.loaded_node_provider = 1
+vim.g["loaded_node_provider"] = 1
+vim.g["loaded_python3_provider"] = 1
+-- vim.g["loaded_perl_provider"] = 0
+-- vim.g["loaded_ruby_provider"] = 0
 
 -- add binaries installed by mason.nvim to path
 local is_windows = vim.loop.os_uname().sysname == "Windows_NT"
@@ -65,12 +69,9 @@ vim.o.relativenumber = true
 
 -------------------------------------------------------------------------------------------------------------------------------------------------
 
-vim.g.maplocalleader = ","
-
-
 local function customize_colorscheme()
-  -- Use Vim script syntax with vim.cmd
-  vim.cmd([[
+	-- Use Vim script syntax with vim.cmd
+	vim.cmd([[
     highlight LineNr ctermfg=White guifg=#e2e2e2
     highlight CursorLineNr ctermfg=Yellow guifg=#e5cfff
 highlight Comment ctermfg=Gray guifg=#9898af
@@ -84,20 +85,20 @@ vim.wo.spell = true
 vim.bo.spelllang = "en_us"
 -- Set Vimtex options
 vim.g.vimtex_compiler_latexmk = {
-  options = {
-    "-shell-escape",
-    "-verbose",
-    "-file-line-error",
-    "-synctex=1",
-    "-xelatex=\"xelatex -shell-escape\"",
-    "-interaction=nonstopmode",
-  },
--- options = {
---         "-pdflatex=pdflatex -shell-escape",
---         "-pdf"
---     }
+	options = {
+		"-shell-escape",
+		"-verbose",
+		"-file-line-error",
+		"-synctex=1",
+		'-xelatex="xelatex -shell-escape"',
+		"-interaction=nonstopmode",
+	},
+	-- options = {
+	--         "-pdflatex=pdflatex -shell-escape",
+	--         "-pdf"
+	--     }
 }
+vim.opt_local.conceallevel = 2
 
-
-vim.g.python3_host_prog = vim.fn.exepath 'python3'
-
+vim.opt.foldmethod = "expr"
+vim.opt.foldexpr = "nvim_treesitter#foldexpr()"

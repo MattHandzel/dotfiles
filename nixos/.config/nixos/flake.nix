@@ -2,7 +2,8 @@
   description = "Matt's nixos configuration (based off FrostPhoenix)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-24.11-darwin";
+
     nur.url = "github:nix-community/NUR";
 
     hypr-contrib.url = "github:hyprwm/contrib";
@@ -11,7 +12,11 @@
     alejandra.url = "github:kamadorueda/alejandra/3.0.0";
 
     nix-gaming.url = "github:fufexan/nix-gaming";
+    notion-repackaged = {
+      url = "github:MattHandzel/nix-notion-repackaged/master";
 
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     hyprland = {
       type = "git";
       url = "https://github.com/hyprwm/Hyprland";
@@ -19,7 +24,7 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager";
+      url = "github:nix-community/home-manager/release-24.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -28,7 +33,7 @@
       flake = false;
     };
     catppuccin-cava = {
-      url = "github:catppuccin/cava";
+      url = "github:catppuccin/cava/6ec25ba688e30f3e5d6004ef6a295e6ba90c64d4";
       flake = false;
     };
     catppuccin-starship = {
@@ -49,14 +54,20 @@
   } @ inputs: let
     username = "matth";
     system = "x86_64-linux";
-    pkgs = import nixpkgs {
-      inherit system;
-      config.allowUnfree = true;
-    };
-    lib = nixpkgs.lib;
 
     sharedVariables = import ./shared-variables.nix;
   in {
+    # nixpkgs = {
+    #   overlay = final: prev: {
+    #     nixpkgs.config.permittedInsecurePackages = [
+    #       "electron-28.3.3"
+    #       "electron-30.5.1"
+    #     ];
+    #   };
+    # };
+
+    # packages.x86_64-linux = notion-repackaged.packages.${system}.default;
+
     nixosConfigurations = {
       desktop = nixpkgs.lib.nixosSystem {
         inherit system;
@@ -68,7 +79,9 @@
       };
       laptop = nixpkgs.lib.nixosSystem {
         inherit system;
-        modules = [(import ./hosts/laptop)];
+        modules = [
+          (import ./hosts/laptop)
+        ];
         specialArgs = {
           host = "laptop";
           inherit self inputs username sharedVariables;

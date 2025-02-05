@@ -1,5 +1,9 @@
 vim.g.base46_cache = vim.fn.stdpath("data") .. "/nvchad/base46/"
+vim.o.sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
+vim.g.python3_host_prog = vim.fn.exepath("python3")
+vim.g.node_host_prog = "/run/current-system/sw/bin/node"
 vim.g.mapleader = " "
+vim.g.maplocalleader = ","
 
 -- bootstrap lazy and all plugins
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -176,4 +180,5 @@ if cmp_style ~= "atom" and cmp_style ~= "atom_colored" then
 	options.window.completion.border = border("CmpBorder")
 end
 require("copilot_cmp")
+
 cmp.setup(options)
