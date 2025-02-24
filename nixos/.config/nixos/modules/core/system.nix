@@ -23,6 +23,7 @@
     overlays = [
       inputs.nur.overlay
       (import ./overlays/command-not-found.nix)
+      (import ./overlays/hyprsession.nix)
     ];
   };
 

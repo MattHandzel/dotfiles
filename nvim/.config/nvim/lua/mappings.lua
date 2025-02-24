@@ -431,3 +431,5 @@ end
 vim.keymap.set("n", "ga?", "<cmd>TextCaseOpenTelescope<CR>", { noremap = true })
 
 vim.keymap.set("n", "<leader>nl", "<cmd>SemanticSearch<CR>", { noremap = true })
+
+vim.api.nvim_set_keymap("n", "<leader>sc", ":lua require'sc-im'.open_in_scim()<CR>", { noremap = true, silent = true })

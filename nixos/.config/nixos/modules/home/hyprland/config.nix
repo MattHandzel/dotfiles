@@ -87,11 +87,24 @@ in {
         "hyprlock"
       ];
 
-      "device" = {
-        "name" = ''          wingcool-inc.-touchscreen-1
-                    output = DP-1
-        '';
-      };
+      "device" = [
+        {
+          "name" = ''            wingcool-inc.-touchscreen
+                             output = DP-1
+          '';
+        }
+        {
+          "name" = ''            wingcool-inc.-touchscreen-1
+                             output = DP-1
+          '';
+        }
+        # {
+        #   "name" = ''            wingcool-inc.-touchscreen
+        #                      output = DP-1
+        #   '';
+        # }
+      ];
+
       input = {
         kb_layout = "pl,us";
         kb_options = "grp:alt_caps_toggle";
@@ -138,6 +151,7 @@ in {
         focus_on_activate = true;
         new_window_takes_over_fullscreen = 1;
         initial_workspace_tracking = 0;
+        vfr = true;
       };
 
       dwindle = {
@@ -186,7 +200,7 @@ in {
       };
 
       animations = {
-        enabled = true;
+        enabled = false;
 
         bezier = [
           "fluent_decel, 0, 0.2, 0.4, 1"
@@ -452,6 +466,7 @@ in {
 # monitor mod ffe
       monitor=eDP-1,preferred,0x0,1.0
       monitor=DP-1,preferred,1920x0,1.0
+      monitor=HDMI-A-1,preferred,-1920x0,1.0
 
       # this
 

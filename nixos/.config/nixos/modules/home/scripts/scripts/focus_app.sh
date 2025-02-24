@@ -10,9 +10,9 @@ fi
 class_name="$1"
 
 # Use hyprctl to list all clients and filter by the class name
-window_id=$(hyprctl clients | grep -Ei "class:.*$class_name" | sed -n 's/.*class: *\([^ ]*\).*/\1/p')
+window_id=$(hyprctl clients | grep -Ei "class:.*$class_name" | sed -n 's/.*class: *\([^ ]*\).*/\1/p' | sed -n '1p')
+# window_id=$(hyprctl clients | grep -Ei "class:.*$class_name")
 
-# echo "Found window id: $window_id"
 
 # Check if a window with the specified class name was found
 if [ -n "$window_id" ]; then

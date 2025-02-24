@@ -168,7 +168,8 @@ in {
     # gnumake42
     # glibcLocales
     #
-    # cargo
+    cargo
+    pkg-config
     # openconnect_openssl
     # ninja
     # gh
@@ -185,5 +186,6 @@ in {
     gopls
     delve
     gcc
+    sc-im
   ];
 }

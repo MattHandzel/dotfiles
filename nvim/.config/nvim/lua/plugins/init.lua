@@ -1384,4 +1384,35 @@ return {
 	-- 	---@type gopher.Config
 	-- 	opts = {},
 	-- },
+	{ "hat0uma/csvview.nvim", opts = { ... }, event = "VeryLazy" },
+	{
+		"DAmesberger/sc-im.nvim",
+		event = "VeryLazy",
+		-- opts = {
+		-- 	ft = "scim",
+		-- 	include_sc_file = true,
+		-- 	update_sc_from_md = true,
+		-- 	link_fmt = 1,
+		-- 	split = "floating",
+		-- 	float_config = {
+		-- 		height = 0.9,
+		-- 		width = 0.9,
+		-- 		style = "minimal",
+		-- 		border = "single",
+		-- 		hl = "Normal",
+		-- 		blend = 0,
+		-- 	},
+		-- },
+	},
+	{
+		"rmanocha/linear-nvim",
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+			"nvim-telescope/telescope.nvim",
+			"stevearc/dressing.nvim",
+		},
+		config = function()
+			require("linear-nvim").setup()
+		end,
+	},
 }

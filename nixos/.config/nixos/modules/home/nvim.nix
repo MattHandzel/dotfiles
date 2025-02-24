@@ -51,6 +51,8 @@
       pkgs.vimPlugins.nvim-dap-go
       pkgs.vimPlugins.nvim-dap-python
       pkgs.vimPlugins.nvim-dap-ui
+
+      pkgs.sc-im
     ];
   };
 }
