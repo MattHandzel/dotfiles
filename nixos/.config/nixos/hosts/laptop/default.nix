@@ -2,10 +2,13 @@
   pkgs,
   config,
   ...
-}: {
+}: let
+  sharedVariables = import ../../shared_variables.nix;
+in {
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
     "electron-28.3.3"
+    "electron-32.3.3"
     "electron-30.5.1"
   ];
   imports = [
@@ -52,6 +55,50 @@
       user = "matth";
       dataDir = "/home/matth/.config/syncthing/";
     };
+
+    # logkeys = {
+    #   description = "Logkeys keylogger";
+    #   wantedBy = ["default.target"];
+    #   serviceConfig = {
+    #     ExecStart = "${pkgs.logkeys}/bin/logkeys --start --output=$HOME/notes/life-logging/key-logging/keylog.log --device=/dev/input/eventX";
+    #     Restart = "always";
+    #     RestartSec = "10";
+    #   };
+    # };
+  };
+  powerManagement.resumeCommands = ''
+  '';
+
+  systemd.services = {
+    # "custom-pre-suspend" = {
+    #   before = ["systemd-suspend.service"];
+    #   wantedBy = ["systemd-suspend.service"];
+    #   serviceConfig = {
+    #     Type = "oneshot";
+    #     Environment = "PATH=/run/current-system/sw/bin:/bin:/usr/bin:/sbin:/usr/sbin";
+    #     ExecStart = "${sharedVariables.rootDirectory}/modules/home/scripts/scripts/suspend-script-runner.sh pre";
+    #   };
+    # };
+    #
+    # "custom-pre-hibernate" = {
+    #   before = ["systemd-hibernate.service"];
+    #   wantedBy = ["systemd-hibernate.service"];
+    #   serviceConfig = {
+    #     Type = "oneshot";
+    #     Environment = "PATH=/run/current-system/sw/bin:/bin:/usr/bin:/sbin:/usr/sbin";
+    #     ExecStart = "${sharedVariables.rootDirectory}/modules/home/scripts/scripts/suspend-script-runner.sh pre";
+    #   };
+    # };
+
+    # "custom-post-resume" = {
+    #   wantedBy = ["post-resume.target"];
+    #   # conflicts = ["shutdown.target" "reboot.target" "suspend.target" "hibernate.target"];
+    #   serviceConfig = {
+    #     Type = "oneshot";
+    #     Environment = "PATH=/run/current-system/sw/bin:/bin:/usr/bin:/sbin:/usr/sbin:/etc/profiles/per-user/matth/bin/";
+    #     ExecStart = "${sharedVariables.rootDirectory}/modules/home/scripts/scripts/suspend-script-runner.sh post";
+    #   };
+    # };
   };
 
   services.udev.packages = [
@@ -102,7 +149,7 @@
   # services.printing.enable = true;
   # services.printing.drivers = [ pkgs.printer-drivers ];
 
-  home-manager.backupFileExtension = "backup15";
+  home-manager.backupFileExtension = "backup_$(date +%Y-%m-%d_%H-%M-%S)";
 
   services.fprintd.enable = true;
 }

@@ -7,7 +7,7 @@ TMP_GIF_RESULT="/tmp/gif_result"
 APP_NAME="Recorder"
 
 OUT_DIR="$HOME/Videos"
-filename=$(date +"%Y-%m-%d_%H-%M-%S")
+filename=$(date +"%Y-%m-%d_%H-%M-%S.%3N %Z")
 FILENAME="$OUT_DIR/$filename."
 
 if [ ! -d "$OUT_DIR" ]; then

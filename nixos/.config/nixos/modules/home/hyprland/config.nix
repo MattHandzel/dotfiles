@@ -8,7 +8,7 @@
     thunderbird = "M";
     slack = "K";
     morgen = "C";
-    yazi = "F";
+    nautilus = "F";
     whatsapp-for-linux = "W";
     "io.github.alainm23.planify" = "T";
   };
@@ -76,15 +76,19 @@ in {
         "poweralertd &"
         "waybar &"
         "swaync &"
-        "wl-paste --watch cliphist store --max-items 1000000 &"
+        "wl-paste --watch cliphist store --max-items 100000000 &"
         "gammastep -l  0.1047:-110.2062 -t 5700:1500 -b 1:.5 &"
         "sudo chmod 666 /dev/i2c-* &"
         "io.github.alainm23.planify &"
+        "sudo logkeys --start --device event0 --output $HOME/notes/life-logging/key-logging/keyboard.log &"
 
         "aw-server & "
         "aw-watcher-window > /home/matth/log_for_aw.txt"
         "aw-watcher-afk > /home/matth/log_for_aw1.txt"
+        "audio-log &"
         "hyprlock"
+        "screen-log 10 &"
+        "process-log 60 &"
       ];
 
       "device" = [
@@ -269,7 +273,7 @@ in {
 
           # screenshot
           "ALT, Print, exec, ocr-screenshot && wl-paste -t text/plain > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').txt"
-          ",Print, exec, grimblast --notify --cursor --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
+          ",Print, exec, grimblast --notify  --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
 
           "$mainMod, N, exec, quick-capture"
           "$mainMod ALT, N, exec, quick-capture"

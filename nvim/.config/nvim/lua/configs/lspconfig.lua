@@ -3,7 +3,17 @@ local lspconfig = require("lspconfig")
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities.offsetEncoding = { "utf-16" }
 lspconfig.pyright.setup({})
-lspconfig.tsserver.setup({})
+lspconfig.ts_ls.setup({
+	-- on_attach = ,
+	-- capabilities = capabilities,
+	settings = {
+		typescript = {
+			tsserver = {
+				-- Any specific settings you need
+			},
+		},
+	},
+})
 lspconfig.ltex.setup({
 	checkfrequency = "save",
 })

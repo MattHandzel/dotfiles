@@ -4,10 +4,10 @@
 NOTES_DIR="$HOME/notes/capture/raw_capture"
 
 # Get the current date in the format YYYY-MM-DD
-TODAY=$(date +%Y-%m-%d)
+TODAY=$(date -u +%Y-%m-%d)
 
 # Get the current timestamp in the format YYYY-MM-DD HH:MM
-TIMESTAMP=$(date +"%Y-%m-%d %H:%M")
+TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S.%3N %Z")
 
 # Define the file for today's notes
 TODAY_FILE="${NOTES_DIR}/${TODAY}.md"

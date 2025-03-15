@@ -8,7 +8,7 @@ mkdir -p "$NOTES_DIR"
 TODAY=$(date +%Y-%m-%d)
 
 # Get the current timestamp in the format YYYY-MM-DD HH:MM
-TIMESTAMP=$(date +"%Y-%m-%d %H:%M")
+TIMESTAMP=$(date +"%Y-%m-%d %H:%M.%3N %Z")
 
 # Define the file for today's notes
 TODAY_FILE="${NOTES_DIR}/${TODAY}.md"
@@ -73,7 +73,7 @@ if [[ " ${OPTIONS[*]} " =~ " Text " ]]; then
 fi
 
 # Step 3: Capture selected modalities
-CURRENT_TIME=$(date +"%Y-%m-%d_%H-%M-%S")
+CURRENT_TIME=$(date +"%Y-%m-%d_%H-%M-%S.%3N %Z")
 for opt in "${OPTIONS[@]}"; do
     case $opt in
         "Clipboard") capture_clipboard ;;

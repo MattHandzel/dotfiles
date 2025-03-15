@@ -13,7 +13,7 @@
       # ];
     };
     extraHosts = ''
-      76.191.29.250 local-server
+      76.191.30.233 local-server
       # 127.0.0.1 www.reddit.com # block access to reddit
       # 127.0.0.1 reddit.com
       # 127.0.0.1 instagram.com

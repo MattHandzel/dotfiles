@@ -46,6 +46,12 @@
     spicetify-nix.url = "github:gerg-l/spicetify-nix";
     spicetify-nix.inputs.nixpkgs.follows = "nixpkgs";
     zen-browser.url = "github:MarceColl/zen-browser-flake";
+
+    lifelog = {
+      url = "github:MattHandzel/lifelog";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {

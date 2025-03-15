@@ -34,6 +34,10 @@
     ./scripts/quick-capture.sh
     ./scripts/copy-to-clipboard.sh
     ./scripts/record-lecture.sh
+    ./scripts/audio-log.sh
+    ./scripts/screen-log.sh
+    ./scripts/process-log.sh
+    ./scripts/suspend-script-runner.sh
   ];
 
   # Create shell script bins

@@ -19,7 +19,7 @@
     extraConfig = ''
       IdleAction=suspend
       IdleActionSec=15min
-      HandlePowerKey=suspend
+      HandlePowerKey=hibernate
       HibernateDelaySec=30m
       SuspendState=mem
     '';

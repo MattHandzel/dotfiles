@@ -1,12 +1,12 @@
 { pkgs, ... }: 
 {
-  hardware.pulseaudio.enable = false;
+  hardware.pulseaudio.enable = true;
   services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-    # lowLatency.enable = true;
+    enable = false;
+    # alsa.enable = true;
+    # alsa.support32Bit = true;
+    # pulse.enable = true;
+    # # lowLatency.enable = true;
   };
   environment.systemPackages = with pkgs; [
     pulseaudioFull

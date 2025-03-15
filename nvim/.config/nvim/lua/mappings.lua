@@ -354,14 +354,49 @@ vim.keymap.set("i", "C-Z", "<Esc>ui", { noremap = true })
 
 -- Obsidian
 --
-vim.keymap.set("n", "<leader>gl", "<cmd>ObsidianFollowLink<CR>", { noremap = true })
-vim.keymap.set("n", "<leader>od", "<cmd>ObsidianDailies<CR>", { noremap = true })
-
 local function getCurrentWeekNumber()
 	local current_date = os.date("*t")
 	local week_number = os.date("%W", os.time(current_date))
 	return tonumber(week_number) + 1
 end
+vim.keymap.set("n", "<leader>gl", "<cmd>ObsidianFollowLink<CR>", { noremap = true })
+vim.keymap.set("n", "<leader>od", "<cmd>ObsidianDailies<CR>", { noremap = true })
+vim.keymap.set("n", "<leader>op", "<cmd>ObsidianPasteImg<CR>", { noremap = true })
+
+function PasteClipboardImage()
+	-- Get the current timestamp
+	local timestamp = os.date("%Y%m%d%H%M%S")
+
+	-- Create the image file name
+	local image_name = timestamp .. ".png"
+
+	-- Get the current directory
+	local current_dir = vim.fn.expand("%:p:h")
+
+	-- Full path for the new image
+	local image_path = current_dir .. "/" .. image_name
+
+	-- Command to save clipboard image (assumes xclip for Linux)
+	local save_command = string.format("wl-paste -t image/png > %s", image_path)
+
+	-- Execute the save command
+	local success = os.execute(save_command)
+
+	if success then
+		-- Create the markdown image link
+		local markdown_link = string.format("![%s](./%s)", timestamp, image_name)
+
+		-- Insert the markdown link at the cursor position
+		vim.api.nvim_put({ markdown_link }, "c", true, true)
+
+		print("Image saved and link inserted.")
+	else
+		print("Failed to save image from clipboard.")
+	end
+end
+
+-- Map the function to a key combination (e.g., <leader>p)
+vim.api.nvim_set_keymap("n", "<leader>p", ":lua PasteClipboardImage()<CR>", { noremap = true, silent = true })
 
 local week_number = getCurrentWeekNumber()
 local title = string.format("2025-W%d", week_number)

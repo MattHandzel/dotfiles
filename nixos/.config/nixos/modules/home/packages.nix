@@ -187,5 +187,9 @@ in {
     delve
     gcc
     sc-im
+
+    logkeys # keylogger
+    inputs.lifelog.packages.x86_64-linux.default
+    v4l-utils
   ];
 }

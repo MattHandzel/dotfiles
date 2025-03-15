@@ -61,7 +61,7 @@ mkdir -p "$destination_dir"
 
 # Logging
 function log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S.%3N %Z')] $1"
 }
 
 # Dry-run mode
