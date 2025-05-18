@@ -38,6 +38,9 @@
     ./scripts/screen-log.sh
     ./scripts/process-log.sh
     ./scripts/suspend-script-runner.sh
+    ./scripts/notetaker.sh
+    ./scripts/track_window_history.sh
+    ./scripts/track_workspace_history.sh
   ];
 
   # Create shell script bins

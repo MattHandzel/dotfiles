@@ -1,5 +1,4 @@
 -- add yours here
-
 local map = vim.keymap.set
 
 map("i", "<C-b>", "<ESC>^i", { desc = "Move Beginning of line" })
@@ -7,10 +6,10 @@ map("i", "<C-e>", "<End>", { desc = "Move End of line" })
 
 map("n", "<Esc>", "<cmd>noh<CR>", { desc = "General Clear highlights" })
 
-map({ "n", "t" }, "<C-h>", "<C-w>h", { desc = "Switch Window left" })
-map({ "n", "t" }, "<C-l>", "<C-w>l", { desc = "Switch Window right" })
-map({ "n", "t" }, "<C-j>", "<C-w>j", { desc = "Switch Window down" })
-map({ "n", "t" }, "<C-k>", "<C-w>k", { desc = "Switch Window up" })
+-- map({ "n", "t" }, "<C-h>", "<C-w>h", { desc = "Switch Window left" })
+-- map({ "n", "t" }, "<C-l>", "<C-w>l", { desc = "Switch Window right" })
+-- map({ "n", "t" }, "<C-j>", "<C-w>j", { desc = "Switch Window down" })
+-- map({ "n", "t" }, "<C-k>", "<C-w>k", { desc = "Switch Window up" })
 
 map({ "i", "x", "n", "s" }, "<C-s>", "<cmd>w<cr><esc>", { desc = "Save file" })
 map("n", "<C-c>", "<cmd>%y+<CR>", { desc = "File Copy whole" })
@@ -24,33 +23,37 @@ map("n", "]d", vim.diagnostic.goto_next, { desc = "Lsp next diagnostic" })
 map("n", "<leader>dl", vim.diagnostic.setloclist, { desc = "Lsp diagnostic loclist" })
 
 -- tabufline
-map("n", "<leader>b", "<cmd>enew<CR>", { desc = "Buffer New" })
-map("n", "<leader>x", function()
-	require("nvchad.tabufline").close_buffer()
-end, { desc = "Buffer Close" })
+-- map("n", "<leader>b", "<cmd>enew<CR>", { desc = "Buffer New" })
+-- map("n", "<leader>x", function()
+--   require("nvchad.tabufline").close_buffer()
+-- end, { desc = "Buffer Close" })
 
 -- nvimtree
-map("n", "<leader>e", "<cmd>Neotree toggle<CR>", { desc = "Neotree Toggle window" })
+local snacks = require("snacks")
+map("n", "<leader>e", function()
+	snacks.explorer()
+end, { desc = "Toggle Explorer" })
 
 -- telescope
-local telescope_builtin = require("telescope.builtin")
-map("n", "<leader>fw", "<cmd>Telescope live_grep<CR>", { desc = "Telescope Live grep" })
-map("n", "<leader>fb", "<cmd>Telescope buffers<CR>", { desc = "Telescope Find buffers" })
-map("n", "<leader>fh", "<cmd>Telescope help_tags<CR>", { desc = "Telescope Help page" })
-map("n", "<leader>fs", telescope_builtin.lsp_document_symbols, { desc = "Telescope Help page" })
-map("n", "<leader>fo", "<cmd>Telescope oldfiles<CR>", { desc = "Telescope Find oldfiles" })
-map("n", "<leader>fz", "<cmd>Telescope current_buffer_fuzzy_find<CR>", { desc = "Telescope Find in current buffer" })
-map("n", "<leader>fgc", "<cmd>Telescope git_commits<CR>", { desc = "Telescope Git commits" })
-map("n", "<leader>fgs", "<cmd>Telescope git_status<CR>", { desc = "Telescope Git status" })
--- map("n", "<leader>ft", "<cmd>Telescope terms<CR>", { desc = "Telescope Pick hidden term" })
--- map("n", "<leader>th", "<cmd>Telescope themes<CR>", { desc = "Telescope Nvchad themes" })
-map("n", "<leader>fa", "<cmd>Telescope find_files<cr>", { desc = "Telescope Find files" })
-map(
-	"n",
-	"<leader>ff",
-	"<cmd>Telescope find_files follow=true no_ignore=true hidden=true<CR>",
-	{ desc = "Telescope Find all files" }
-)
+-- local telescope_builtin = require("telescope.builtin")
+-- map("n", "<leader>fw", "<cmd>Telescope live_grep<CR>", { desc = "Telescope Live grep" })
+-- map("n", "<leader>fb", "<cmd>Telescope buffers<CR>", { desc = "Telescope Find buffers" })
+-- map("n", "<leader>fh", "<cmd>Telescope help_tags<CR>", { desc = "Telescope Help page" })
+-- map("n", "<leader>fs", telescope_builtin.lsp_document_symbols, { desc = "Telescope Help page" })
+-- map("n", "<leader>fS", telescope_builtin.lsp_dynamic_workspace_symbols, { desc = "Telescope Help page" })
+-- map("n", "<leader>fo", "<cmd>Telescope oldfiles<CR>", { desc = "Telescope Find oldfiles" })
+-- map("n", "<leader>fz", "<cmd>Telescope current_buffer_fuzzy_find<CR>", { desc = "Telescope Find in current buffer" })
+-- map("n", "<leader>fgc", "<cmd>Telescope git_commits<CR>", { desc = "Telescope Git commits" })
+-- map("n", "<leader>fgs", "<cmd>Telescope git_status<CR>", { desc = "Telescope Git status" })
+-- -- map("n", "<leader>ft", "<cmd>Telescope terms<CR>", { desc = "Telescope Pick hidden term" })
+-- -- map("n", "<leader>th", "<cmd>Telescope themes<CR>", { desc = "Telescope Nvchad themes" })
+-- map("n", "<leader>fa", "<cmd>Telescope find_files<cr>", { desc = "Telescope Find files" })
+-- map(
+--   "n",
+--   "<leader>ff",
+--   "<cmd>Telescope find_files follow=true no_ignore=true hidden=true<CR>",
+--   { desc = "Telescope Find all files" }
+-- )
 
 -- better indenting
 map("v", "<", "<gv")
@@ -140,9 +143,9 @@ map("n", "<C-i>", "<C-i>zz", { noremap = true })
 
 map("n", "<S-H>", ":bprev<CR>", silent_no_remap)
 map("n", "<S-L>", ":bnext<CR>", silent_no_remap)
-map("n", "<leader>qq", "<cmd>Neotree close<CR><cmd>qa<CR>")
-map("n", "<leader>qw", "<cmd>Neotree close<CR><cmd>wqa<CR>")
-map("n", "<leader>q!", "<cmd>Neotree close<CR><cmd>qa!<CR>")
+map("n", "<leader>qq", "<cmd>qa<CR>")
+map("n", "<leader>qw", "<cmd>wqa<CR>")
+map("n", "<leader>q!", "<cmd>qa!<CR>")
 map("n", "<C-Up>", "<cmd>resize +2<cr>", { desc = "Increase window height" })
 map("n", "<C-Down>", "<cmd>resize -2<cr>", { desc = "Decrease window height" })
 map("n", "<C-Left>", "<cmd>vertical resize -2<cr>", { desc = "Decrease window width" })
@@ -309,10 +312,10 @@ vim.keymap.set({ "n" }, "<leader>tn", function()
 end, { desc = "New terminal" })
 betterTerm.setup()
 
-vim.keymap.set("i", "<C-k>", "<Esc>:TmuxNavigateUp<CR>i", { noremap = true, silent = true })
-vim.keymap.set("i", "<C-j>", "<Esc>:TmuxNavigateDown<CR>i", { noremap = true, silent = true })
-vim.keymap.set("i", "<C-h>", "<Esc>:TmuxNavigateLeft<CR>i", { noremap = true, silent = true })
-vim.keymap.set("i", "<C-l>", "<Esc>:TmuxNavigateRight<CR>i", { noremap = true, silent = true })
+vim.keymap.set({ "i", "n", "t" }, "<C-k>", "<cmd>TmuxNavigateUp<CR>", { noremap = true, silent = true })
+vim.keymap.set({ "i", "n", "t" }, "<C-j>", "<cmd>TmuxNavigateDown<CR>", { noremap = true, silent = true })
+vim.keymap.set({ "i", "n", "t" }, "<C-h>", "<cmd>TmuxNavigateLeft<CR>", { noremap = true, silent = true })
+vim.keymap.set({ "i", "n", "t" }, "<C-l>", "<cmd>TmuxNavigateRight<CR>", { noremap = true, silent = true })
 
 vim.keymap.set("n", "<leader>ls", require("auto-session.session-lens").search_session, {
 	noremap = true,
@@ -359,9 +362,9 @@ local function getCurrentWeekNumber()
 	local week_number = os.date("%W", os.time(current_date))
 	return tonumber(week_number) + 1
 end
-vim.keymap.set("n", "<leader>gl", "<cmd>ObsidianFollowLink<CR>", { noremap = true })
-vim.keymap.set("n", "<leader>od", "<cmd>ObsidianDailies<CR>", { noremap = true })
-vim.keymap.set("n", "<leader>op", "<cmd>ObsidianPasteImg<CR>", { noremap = true })
+vim.keymap.set("n", "<leader>gl", "<cmd>ObsidianFollowLink<CR>i", { noremap = true })
+vim.keymap.set("n", "<leader>od", "<cmd>ObsidianDailies<CR>i", { noremap = true })
+vim.keymap.set("n", "<leader>op", "<cmd>ObsidianPasteImg<CR>i", { noremap = true })
 
 function PasteClipboardImage()
 	-- Get the current timestamp

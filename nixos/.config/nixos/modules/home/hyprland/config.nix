@@ -1,5 +1,6 @@
 {lib, ...}: let
   sharedVariables = import ../../../shared_variables.nix;
+  # This will make it so that when you press $mainMod + alt + {letter} it will open up the corresponding application
   appKeyboardShortcuts = {
     anki = "A";
     spotify = "S";
@@ -7,10 +8,12 @@
     obsidian = "O";
     thunderbird = "M";
     slack = "K";
-    morgen = "C";
-    nautilus = "F";
+    calendar = "C";
+    # Yazi is defined later b/c it requires citty
     whatsapp-for-linux = "W";
     "io.github.alainm23.planify" = "T";
+    "notetaker" = "N";
+    gimp = "G";
   };
 in let
   makeStringToIncaseSensitiveRegex = str: let
@@ -21,7 +24,7 @@ in let
     builtins.concatStringsSep "" (map charToClass (lib.strings.stringToCharacters str));
 
   singleton_windows = sharedVariables.singletonApplications;
-  floating_windows = ["imv" "mpv" ".blueman-manager-wrapped" "Volume Control" "SpeedCrunch"];
+  floating_windows = ["imv" ".blueman-manager-wrapped" "Volume Control" "org.speedcrunch."];
   generateFloatingRules = floating_window: [
     "float,${floating_window}"
     "center,${floating_window}"
@@ -65,6 +68,10 @@ in {
     };
     settings = {
       # autostart
+      "debug:disable_logs" = false;
+      debug = {
+        disable_logs = false;
+      };
       exec-once = [
         "systemctl --user import-environment &"
         "hash dbus-update-activation-environment 2>/dev/null &"
@@ -76,19 +83,17 @@ in {
         "poweralertd &"
         "waybar &"
         "swaync &"
-        "wl-paste --watch cliphist store --max-items 100000000 &"
+        "wl-paste --watch cliphist store -max-items 25000 &"
         "gammastep -l  0.1047:-110.2062 -t 5700:1500 -b 1:.5 &"
         "sudo chmod 666 /dev/i2c-* &"
         "io.github.alainm23.planify &"
-        "sudo logkeys --start --device event0 --output $HOME/notes/life-logging/key-logging/keyboard.log &"
+        # "sudo logkeys --start --device event0 --output $HOME/notes/life-logging/key-logging/keyboard.log &"
 
         "aw-server & "
         "aw-watcher-window > /home/matth/log_for_aw.txt"
         "aw-watcher-afk > /home/matth/log_for_aw1.txt"
-        "audio-log &"
         "hyprlock"
-        "screen-log 10 &"
-        "process-log 60 &"
+        "lifelog-logger &"
       ];
 
       "device" = [
@@ -102,11 +107,6 @@ in {
                              output = DP-1
           '';
         }
-        # {
-        #   "name" = ''            wingcool-inc.-touchscreen
-        #                      output = DP-1
-        #   '';
-        # }
       ];
 
       input = {
@@ -125,14 +125,12 @@ in {
 
         touchdevice = {
           output = "eDP-1";
-          # name = "04f31234:00-1fd2:8008";
         };
       };
 
       general = {
         "$mainMod" = "SUPER";
         "$term" = "kitty";
-        "$file" = "dolphin";
         "$browser" = "zen";
 
         layout = "dwindle";
@@ -141,7 +139,7 @@ in {
         border_size = 2;
         "col.active_border" = "rgb(cba6f7) rgb(94e2d5) 45deg";
         "col.inactive_border" = "0x00000000";
-        border_part_of_window = false;
+        border_part_of_window = true;
         no_border_on_floating = false;
       };
 
@@ -175,18 +173,16 @@ in {
       };
 
       decoration = {
-        rounding = 0;
+        rounding = 2;
         # active_opacity = 0.90;
-        inactive_opacity = 1.0;
+        # inactive_opacity = 0.75;
 
         fullscreen_opacity = 1.0;
 
         blur = {
           enabled = false;
-          size = 1;
-          passes = 1;
-          # size = 4;
-          # passes = 2;
+          size = 2;
+          passes = 2;
           brightness = 1;
           contrast = 1.400;
           ignore_opacity = true;
@@ -194,13 +190,16 @@ in {
           new_optimizations = true;
           xray = true;
         };
-
         shadow = {
-          ignore_window = true;
-          offset = "0 2";
-          range = 20;
-          render_power = 3;
+          enabled = false;
         };
+
+        # shadow = {
+        #   ignore_window = true;
+        #   offset = "0 2";
+        #   range = 20;
+        #   render_power = 3;
+        # };
       };
 
       animations = {
@@ -245,7 +244,7 @@ in {
           "$mainMod, delete, exit"
 
           # keybindings
-          "$mainMod, T, exec, kitty"
+          "$mainMod, T, exec, kitty sh -c \"exec tmux\""
           "$mainMod SHIFT, T, exec, kitty --title float_kitty"
           # "$mainMod SHIFT, T, exec, kitty --start-as=fullscreen -o 'font_size=16'"
           "$mainMod, Q, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch killactive' 'kill-window-and-switch'"
@@ -263,6 +262,7 @@ in {
           "$mainMod, W,exec, wallpaper-picker"
           "$mainMod SHIFT, W, exec, vm-start"
           "$mainMod, B, exec, zen"
+          "$mainMod, Y, exec, swaync-client --close-latest"
 
           "$mainMod SHIFT, R, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\" && rebuild && notify-if-command-is-successful rebuild"
 
@@ -276,7 +276,7 @@ in {
           ",Print, exec, grimblast --notify  --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
 
           "$mainMod, N, exec, quick-capture"
-          "$mainMod ALT, N, exec, quick-capture"
+          "$mainMod ALT, F, exec, kitty --hold --title yazi --name sh -c \"yazi\""
 
           # Move focus with mainMod + arrow keys
           # "$mainMod, h, changegroupactive, back"
@@ -415,6 +415,8 @@ in {
           "float,title:^(Firefox — Sharing Indicator)$"
           "move 0 0,title:^(Firefox — Sharing Indicator)$"
           "size 700 450,title:^(Volume Control)$"
+          "workspace name:calendar, title:(calendar)"
+          "workspace name:notetaker, title:(notetaker)"
           "move 40 55%,title:^(Volume Control)$"
         ];
 
@@ -470,7 +472,7 @@ in {
 # monitor mod ffe
       monitor=eDP-1,preferred,0x0,1.0
       monitor=DP-1,preferred,1920x0,1.0
-      monitor=HDMI-A-1,preferred,-1920x0,1.0
+      monitor=HDMI-A-1,preferred,-2560x-180,1.0
 
       # this
 

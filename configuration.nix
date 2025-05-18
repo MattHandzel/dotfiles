@@ -119,14 +119,15 @@ unzip
 gnumake42
 
 
- # rust
-cargo
+   # rust
+  cargo
 
 
 
  # sort later
 neofetch
 python311Packages.pip
+    rustup # rustup
 
   ];
               nixpkgs.config.permittedInsecurePackages = [

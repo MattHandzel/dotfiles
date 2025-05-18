@@ -17,8 +17,10 @@ in {
   ];
 
   environment.systemPackages = with pkgs; [
-    hyprsession
-    acpi
+    # hyprsession
+    cargo
+    rustup
+    # ucpi
     brightnessctl
     powertop
     fprintd

@@ -54,5 +54,9 @@
 
       pkgs.sc-im
     ];
+    # TODO: Fix this so it doesn't care about the user
+    extraConfig = ''
+      luafile /home/matth/dotfiles/nvim/.config/nvim/nvim.lua
+    '';
   };
 }

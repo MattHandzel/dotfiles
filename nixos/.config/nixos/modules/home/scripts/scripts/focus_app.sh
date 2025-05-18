@@ -11,6 +11,7 @@ class_name="$1"
 
 # Use hyprctl to list all clients and filter by the class name
 window_id=$(hyprctl clients | grep -Ei "class:.*$class_name" | sed -n 's/.*class: *\([^ ]*\).*/\1/p' | sed -n '1p')
+# .*title: *([^ ]*).*
 # window_id=$(hyprctl clients | grep -Ei "class:.*$class_name")
 
 
@@ -20,8 +21,17 @@ if [ -n "$window_id" ]; then
   hyprctl dispatch focuswindow "class:($window_id)"
   # echo "Focused window with class: $class_name"
 else
-  # If not found then run the application
-  $class_name &
+
+  window_id=$(hyprctl clients | grep -Ei "title:.*$class_name" | sed -n 's/.*title: *\([^ ]*\).*/\1/p' | sed -n '1p')
+  if [ -n "$window_id" ]; then 
+    hyprctl dispatch focuswindow "title:($window_id)"
+  else
+
+    # If not found then run the application
+    $class_name &
+
+  fi
+
 
   # echo "No window found with class: $class_name"
 fi

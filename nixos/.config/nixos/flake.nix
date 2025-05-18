@@ -2,7 +2,7 @@
   description = "Matt's nixos configuration (based off FrostPhoenix)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-24.11-darwin";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.05-darwin";
 
     nur.url = "github:nix-community/NUR";
 
@@ -17,35 +17,34 @@
 
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    hyprland = {
-      type = "git";
-      url = "https://github.com/hyprwm/Hyprland";
-      submodules = true;
-    };
+    # hyprland = {
+    #   type = "git";
+    #   url = "https://github.com/hyprwm/Hyprland";
+    #   submodules = true;
+    # };
 
     # hyprsession.url = "github:joshurtree/hyprsession";
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.11";
+      url = "github:nix-community/home-manager/release-25.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    catppuccin-bat = {
-      url = "github:catppuccin/bat";
-      flake = false;
-    };
-    catppuccin-cava = {
-      url = "github:catppuccin/cava/6ec25ba688e30f3e5d6004ef6a295e6ba90c64d4";
-      flake = false;
-    };
-    catppuccin-starship = {
-      url = "github:catppuccin/starship";
-      flake = false;
-    };
+    # TOOD: I could remove these?
+    # catppuccin-bat = {
+    #   url = "github:catppuccin/bat";
+    #   flake = false;
+    # };
+    # catppuccin-cava = {
+    #   url = "github:catppuccin/cava/6ec25ba688e30f3e5d6004ef6a295e6ba90c64d4";
+    #   flake = false;
+    # };
 
     spicetify-nix.url = "github:gerg-l/spicetify-nix";
     spicetify-nix.inputs.nixpkgs.follows = "nixpkgs";
     zen-browser.url = "github:MarceColl/zen-browser-flake";
+
+    catppuccin.url = "github:catppuccin/nix";
 
     lifelog = {
       url = "github:MattHandzel/lifelog";

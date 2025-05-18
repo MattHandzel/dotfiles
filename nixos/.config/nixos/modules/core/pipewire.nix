@@ -1,14 +1,15 @@
-{ pkgs, ... }: 
-{
-  hardware.pulseaudio.enable = true;
+{pkgs, ...}: {
+  hardware.pulseaudio.enable = false;
   services.pipewire = {
-    enable = false;
-    # alsa.enable = true;
-    # alsa.support32Bit = true;
-    # pulse.enable = true;
-    # # lowLatency.enable = true;
+    enable = true; # core
+    alsa.enable = true; # for audio
+    pulse.enable = true; # if you still want PulseAudio clients
+    wireplumber = {
+      enable = true; # for session management
+    };
   };
   environment.systemPackages = with pkgs; [
-    pulseaudioFull
+    # pulseaudioFull
+    pipewire
   ];
 }

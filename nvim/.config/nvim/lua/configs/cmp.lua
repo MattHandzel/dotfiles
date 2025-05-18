@@ -46,7 +46,7 @@ end
 
 local options = {
 	completion = {
-		completeopt = "menu,menuone",
+		completeopt = "menu,menuone, noinsert, popup",
 	},
 
 	window = {

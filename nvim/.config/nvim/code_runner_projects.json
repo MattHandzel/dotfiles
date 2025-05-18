@@ -54,5 +54,10 @@
     "name": "ModelDevelopment",
     "description": "",
     "file_name": "main.py"
+  },
+  "~/Projects/lifelog/lifelog-logger":{
+    "name" : "lifelog-logger",
+    "description" : "lifelog-logger",
+    "command" : "cargo run --features dev"
   }
 }

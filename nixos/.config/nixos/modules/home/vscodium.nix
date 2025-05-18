@@ -1,12 +1,11 @@
-{ pkgs, ... }: 
-{
+{pkgs, ...}: {
   programs.vscode = {
     enable = true;
     package = pkgs.vscodium;
     extensions = with pkgs.vscode-extensions; [
       # nix language
       bbenoist.nix
-      # nix-shell suport 
+      # nix-shell suport
       arrterian.nix-env-selector
       # python
       ms-python.python
@@ -16,8 +15,8 @@
       ocamllabs.ocaml-platform
 
       # Color theme
-      catppuccin.catppuccin-vsc
-      catppuccin.catppuccin-vsc-icons
+      # catppuccin.catppuccin-vsc
+      # catppuccin.catppuccin-vsc-icons
     ];
     userSettings = {
       "update.mode" = "none";
@@ -28,9 +27,9 @@
       "editor.fontFamily" = "'JetBrainsMono Nerd Font', 'SymbolsNerdFont', 'monospace', monospace";
       "terminal.integrated.fontFamily" = "'JetBrainsMono Nerd Font', 'SymbolsNerdFont'";
       "editor.fontSize" = 16;
-      "workbench.colorTheme" = "Catppuccin Mocha";
-      "workbench.iconTheme" = "catppuccin-mocha";
-      "catppuccin.accentColor" = "lavender";
+      # "workbench.colorTheme" = "Catppuccin Mocha";
+      # "workbench.iconTheme" = "catppuccin-mocha";
+      # "catppuccin.accentColor" = "lavender";
       "vsicons.dontShowNewVersionMessage" = true;
       "explorer.confirmDragAndDrop" = false;
       "editor.fontLigatures" = true;

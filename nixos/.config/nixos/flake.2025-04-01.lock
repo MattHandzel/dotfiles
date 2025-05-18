@@ -234,11 +234,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1743565902,
-        "narHash": "sha256-ZdJFLKlEfwhfoS3p1E4+sIRTtoRiFUFKJjfYbxbztUk=",
+        "lastModified": 1742182935,
+        "narHash": "sha256-ryr7uUFqeTzmxy82Mh4oJwoRam7rNtnsao3RM+sMA/A=",
         "owner": "MattHandzel",
         "repo": "lifelog",
-        "rev": "5be7a0b1b11d2a02455bfe4f495ccfe3a335cc6e",
+        "rev": "94efc877af7fdf2f55cd75dea4c38f8016f0da2f",
         "type": "github"
       },
       "original": {
@@ -379,11 +379,11 @@
     },
     "nixpkgs_7": {
       "locked": {
-        "lastModified": 1744306634,
-        "narHash": "sha256-m9rRZIUKtRYCSY+k0vA+LycSRRA7KOl/neA6WdElW7w=",
+        "lastModified": 1742022705,
+        "narHash": "sha256-3wdOwRv11hdkJgPofl47DTVcTeOTf8gXzsL9w3jbwAY=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "cd4d63bf9485ba66a1f5d036118b053289b153e4",
+        "rev": "bc4deca5088761c1fefd901da77ee5a39fa45d6f",
         "type": "github"
       },
       "original": {

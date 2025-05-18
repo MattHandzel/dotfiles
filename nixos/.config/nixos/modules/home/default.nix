@@ -30,9 +30,16 @@
     ++ [(import ./tmux.nix)] # terminal multiplexer
     ++ [(import ./services.nix)]
     ++ [(import ./todoist.nix)]
+    ++ [inputs.catppuccin.homeManagerModules.catppuccin]
     # ++ [(import ./notion.nix)]
     # ++ [(import ./ntfy.nix)]
     ;
+
+  catppuccin = {
+    flavor = "mocha";
+    enable = true;
+    # nvim.enable = false;
+  };
 
   xdg.mimeApps = {
     enable = true;
@@ -40,10 +47,21 @@
       "inode/directory" = "yazi.desktop";
       "text/plain" = "nvim.desktop";
       "text/x-python" = "nvim.desktop";
+      "text/html" = "zen.desktop";
+      "x-scheme-handler/http" = "zen.desktop";
+      "x-scheme-handler/https" = "zen.desktop";
+      "audio/*" = "mpv.desktop";
+      "video/*" = "mpv.desktop";
+      "image/*" = "feh.desktop";
+      "text/css" = "nvim.desktop";
+      "text/*" = "nvim.desktop";
+      "application/json" = "nvim.desktop";
+      "application/x-shellscript" = "nvim.desktop";
     };
   };
 
   home.sessionVariables = {
     TERMINAL = "kitty";
+    EDITOR = "nvim";
   };
 }

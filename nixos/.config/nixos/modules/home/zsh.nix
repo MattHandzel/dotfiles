@@ -16,6 +16,10 @@ in {
 
   programs.command-not-found.enable = true;
 
+  home.file.".config/cliphist/config".text = ''
+    -max-items 100000
+    -preview-width 256
+  '';
   # setup direnvrc so that when we cd into a dir then we load some vars
   home.file.".direnvrc".text = ''
       use_nix() {
@@ -27,15 +31,15 @@ in {
         fi
       }
 
-      use_python_venv() {
-        if [ -d ".venv" ]; then
-          layout python-venv .venv
-        elif [ -f "Pipfile" ]; then
-          layout python-pipenv
-        elif [ -f "requirements.txt" ]; then
-          layout python
-        fi
-      }
+      # use_python_venv() {
+      #   if [ -d ".venv" ]; then
+      #     layout python-venv .venv
+      #   elif [ -f "Pipfile" ]; then
+      #     layout python-pipenv
+      #   elif [ -f "requirements.txt" ]; then
+      #     layout python
+      #   fi
+      # }
 
       # Combine use_nix and use_python_venv
       load_env() {
@@ -53,6 +57,7 @@ in {
     HISTSIZE=1000000000
     SAVEHIST=1000000000
     setopt EXTENDED_HISTORY
+    RUSTC_WRAPPER=sccache cargo install {package}
   '';
 
   programs.zsh = {
@@ -62,7 +67,7 @@ in {
     syntaxHighlighting.enable = true;
 
     history = {
-      size = 1000000000;
+      size = 100000;
     };
 
     oh-my-zsh = {
@@ -73,6 +78,10 @@ in {
     initExtraFirst = ''
       DISABLE_MAGIC_FUNCTIONS=true
       export "MICRO_TRUECOLOR=1"
+      # Set window title to the current directory
+      precmd() {
+        printf "\033]0;%s\007" "$(basename "$PWD")"
+      }
     '';
 
     initExtra = ''
@@ -84,23 +93,31 @@ in {
       function notec(){
         take-note -c "$*"
         }
-      eval $(thefuck --alias) # gets fuck command running
+      # eval $(thefuck --alias) # gets fuck command running
 
       # export TODOIST_API_KEY="$(pass Todoist/API)"
-      alias notetaker="neovim ~/notes/"
 
-      __conda_setup="$('/home/matth/.conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-      if [ $? -eq 0 ]; then
-          eval "$__conda_setup"
-      else
-          if [ -f "/home/matth/.conda/etc/profile.d/conda.sh" ]; then
-              . "/home/matth/.conda/etc/profile.d/conda.sh"
-          else
-              export PATH="/home/matth/.conda/bin:$PATH"
-          fi
-      fi
-      unset __conda_setup
+      # __conda_setup="$('/home/matth/.conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+      # if [ $? -eq 0 ]; then
+      #     eval "$__conda_setup"
+      # else
+      #     if [ -f "/home/matth/.conda/etc/profile.d/conda.sh" ]; then
+      #         . "/home/matth/.conda/etc/profile.d/conda.sh"
+      #     else
+      #         export PATH="/home/matth/.conda/bin:$PATH"
+      #     fi
+      # fi
+      # unset __conda_setup
 
+
+      function y() {
+        local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+        yazi "$@" --cwd-file="$tmp"
+        if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+          builtin cd -- "$cwd"
+        fi
+        rm -f -- "$tmp"
+      }
 
     '';
 
@@ -122,6 +139,8 @@ in {
       ls = "lsd";
       lst = "lsd --tree --depth";
 
+      rm = "trash";
+
       n = "nvim";
 
       word-count = "wl-paste | wc";
@@ -129,13 +148,14 @@ in {
 
       # Nixos
       ns = "nix-shell --run zsh";
+      nd = "nix develop";
       nix-shell = "nix-shell --run zsh";
 
-      notetaker = "kitty --title notetaker --name notetaker --start-as=fullscreen";
+      # notetaker = "kitty sh -c \"cd ~/notes ; neovim .\" --title notetaker --name notetaker --start-as=fullscreen";
 
       # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
       rebuild = "pushd ${sharedVariables.rootDirectory} && git add --all . && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host} && popd";
-      rebuildu = "pushd ${sharedVariables.rootDirectory} && cp ${sharedVariables.rootDirectory}flake.lock flake.$(date +%Y-%m-%d).lock && git add --all . && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}.#${host} && popd";
+      rebuildu = "pushd ${sharedVariables.rootDirectory} && cp ${sharedVariables.rootDirectory}flake.lock ${sharedVariables.rootDirectory}flake.$(date +%Y-%m-%d).lock && git add --all . && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}.#${host} && popd";
       # testing = "echo \"sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host}\"";
       # rebuild = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}#${host}";
       # rebuildu = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}#${host}";

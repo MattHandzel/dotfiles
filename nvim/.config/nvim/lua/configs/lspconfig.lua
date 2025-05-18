@@ -2,8 +2,22 @@
 local lspconfig = require("lspconfig")
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities.offsetEncoding = { "utf-16" }
+lspconfig.rust_analyzer.setup({
+	-- Server-specific settings. See `:help lspconfig-setup`
+	settings = {
+		["rust-analyzer"] = {},
+	},
+})
+lspconfig.buf.setup({})
 lspconfig.pyright.setup({})
 lspconfig.ts_ls.setup({
+	on_attach = function(client, bufnr)
+		vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(vim.lsp.diagnostic.on_publish_diagnostics, {
+			virtual_text = true,
+			signs = true,
+			underline = true,
+		})
+	end,
 	-- on_attach = ,
 	-- capabilities = capabilities,
 	settings = {
@@ -17,12 +31,12 @@ lspconfig.ts_ls.setup({
 lspconfig.ltex.setup({
 	checkfrequency = "save",
 })
-lspconfig.rust_analyzer.setup({
-	-- Server-specific settings. See `:help lspconfig-setup`
-	settings = {
-		["rust-analyzer"] = {},
-	},
-})
+-- lspconfig.rust_analyzer.setup({
+-- 	-- Server-specific settings. See `:help lspconfig-setup`
+-- 	settings = {
+-- 		["rust-analyzer"] = {},
+-- 	},
+-- })
 lspconfig.hls.setup({
 	filetypes = { "haskell", "lhaskell", "cabal" },
 })
@@ -31,6 +45,27 @@ lspconfig.nixd.setup({})
 
 lspconfig.clangd.setup({ capabilities = capabilities })
 lspconfig.denols.setup({})
+
+-- go setup
+lspconfig.gopls.setup({
+	cmd = { "gopls", "serve" },
+	on_attach = function(client, bufnr)
+		vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(vim.lsp.diagnostic.on_publish_diagnostics, {
+			virtual_text = true,
+			signs = true,
+			underline = true,
+		})
+	end,
+	capabilities = capabilities,
+	settings = {
+		gopls = {
+			analyses = {
+				unusedparams = true,
+			},
+			staticcheck = true,
+		},
+	},
+})
 
 -- Global mappings.
 -- See `:help vim.diagnostic.*` for documentation on any of the below functions

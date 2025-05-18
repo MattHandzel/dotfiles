@@ -72,6 +72,9 @@ in {
       # set -g @thumbs-regexp-1 '[\w-\.]+@([\w-]+\.)+[\w-]{2,4}' # Match emails
       # set -g @thumbs-regexp-2 '[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:' # Match MAC addresses
       set -g @plugin 'akohlbecker/aw-watcher-tmux'
+      set -g @plugin 'christoomey/vim-tmux-navigator'
+      set -ga update-environment TERM
+      set -ga update-environment TERM_PROGRAM
 
       set -gq allow-passthrough on
       set -g visual-activity off

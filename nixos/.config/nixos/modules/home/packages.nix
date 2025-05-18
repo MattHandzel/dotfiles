@@ -168,7 +168,7 @@ in {
     # gnumake42
     # glibcLocales
     #
-    cargo
+    # cargo
     pkg-config
     # openconnect_openssl
     # ninja
@@ -189,7 +189,20 @@ in {
     sc-im
 
     logkeys # keylogger
-    inputs.lifelog.packages.x86_64-linux.default
+    inputs.lifelog.packages.x86_64-linux.lifelog-logger
+    inputs.lifelog.packages.x86_64-linux.lifelog-server
     v4l-utils
+    # rustup
+
+    rust-analyzer
+    rustfmt
+    rustc
+
+    xdg-desktop-portal
+    xdg-desktop-portal-kde
+
+    surrealdb
+
+    trash-cli
   ];
 }

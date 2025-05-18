@@ -13,6 +13,7 @@ local options = {
 		typescript = { "prettier" },
 		json = { "prettier" },
 		go = { "gofmt" },
+    rust = {"rustfmt"},
 	},
 }
 

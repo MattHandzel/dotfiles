@@ -694,6 +694,7 @@ return {
       { "<c-b>",       function() if not require("noice.lsp").scroll(-4) then return "<c-b>" end end, silent = true,              expr = true,              desc = "Scroll backward", mode = { "i", "n", "s" } },
     },
 	},
+
 	{
 		"stevearc/dressing.nvim",
 		opts = {},
@@ -855,8 +856,48 @@ return {
 		config = function()
 			require("auto-session").setup({
 				log_level = "warning",
+				enabled = true, -- Enables/disables auto creating, saving and restoring
+				root_dir = vim.fn.stdpath("data") .. "/sessions/", -- Root dir where sessions will be stored
+				auto_save = true, -- Enables/disables auto saving session on exit
+				auto_restore = true, -- Enables/disables auto restoring session on start
+				auto_create = true, -- Enables/disables auto creating new session files. Can take a function that should return true/false if a new session file should be created or not
+				suppressed_dirs = { "~/", "~/Downloads", "/", "~/notes" }, -- Suppress session restore/create in certain directories
+				allowed_dirs = nil, -- Allow session restore/create in certain directories
+				auto_restore_last_session = false, -- On startup, loads the last saved session if session for cwd does not exist
+				use_git_branch = true, -- Include git branch name in session name
+				lazy_support = true, -- Automatically detect if Lazy.nvim is being used and wait until Lazy is done to make sure session is restored correctly. Does nothing if Lazy isn't being used. Can be disabled if a problem is suspected or for debugging
+				bypass_save_filetypes = nil, -- List of filetypes to bypass auto save when the only buffer open is one of the file types listed, useful to ignore dashboards
+				close_unsupported_windows = true, -- Close windows that aren't backed by normal file before autosaving a session
+				args_allow_single_directory = true, -- Follow normal sesion save/load logic if launched with a single directory as the only argument
+				args_allow_files_auto_save = false, -- Allow saving a session even when launched with a file argument (or multiple files/dirs). It does not load any existing session first. While you can just set this to true, you probably want to set it to a function that decides when to save a session when launched with file args. See documentation for more detail
+				continue_restore_on_error = true, -- Keep loading the session even if there's an error
+				show_auto_restore_notif = false, -- Whether to show a notification when auto-restoring
+				cwd_change_handling = false, -- Follow cwd changes, saving a session before change and restoring after
+				lsp_stop_on_restore = false, -- Should language servers be stopped when restoring a session. Can also be a function that will be called if set. Not called on autorestore from startup
+				log_level = "error", -- Sets the log level of the plugin (debug, info, warn, error).
 
-				auto_session_suppress_dirs = { "~/", "~/Downloads", "/", "~/notes" },
+				session_lens = {
+					load_on_setup = true, -- Initialize on startup (requires Telescope)
+					theme_conf = { -- Pass through for Telescope theme options
+						-- layout_config = { -- As one example, can change width/height of picker
+						--   width = 0.8,    -- percent of window
+						--   height = 0.5,
+						-- },
+					},
+					previewer = false, -- File preview for session picker
+
+					mappings = {
+						-- Mode can be a string or a table, e.g. {"i", "n"} for both insert and normal mode
+						delete_session = { "i", "<C-D>" },
+						alternate_session = { "i", "<C-S>" },
+						copy_session = { "i", "<C-Y>" },
+					},
+
+					session_control = {
+						control_dir = vim.fn.stdpath("data") .. "/auto_session/", -- Auto session control dir, for control files, like alternating between two sessions with session-lens
+						control_filename = "session_control.json", -- File name of the session control file
+					},
+				},
 			})
 		end,
 	},
@@ -865,7 +906,9 @@ return {
 		cmd = "Copilot",
 		build = ":Copilot auth",
 		opts = {
+
 			suggestion = { enabled = true },
+			debug = false,
 			panel = { enabled = false },
 			filetypes = {
 				markdown = true,
@@ -925,6 +968,11 @@ return {
 	{
 		"williamboman/mason.nvim",
 		opts = {
+			-- setup = {
+			--   rust_analyzer = function()
+			--     return true
+			--   end,
+			-- },
 			ensure_installed = {
 				"lua-language-server",
 				"html-lsp",
@@ -934,6 +982,8 @@ return {
 				"clang-format",
 				"markdown",
 				"markdown_inline",
+				"rust-analyzer",
+				"gopls",
 			},
 		},
 	},
@@ -942,6 +992,683 @@ return {
 		"rcarriga/nvim-notify",
 		config = function()
 			require("configs.notify")
+		end,
+	},
+	{
+		"folke/snacks.nvim",
+		priority = 1000,
+		lazy = false,
+		---@type snacks.Config
+		opts = {
+			bigfile = { enabled = true },
+			dashboard = { enabled = true },
+			explorer = { enabled = true, replace_netrw = true },
+			indent = { enabled = true },
+			input = { enabled = true },
+			notifier = {
+				enabled = true,
+				timeout = 3000,
+			},
+			picker = {
+				sources = {
+					explorer = {
+						actions = {
+							explorer_del = function(picker) --[[Override]]
+								local actions = require("snacks.explorer.actions")
+								local Tree = require("snacks.explorer.tree")
+								local paths = vim.tbl_map(Snacks.picker.util.path, picker:selected({ fallback = true }))
+								if #paths == 0 then
+									return
+								end
+								local what = #paths == 1 and vim.fn.fnamemodify(paths[1], ":p:~:.")
+									or #paths .. " files"
+								actions.confirm("Put to the trash " .. what .. "?", function()
+									local jobs = #paths
+									local after_job = function()
+										jobs = jobs - 1
+										if jobs == 0 then
+											picker.list:set_selected()
+											actions.update(picker)
+										end
+									end
+									for _, path in ipairs(paths) do
+										local err_data = {}
+										local cmd = "trash " .. path --[[Actual command to run]]
+										local job_id = vim.fn.jobstart(cmd, {
+											detach = true,
+											on_stderr = function(_, data)
+												err_data[#err_data + 1] = table.concat(data, "\n")
+											end,
+											on_exit = function(_, code)
+												pcall(function()
+													if code == 0 then
+														Snacks.bufdelete({ file = path, force = true })
+													else
+														local err_msg = vim.trim(table.concat(err_data, ""))
+														Snacks.notify.error(
+															"Failed to delete `" .. path .. "`:\n- " .. err_msg
+														)
+													end
+													Tree:refresh(vim.fs.dirname(path))
+												end)
+												after_job()
+											end,
+										})
+										if job_id == 0 then
+											after_job()
+											Snacks.notify.error("Failed to start the job for: " .. path)
+										end
+									end
+								end)
+							end,
+						},
+					},
+				},
+			},
+			quickfile = { enabled = true },
+			scope = { enabled = true },
+			scroll = { enabled = false },
+			statuscolumn = { enabled = true },
+			win = { enabled = true },
+			words = { enabled = true },
+			styles = {
+				notification = {
+					-- wo = { wrap = true } -- Wrap notifications
+				},
+			},
+		},
+		keys = {
+			-- Top Pickers & Explorer
+			{
+				"<leader><space>",
+				function()
+					Snacks.picker.smart()
+				end,
+				desc = "Smart Find Files",
+			},
+			{
+				"<leader>,",
+				function()
+					Snacks.picker.buffers()
+				end,
+				desc = "Buffers",
+			},
+			{
+				"<leader>/",
+				function()
+					Snacks.picker.grep()
+				end,
+				desc = "Grep",
+			},
+			{
+				"<leader>:",
+				function()
+					Snacks.picker.command_history()
+				end,
+				desc = "Command History",
+			},
+			{
+				"<leader>n",
+				function()
+					Snacks.picker.notifications()
+				end,
+				desc = "Notification History",
+			},
+			{
+				"<leader>e",
+				function()
+					Snacks.explorer()
+				end,
+				desc = "File Explorer",
+			},
+			-- find
+			{
+				"<leader>fb",
+				function()
+					Snacks.picker.buffers()
+				end,
+				desc = "Buffers",
+			},
+			{
+				"<leader>fc",
+				function()
+					Snacks.picker.files({ cwd = vim.fn.stdpath("config") })
+				end,
+				desc = "Find Config File",
+			},
+			{
+				"<leader>ff",
+				function()
+					Snacks.picker.files()
+				end,
+				desc = "Find Files",
+			},
+			{
+				"<leader>fg",
+				function()
+					Snacks.picker.git_files()
+				end,
+				desc = "Find Git Files",
+			},
+			{
+				"<leader>fp",
+				function()
+					Snacks.picker.projects()
+				end,
+				desc = "Projects",
+			},
+			{
+				"<leader>fr",
+				function()
+					Snacks.picker.recent()
+				end,
+				desc = "Recent",
+			},
+			-- git
+			{
+				"<leader>gb",
+				function()
+					Snacks.picker.git_branches()
+				end,
+				desc = "Git Branches",
+			},
+			{
+				"<leader>gl",
+				function()
+					Snacks.picker.git_log()
+				end,
+				desc = "Git Log",
+			},
+			{
+				"<leader>gL",
+				function()
+					Snacks.picker.git_log_line()
+				end,
+				desc = "Git Log Line",
+			},
+			{
+				"<leader>gs",
+				function()
+					Snacks.picker.git_status()
+				end,
+				desc = "Git Status",
+			},
+			{
+				"<leader>gS",
+				function()
+					Snacks.picker.git_stash()
+				end,
+				desc = "Git Stash",
+			},
+			{
+				"<leader>gd",
+				function()
+					Snacks.picker.git_diff()
+				end,
+				desc = "Git Diff (Hunks)",
+			},
+			{
+				"<leader>gf",
+				function()
+					Snacks.picker.git_log_file()
+				end,
+				desc = "Git Log File",
+			},
+			-- Grep
+			{
+				"<leader>sb",
+				function()
+					Snacks.picker.lines()
+				end,
+				desc = "Buffer Lines",
+			},
+			{
+				"<leader>sB",
+				function()
+					Snacks.picker.grep_buffers()
+				end,
+				desc = "Grep Open Buffers",
+			},
+			{
+				"<leader>sg",
+				function()
+					Snacks.picker.grep()
+				end,
+				desc = "Grep",
+			},
+			{
+				"<leader>sw",
+				function()
+					Snacks.picker.grep_word()
+				end,
+				desc = "Visual selection or word",
+				mode = { "n", "x" },
+			},
+			-- search
+			{
+				'<leader>s"',
+				function()
+					Snacks.picker.registers()
+				end,
+				desc = "Registers",
+			},
+			{
+				"<leader>s/",
+				function()
+					Snacks.picker.search_history()
+				end,
+				desc = "Search History",
+			},
+			{
+				"<leader>sa",
+				function()
+					Snacks.picker.autocmds()
+				end,
+				desc = "Autocmds",
+			},
+			{
+				"<leader>sb",
+				function()
+					Snacks.picker.lines()
+				end,
+				desc = "Buffer Lines",
+			},
+			{
+				"<leader>sc",
+				function()
+					Snacks.picker.command_history()
+				end,
+				desc = "Command History",
+			},
+			{
+				"<leader>sC",
+				function()
+					Snacks.picker.commands()
+				end,
+				desc = "Commands",
+			},
+			{
+				"<leader>sd",
+				function()
+					Snacks.picker.diagnostics()
+				end,
+				desc = "Diagnostics",
+			},
+			{
+				"<leader>sD",
+				function()
+					Snacks.picker.diagnostics_buffer()
+				end,
+				desc = "Buffer Diagnostics",
+			},
+			{
+				"<leader>sh",
+				function()
+					Snacks.picker.help()
+				end,
+				desc = "Help Pages",
+			},
+			{
+				"<leader>sH",
+				function()
+					Snacks.picker.highlights()
+				end,
+				desc = "Highlights",
+			},
+			{
+				"<leader>si",
+				function()
+					Snacks.picker.icons()
+				end,
+				desc = "Icons",
+			},
+			{
+				"<leader>sj",
+				function()
+					Snacks.picker.jumps()
+				end,
+				desc = "Jumps",
+			},
+			{
+				"<leader>sk",
+				function()
+					Snacks.picker.keymaps()
+				end,
+				desc = "Keymaps",
+			},
+			{
+				"<leader>sl",
+				function()
+					Snacks.picker.loclist()
+				end,
+				desc = "Location List",
+			},
+			{
+				"<leader>sm",
+				function()
+					Snacks.picker.marks()
+				end,
+				desc = "Marks",
+			},
+			{
+				"<leader>sM",
+				function()
+					Snacks.picker.man()
+				end,
+				desc = "Man Pages",
+			},
+			{
+				"<leader>sp",
+				function()
+					Snacks.picker.lazy()
+				end,
+				desc = "Search for Plugin Spec",
+			},
+			{
+				"<leader>sq",
+				function()
+					Snacks.picker.qflist()
+				end,
+				desc = "Quickfix List",
+			},
+			{
+				"<leader>sR",
+				function()
+					Snacks.picker.resume()
+				end,
+				desc = "Resume",
+			},
+			{
+				"<leader>su",
+				function()
+					Snacks.picker.undo()
+				end,
+				desc = "Undo History",
+			},
+			{
+				"<leader>uC",
+				function()
+					Snacks.picker.colorschemes()
+				end,
+				desc = "Colorschemes",
+			},
+			-- LSP
+			{
+				"gd",
+				function()
+					Snacks.picker.lsp_definitions()
+				end,
+				desc = "Goto Definition",
+			},
+			{
+				"gD",
+				function()
+					Snacks.picker.lsp_declarations()
+				end,
+				desc = "Goto Declaration",
+			},
+			{
+				"gr",
+				function()
+					Snacks.picker.lsp_references()
+				end,
+				nowait = true,
+				desc = "References",
+			},
+			{
+				"gI",
+				function()
+					Snacks.picker.lsp_implementations()
+				end,
+				desc = "Goto Implementation",
+			},
+			{
+				"gy",
+				function()
+					Snacks.picker.lsp_type_definitions()
+				end,
+				desc = "Goto T[y]pe Definition",
+			},
+			{
+				"<leader>ss",
+				function()
+					Snacks.picker.lsp_symbols()
+				end,
+				desc = "LSP Symbols",
+			},
+			{
+				"<leader>sS",
+				function()
+					Snacks.picker.lsp_workspace_symbols()
+				end,
+				desc = "LSP Workspace Symbols",
+			},
+			-- Other
+			{
+				"<leader>z",
+				function()
+					Snacks.zen()
+				end,
+				desc = "Toggle Zen Mode",
+			},
+			{
+				"<leader>Z",
+				function()
+					Snacks.zen.zoom()
+				end,
+				desc = "Toggle Zoom",
+			},
+			{
+				"<leader>.",
+				function()
+					Snacks.scratch()
+				end,
+				desc = "Toggle Scratch Buffer",
+			},
+			{
+				"<leader>S",
+				function()
+					Snacks.scratch.select()
+				end,
+				desc = "Select Scratch Buffer",
+			},
+			{
+				"<leader>n",
+				function()
+					Snacks.notifier.show_history()
+				end,
+				desc = "Notification History",
+			},
+			{
+				"<leader>bd",
+				function()
+					Snacks.bufdelete()
+				end,
+				desc = "Delete Buffer",
+			},
+			{
+				"<leader>cR",
+				function()
+					Snacks.rename.rename_file()
+				end,
+				desc = "Rename File",
+			},
+			{
+				"<leader>gB",
+				function()
+					Snacks.gitbrowse()
+				end,
+				desc = "Git Browse",
+				mode = { "n", "v" },
+			},
+			{
+				"<leader>gg",
+				function()
+					Snacks.lazygit()
+				end,
+				desc = "Lazygit",
+			},
+			{
+				"<leader>un",
+				function()
+					Snacks.notifier.hide()
+				end,
+				desc = "Dismiss All Notifications",
+			},
+			{
+				"<c-/>",
+				function()
+					Snacks.terminal()
+				end,
+				desc = "Toggle Terminal",
+			},
+
+			-- { "<c-_>",      function() Snacks.terminal() end, desc = "which_key_ignore" },
+			{
+				"]]",
+				function()
+					Snacks.words.jump(vim.v.count1)
+				end,
+				desc = "Next Reference",
+				mode = { "n", "t" },
+			},
+			{
+				"[[",
+				function()
+					Snacks.words.jump(-vim.v.count1)
+				end,
+				desc = "Prev Reference",
+				mode = { "n", "t" },
+			},
+			{
+				"<leader>N",
+				desc = "Neovim News",
+				function()
+					Snacks.win({
+						file = vim.api.nvim_get_runtime_file("doc/news.txt", false)[1],
+						width = 0.6,
+						height = 0.6,
+						wo = {
+							spell = false,
+							wrap = false,
+							signcolumn = "yes",
+							statuscolumn = " ",
+							conceallevel = 3,
+						},
+					})
+				end,
+			},
+		},
+		init = function()
+			vim.api.nvim_create_autocmd("User", {
+				pattern = "VeryLazy",
+				callback = function()
+					-- Setup some globals for debugging (lazy-loaded)
+					_G.dd = function(...)
+						Snacks.debug.inspect(...)
+					end
+					_G.bt = function()
+						Snacks.debug.backtrace()
+					end
+					vim.print = _G.dd -- Override print to use snacks for `:=` command
+
+					-- Create some toggle mappings
+					Snacks.toggle.option("spell", { name = "Spelling" }):map("<leader>us")
+					Snacks.toggle.option("wrap", { name = "Wrap" }):map("<leader>uw")
+					Snacks.toggle.option("relativenumber", { name = "Relative Number" }):map("<leader>uL")
+					Snacks.toggle.diagnostics():map("<leader>ud")
+					Snacks.toggle.line_number():map("<leader>ul")
+					Snacks.toggle
+						.option("conceallevel", { off = 0, on = vim.o.conceallevel > 0 and vim.o.conceallevel or 2 })
+						:map("<leader>uc")
+					Snacks.toggle.treesitter():map("<leader>uT")
+					Snacks.toggle
+						.option("background", { off = "light", on = "dark", name = "Dark Background" })
+						:map("<leader>ub")
+					Snacks.toggle.inlay_hints():map("<leader>uh")
+					Snacks.toggle.indent():map("<leader>ug")
+					Snacks.toggle.dim():map("<leader>uD")
+				end,
+			})
+		end,
+	},
+	-- {
+	--   "folke/snacks.nvim",
+	--   priority = 1000,
+	--   lazy = false,
+	--   ---@type snacks.Config
+	--   opts = {
+	--     -- your configuration comes here
+	--     -- or leave it empty to use the default settings
+	--     -- refer to the configuration section below
+	--     bigfile = { enabled = true },
+	--     dashboard = { enabled = true },
+	--     explorer = { enabled = true },
+	--     indent = { enabled = true },
+	--     input = { enabled = true },
+	--     picker = { enabled = true },
+	--     notifier = { enabled = true },
+	--     quickfile = { enabled = true },
+	--     scope = { enabled = true },
+	--     scroll = { enabled = false },
+	--     statuscolumn = { enabled = true },
+	--     words = { enabled = true },
+	--   },
+	-- },
+	{
+		"lewis6991/gitsigns.nvim",
+		event = "VeryLazy",
+		config = function()
+			require("gitsigns").setup({
+				signs = {
+					add = { text = "┃" },
+					change = { text = "┃" },
+					delete = { text = "_" },
+					topdelete = { text = "‾" },
+					changedelete = { text = "~" },
+					untracked = { text = "┆" },
+				},
+				signs_staged = {
+					add = { text = "┃" },
+					change = { text = "┃" },
+					delete = { text = "_" },
+					topdelete = { text = "‾" },
+					changedelete = { text = "~" },
+					untracked = { text = "┆" },
+				},
+				signs_staged_enable = true,
+				signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
+				numhl = false, -- Toggle with `:Gitsigns toggle_numhl`
+				linehl = false, -- Toggle with `:Gitsigns toggle_linehl`
+				word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
+				watch_gitdir = {
+					follow_files = true,
+				},
+				auto_attach = true,
+				attach_to_untracked = false,
+				current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
+				current_line_blame_opts = {
+					virt_text = true,
+					virt_text_pos = "eol", -- 'eol' | 'overlay' | 'right_align'
+					delay = 1000,
+					ignore_whitespace = false,
+					virt_text_priority = 100,
+					use_focus = true,
+				},
+				current_line_blame_formatter = "<author>, <author_time:%R> - <summary>",
+				sign_priority = 6,
+				update_debounce = 100,
+				status_formatter = nil, -- Use default
+				max_file_length = 40000, -- Disable if file is longer than this (in lines)
+				preview_config = {
+					-- Options passed to nvim_open_win
+					border = "single",
+					style = "minimal",
+					relative = "cursor",
+					row = 0,
+					col = 1,
+				},
+			})
 		end,
 	},
 
@@ -1205,6 +1932,43 @@ return {
 	-- 	end,
 	-- },
 	{
+		"folke/trouble.nvim",
+		opts = {}, -- for default options, refer to the configuration section for custom setup.
+		cmd = "Trouble",
+		keys = {
+			{
+				"<leader>xx",
+				"<cmd>Trouble diagnostics toggle<cr>",
+				desc = "Diagnostics (Trouble)",
+			},
+			{
+				"<leader>xX",
+				"<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
+				desc = "Buffer Diagnostics (Trouble)",
+			},
+			{
+				"<leader>cs",
+				"<cmd>Trouble symbols toggle focus=false<cr>",
+				desc = "Symbols (Trouble)",
+			},
+			{
+				"<leader>cl",
+				"<cmd>Trouble lsp toggle focus=false win.position=right<cr>",
+				desc = "LSP Definitions / references / ... (Trouble)",
+			},
+			{
+				"<leader>xL",
+				"<cmd>Trouble loclist toggle<cr>",
+				desc = "Location List (Trouble)",
+			},
+			{
+				"<leader>xQ",
+				"<cmd>Trouble qflist toggle<cr>",
+				desc = "Quickfix List (Trouble)",
+			},
+		},
+	},
+	{
 		"folke/flash.nvim",
 		event = "VeryLazy",
 		vscode = true,
@@ -1414,5 +2178,58 @@ return {
 		config = function()
 			require("linear-nvim").setup()
 		end,
+	},
+	-- {
+	--   'mrcjkb/rustaceanvim',
+	--   version = '^5',
+	--   event = "VeryLazy",
+	--
+	-- },
+
+	-- {
+	--   'simrat39/rust-tools.nvim',
+	--   event="VeryLazy",
+	--   config = function()
+	--     require('rust-tools').setup({
+	--     tools = {
+	--       autoSetHints = true,
+	--       hover_with_actions = true,
+	--       runnables = {
+	--         use_telescope = true
+	--       },
+	--       inlay_hints = {
+	--         show_parameter_hints = true,
+	--         parameter_hints_prefix = "<-",
+	--         other_hints_prefix = "=>",
+	--       },
+	--     },
+	--
+	--     })
+	--   end
+	-- },
+	{
+		"saecki/crates.nvim",
+		ft = { "rust", "toml" },
+		config = function()
+			require("crates").setup({
+				completion = {
+					cmp = {
+						enabled = true,
+					},
+				},
+			})
+			require("cmp").setup.buffer({
+				sources = { { name = "crates" } },
+			})
+		end,
+	},
+	{
+		"nvim-pack/nvim-spectre",
+		event = "VeryLazy",
+		lazy = false,
+		cmd = "Spectre",
+		opts = {
+			open_cmd = "noswapfile vnew",
+		},
 	},
 }

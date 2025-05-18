@@ -39,6 +39,39 @@
         "type": "github"
       }
     },
+    "catppuccin-bat": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1734996624,
+        "narHash": "sha256-6fWoCH90IGumAMc4buLRWL0N61op+AuMNN9CAR9/OdI=",
+        "owner": "catppuccin",
+        "repo": "bat",
+        "rev": "699f60fc8ec434574ca7451b444b880430319941",
+        "type": "github"
+      },
+      "original": {
+        "owner": "catppuccin",
+        "repo": "bat",
+        "type": "github"
+      }
+    },
+    "catppuccin-cava": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1716595578,
+        "narHash": "sha256-1+CCUaf8U/NH/eHuYRbQo8inbhSMJ3vji6UH52hrF1s=",
+        "owner": "catppuccin",
+        "repo": "cava",
+        "rev": "6ec25ba688e30f3e5d6004ef6a295e6ba90c64d4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "catppuccin",
+        "repo": "cava",
+        "rev": "6ec25ba688e30f3e5d6004ef6a295e6ba90c64d4",
+        "type": "github"
+      }
+    },
     "fenix": {
       "inputs": {
         "nixpkgs": [
@@ -234,11 +267,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1743565902,
-        "narHash": "sha256-ZdJFLKlEfwhfoS3p1E4+sIRTtoRiFUFKJjfYbxbztUk=",
+        "lastModified": 1742182935,
+        "narHash": "sha256-ryr7uUFqeTzmxy82Mh4oJwoRam7rNtnsao3RM+sMA/A=",
         "owner": "MattHandzel",
         "repo": "lifelog",
-        "rev": "5be7a0b1b11d2a02455bfe4f495ccfe3a335cc6e",
+        "rev": "94efc877af7fdf2f55cd75dea4c38f8016f0da2f",
         "type": "github"
       },
       "original": {
@@ -379,11 +412,11 @@
     },
     "nixpkgs_7": {
       "locked": {
-        "lastModified": 1744306634,
-        "narHash": "sha256-m9rRZIUKtRYCSY+k0vA+LycSRRA7KOl/neA6WdElW7w=",
+        "lastModified": 1742022705,
+        "narHash": "sha256-3wdOwRv11hdkJgPofl47DTVcTeOTf8gXzsL9w3jbwAY=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "cd4d63bf9485ba66a1f5d036118b053289b153e4",
+        "rev": "bc4deca5088761c1fefd901da77ee5a39fa45d6f",
         "type": "github"
       },
       "original": {
@@ -470,6 +503,8 @@
       "inputs": {
         "alejandra": "alejandra",
         "catppuccin": "catppuccin",
+        "catppuccin-bat": "catppuccin-bat",
+        "catppuccin-cava": "catppuccin-cava",
         "home-manager": "home-manager",
         "hypr-contrib": "hypr-contrib",
         "hyprpicker": "hyprpicker",
