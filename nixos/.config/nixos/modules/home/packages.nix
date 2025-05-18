@@ -118,7 +118,7 @@ in {
 
     wlroots
     wl-gammactl
-    mako
+    # mako
 
     #  gcc
     #  clang
