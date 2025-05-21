@@ -1,70 +1,70 @@
-{ pkgs, ... }: 
-{
+{pkgs, ...}: {
   programs.micro = {
     enable = true;
-    
+
     settings = {
       "colorscheme" = "catppuccin-mocha";
       "*.nix" = {"tabsize" = 2;};
-      "*.ml"  = {"tabsize" = 2;};
-      "*.sh"  = {"tabsize" = 2;};
+      "*.ml" = {"tabsize" = 2;};
+      "*.sh" = {"tabsize" = 2;};
       "tabstospaces" = true;
       "tabsize" = 4;
     };
   };
 
-  xdg.configFile."micro/bindings.json".text = ''
+  xdg.configfile."micro/bindings.json".text = ''
     {
-      "Ctrl-Up": "CursorUp,CursorUp,CursorUp,CursorUp,CursorUp",
-      "Ctrl-Down": "CursorDown,CursorDown,CursorDown,CursorDown,CursorDown",
-      "Ctrl-Backspace": "DeleteWordLeft",
-      "Ctrl-Delete": "DeleteWordRight",
-      "CtrlShiftUp": "ScrollUp,ScrollUp,ScrollUp,ScrollUp,ScrollUp",
-      "CtrlShiftDown": "ScrollDown,ScrollDown,ScrollDown,ScrollDown,ScrollDown"
+      "ctrl-up": "cursorup,cursorup,cursorup,cursorup,cursorup",
+      "ctrl-down": "cursordown,cursordown,cursordown,cursordown,cursordown",
+      "ctrl-backspace": "deletewordleft",
+      "ctrl-delete": "deletewordright",
+      "ctrlshiftup": "scrollup,scrollup,scrollup,scrollup,scrollup",
+      "ctrlshiftdown": "scrolldown,scrolldown,scrolldown,scrolldown,scrolldown"
     }
   '';
 
-  xdg.configFile."micro/colorschemes/catppuccin-mocha.micro".text = ''
-    color-link comment "#585B70"
+  xdg.configfile."micro/colorschemes/catppuccin-mocha.micro".text = ''
+    color-link comment "#585b70"
 
-    color-link identifier "#89B4FA"
-    color-link identifier.class "#89B4FA"
-    color-link identifier.var "#89B4FA"
+    color-link identifier "#89b4fa"
+    color-link identifier.class "#89b4fa"
+    color-link identifier.var "#89b4fa"
 
-    color-link constant "#FAB387"
-    color-link constant.number "#FAB387"
-    color-link constant.string "#A6E3A1"
+    color-link constant "#fab387"
+    color-link constant.number "#fab387"
+    color-link constant.string "#a6e3a1"
 
-    color-link symbol "#F5C2E7"
-    color-link symbol.brackets "#F2CDCD"
-    color-link symbol.tag "#89B4FA"
+    color-link symbol "#f5c2e7"
+    color-link symbol.brackets "#f2cdcd"
+    color-link symbol.tag "#89b4fa"
 
-    color-link type "#89B4FA"
-    color-link type.keyword "#F9E2AF"
+    color-link type "#89b4fa"
+    color-link type.keyword "#f9e2af"
 
-    color-link special "#F5C2E7"
-    color-link statement "#CBA6F7"
-    color-link preproc "#F5C2E7"
+    color-link special "#f5c2e7"
+    color-link statement "#cba6f7"
+    color-link preproc "#f5c2e7"
 
-    color-link underlined "#89DCEB"
-    color-link error "bold #F38BA8"
-    color-link todo "bold #F9E2AF"
+    color-link underlined "#89dceb"
+    color-link error "bold #f38ba8"
+    color-link todo "bold #f9e2af"
 
-    color-link diff-added "#A6E3A1"
-    color-link diff-modified "#F9E2AF"
-    color-link diff-deleted "#F38BA8"
+    color-link diff-added "#a6e3a1"
+    color-link diff-modified "#f9e2af"
+    color-link diff-deleted "#f38ba8"
 
-    color-link gutter-error "#F38BA8"
-    color-link gutter-warning "#F9E2AF"
+    color-link gutter-error "#f38ba8"
+    color-link gutter-warning "#f9e2af"
 
-    color-link statusline "#CDD6F4,#181825"
-    color-link tabbar "#CDD6F4"
-    color-link indent-char "#45475A"
-    color-link line-number "#45475A"
-    color-link current-line-number "#B4BEFE"
+    color-link statusline "#cdd6f4,#181825"
+    color-link tabbar "#cdd6f4"
+    color-link indent-char "#45475a"
+    color-link line-number "#45475a"
+    color-link current-line-number "#b4befe"
 
     color-link color-column "#313244"
     color-link type.extended "default"
 
   '';
 }
+
