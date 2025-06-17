@@ -6,12 +6,14 @@
     vimAlias = true;
     withPython3 = true;
     extraPython3Packages = ps: with ps; [pynvim black unidecode isort pylatexenc];
-    extraLuaPackages = ps: [ps.magick];
+    extraLuaPackages = ps: [ps.magick ps.neorg];
 
     # python3.withPackages = (ps: with ps; [neovim pynvim]);
     extraPackages = with pkgs; [
       vimPlugins.nvchad
       vimPlugins.nvchad-ui
+
+      # (nvim-treesitter.withPlugins (p: [p.norg p.norg-meta]))
 
       ripgrep
       python3

@@ -7,9 +7,9 @@
 in {
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
-    "electron-28.3.3"
-    "electron-32.3.3"
-    "electron-30.5.1"
+    # "electron-28.3.3"
+    # "electron-32.3.3"
+    # "electron-30.5.1"
   ];
   imports = [
     ./hardware-configuration.nix

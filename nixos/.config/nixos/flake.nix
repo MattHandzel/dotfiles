@@ -12,11 +12,11 @@
     alejandra.url = "github:kamadorueda/alejandra/3.0.0";
 
     nix-gaming.url = "github:fufexan/nix-gaming";
-    notion-repackaged = {
-      url = "github:MattHandzel/nix-notion-repackaged/master";
-
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # notion-repackaged = {
+    #   url = "github:MattHandzel/nix-notion-repackaged/master";
+    #
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
     # hyprland = {
     #   type = "git";
     #   url = "https://github.com/hyprwm/Hyprland";

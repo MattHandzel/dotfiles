@@ -66,6 +66,12 @@ return {
 	},
 	{
 		"nvim-treesitter/nvim-treesitter",
+		config = function()
+			require("nvim-treesitter.configs").setup({
+				ensure_installed = { "norg" },
+				highlight = { enable = true },
+			})
+		end,
 	},
 	-- config = function()
 	-- 	require("image").setup({
@@ -106,33 +112,6 @@ return {
 	-- 	})
 	-- end,
 	-- },
-
-	{
-		"nvim-neorg/neorg",
-		build = ":Neorg sync-parsers",
-		dependencies = { "nvim-lua/plenary.nvim" },
-		event = "VeryLazy",
-		config = function()
-			require("neorg").setup({
-				load = {
-					["core.defaults"] = {}, -- Loads default behaviour
-					["core.concealer"] = {}, -- Adds pretty icons to your documents
-					["core.completion"] = { -- Enables completion
-						config = {
-							engine = "nvim-cmp",
-						},
-					},
-					["core.dirman"] = { -- Manages Neorg workspaces
-						config = {
-							workspaces = {
-								notes = "~/notes",
-							},
-						},
-					},
-				},
-			})
-		end,
-	},
 
 	{
 		"iamcco/markdown-preview.nvim",
@@ -2231,5 +2210,66 @@ return {
 		opts = {
 			open_cmd = "noswapfile vnew",
 		},
+	},
+	-- {
+	-- 	"nvim-orgmode/orgmode",
+	-- 	event = "VeryLazy",
+	-- 	opts = {},
+	-- 	config = function(_, opts)
+	-- 		require("orgmode").setup(opts)
+	-- 	end,
+	-- },
+
+	{
+		"nvim-neorg/neorg",
+		build = ":Neorg sync-parsers",
+		dependencies = { "nvim-lua/plenary.nvim" }, --, "juniorsundar/neorg-extras" },
+		-- branch = "main",
+		version = "*",
+		event = "VeryLazy",
+		config = function()
+			require("neorg").setup({
+				load = {
+					["core.defaults"] = {}, -- Loads default behaviour
+					["core.concealer"] = {}, -- Adds pretty icons to your documents
+					["core.completion"] = { -- Enables completion
+						config = {
+							engine = "nvim-cmp",
+						},
+					},
+					["core.dirman"] = { -- Manages Neorg workspaces
+						config = {
+							workspaces = {
+								notes = "~/notes",
+
+								gtd = "~/notes/gtd",
+							},
+						},
+					},
+					-- ["external.many-mans"] = {
+					-- 	config = {
+					-- 		metadata_fold = true, -- If want @data property ... @end to fold
+					-- 		code_fold = true, -- If want @code ... @end to fold
+					-- 	},
+					-- },
+					-- ["external.roam"] = {
+					-- 	config = {
+					-- 		fuzzy_finder = "Snacks", -- OR "Fzf" OR "Snacks". Defaults to "Telescope"
+					-- 		fuzzy_backlinks = false, -- Set to "true" for backlinks in fuzzy finder instead of buffer
+					-- 		roam_base_directory = "", -- Directory in current workspace to store roam nodes
+					-- 		node_name_randomiser = false, -- Tokenise node name suffix for more randomisation
+					-- 		node_name_snake_case = false, -- snake_case the names if node_name_randomiser = false
+					-- 	},
+					-- },
+					["core.ui"] = { -- Adds pretty UI elements to Neorg
+					},
+					["core.ui.calendar"] = { -- Calendar view
+					},
+
+					-- ["core.gtd.base"] = { config = { workspace = "gtd" } },
+					-- ["core.gtd.ui"] = {},
+				},
+			})
+		end,
 	},
 }

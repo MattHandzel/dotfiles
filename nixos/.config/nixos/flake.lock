@@ -234,11 +234,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1747197157,
-        "narHash": "sha256-0GhVW/84dw95QA+NetSSgz2xaaZdeXkxDjQwzrYgy4A=",
+        "lastModified": 1742182935,
+        "narHash": "sha256-ryr7uUFqeTzmxy82Mh4oJwoRam7rNtnsao3RM+sMA/A=",
         "owner": "MattHandzel",
         "repo": "lifelog",
-        "rev": "b87de8ca905e36f3461ee7521e182ac87646d98b",
+        "rev": "94efc877af7fdf2f55cd75dea4c38f8016f0da2f",
         "type": "github"
       },
       "original": {
@@ -425,27 +425,6 @@
         "type": "github"
       }
     },
-    "notion-repackaged": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1732476757,
-        "narHash": "sha256-1PrrY/9c5eqt7CE/58tKx1qTTDeMUZzpN8+Lt6w0fyU=",
-        "owner": "MattHandzel",
-        "repo": "nix-notion-repackaged",
-        "rev": "1b065bf1e8ce035feac5954ca326fc762f690a48",
-        "type": "github"
-      },
-      "original": {
-        "owner": "MattHandzel",
-        "ref": "master",
-        "repo": "nix-notion-repackaged",
-        "type": "github"
-      }
-    },
     "nur": {
       "inputs": {
         "flake-parts": "flake-parts_2",
@@ -476,7 +455,6 @@
         "lifelog": "lifelog",
         "nix-gaming": "nix-gaming",
         "nixpkgs": "nixpkgs_7",
-        "notion-repackaged": "notion-repackaged",
         "nur": "nur",
         "spicetify-nix": "spicetify-nix",
         "zen-browser": "zen-browser"

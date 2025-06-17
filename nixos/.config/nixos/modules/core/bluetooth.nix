@@ -14,15 +14,15 @@
     serviceConfig.ExecStart = "${pkgs.bluez}/bin/mpris-proxy";
   };
 
-  systemd.user.services.my-user-task = {
-    enable = true;
-    description = "My daily task notification";
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "notify-send -t 2000 -u normal -i dialog-information \"Daily task 📅!\" \"\"";
-    };
-    wantedBy = ["default.target"];
-  };
+  # systemd.user.services.my-user-task = {
+  #   enable = true;
+  #   description = "My daily task notification";
+  #   serviceConfig = {
+  #     Type = "oneshot";
+  #     ExecStart = "notify-send -t 2000 -u normal -i dialog-information \"Daily task 📅!\" \"\"";
+  #   };
+  #   wantedBy = ["default.target"];
+  # };
 
   systemd.user.timers.my-user-task = {
     enable = true;

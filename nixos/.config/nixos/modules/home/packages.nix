@@ -157,7 +157,7 @@ in {
     speedcrunch
     ntfy-sh
 
-    xdg-desktop-portal
+    kdePackages.xdg-desktop-portal-kde # xdg-desktop-portal
     firefox
 
     # xdg-desktop-port-kde
@@ -174,7 +174,7 @@ in {
     # ninja
     # gh
 
-    inputs.notion-repackaged.packages.x86_64-linux.notion-repackaged
+    # inputs.notion-repackaged.packages.x86_64-linux.notion-repackaged
     kdePackages.kdenlive
     qbittorrent-enhanced
     platformio
@@ -190,7 +190,7 @@ in {
 
     logkeys # keylogger
     inputs.lifelog.packages.x86_64-linux.lifelog-logger
-    inputs.lifelog.packages.x86_64-linux.lifelog-server
+    # inputs.lifelog.packages.x86_64-linux.lifelog-server
     v4l-utils
     # rustup
 
@@ -199,7 +199,7 @@ in {
     rustc
 
     xdg-desktop-portal
-    xdg-desktop-portal-kde
+    kdePackages.xdg-desktop-portal-kde #    xdg-desktop-portal-kde
 
     surrealdb
 
