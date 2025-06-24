@@ -1,4 +1,4 @@
-require("neo-tree").setup()
+-- require("neo-tree").setup()
 require("betterTerm").setup({
 	prefix = "term-",
 	startInserted = true,
