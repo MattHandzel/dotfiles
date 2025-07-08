@@ -93,7 +93,6 @@ in {
     helvetica-neue-lt-std
     # terminal stuff
     stow
-    thefuck
     yazi
     # hyprshade
     # grimblast
@@ -204,5 +203,6 @@ in {
     surrealdb
 
     trash-cli
+    mermaid-cli # for mermaid diagrams
   ];
 }

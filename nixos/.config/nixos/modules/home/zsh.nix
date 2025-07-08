@@ -10,7 +10,7 @@ in {
   home.packages = with pkgs; [
     direnv
     lsd
-    thefuck
+    pay-respects
     tldr
   ];
 
@@ -93,7 +93,7 @@ in {
       function notec(){
         take-note -c "$*"
         }
-      # eval $(thefuck --alias) # gets fuck command running
+      # eval $(pay-respects --alias) # gets fuck command running
 
       # export TODOIST_API_KEY="$(pass Todoist/API)"
 

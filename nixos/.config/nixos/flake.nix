@@ -2,7 +2,7 @@
   description = "Matt's nixos configuration (based off FrostPhoenix)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.05-darwin";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     nur.url = "github:nix-community/NUR";
 
@@ -26,7 +26,7 @@
     # hyprsession.url = "github:joshurtree/hyprsession";
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.05";
+      url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

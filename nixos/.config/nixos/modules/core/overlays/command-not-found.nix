@@ -27,8 +27,8 @@ self: super: {
           fi
 
           # Try typo correction with thefuck
-          if command -v fuck >/dev/null; then
-              fuck_suggestion=$(fuck --yeah 2>/dev/null | tail -n1)
+          if command -v f >/dev/null; then
+              fuck_suggestion=$(f --yeah 2>/dev/null | tail -n1)
               if [ -n "$fuck_suggestion" ]; then
                   echo "Did you mean: $fuck_suggestion ? [y/N]"
                   read -r answer

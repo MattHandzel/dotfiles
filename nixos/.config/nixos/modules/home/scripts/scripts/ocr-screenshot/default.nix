@@ -1,5 +1,5 @@
 {pkgs ? import <nixpkgs> {}}: let
-  pythonEnv = pkgs.python310.withPackages (ps:
+  pythonEnv = pkgs.python312.withPackages (ps:
     with ps; [
       pillow
       pytesseract
