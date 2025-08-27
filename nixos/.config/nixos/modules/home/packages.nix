@@ -204,5 +204,6 @@ in {
 
     trash-cli
     mermaid-cli # for mermaid diagrams
+    windsurf
   ];
 }

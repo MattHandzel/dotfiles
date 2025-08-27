@@ -5,7 +5,7 @@
   ...
 }: {
   # Add user to libvirtd group
-  users.users.${username}.extraGroups = ["libvirtd"];
+  users.users.${username}.extraGroups = ["libvirtd" "i2c"];
 
   users.groups.libvirtd.members = ["${username}"];
 
@@ -23,6 +23,9 @@
 
   # Manage the virtualisation services
   virtualisation = {
+    docker = {
+      enable = true;
+    };
     libvirtd = {
       enable = true;
       qemu = {
