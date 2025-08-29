@@ -26,14 +26,18 @@ in let
   singleton_windows = sharedVariables.singletonApplications;
   floating_windows = ["imv" ".blueman-manager-wrapped" "Volume Control" "org.speedcrunch."];
   generateFloatingRules = floating_window: [
-    "float,${floating_window}"
-    "center,${floating_window}"
-    "size 1200 725,${floating_window}"
+    "float,title:^(${floating_window})$"
+    "center,title:^(${floating_window})$"
+    "size 1200 725,title:^(${floating_window})$"
+    "float,^(${floating_window})$"
+    "center,^(${floating_window})$"
+    "size 1200 725,^(${floating_window})$"
   ];
   generateSignletonWindowRules = singleton: let
     not_case_sensitive = makeStringToIncaseSensitiveRegex singleton;
   in [
     "workspace name:${singleton}, class:(${not_case_sensitive})"
+    "workspace name:${singleton}, title:(${not_case_sensitive})"
   ];
 
   generateSingletonKeyboardShortcuts = singleton:
@@ -84,16 +88,16 @@ in {
         "waybar &"
         "swaync &"
         "wl-paste --watch cliphist store -max-items 25000 &"
-        "gammastep -l  0.1047:-110.2062 -t 5700:1500 -b 1:.5 &"
+        "gammastep -l  0.1047:-100.2062 -t 5700:2500 -b 1:.7 &"
         "sudo chmod 666 /dev/i2c-* &"
-        "io.github.alainm23.planify &"
+        "GDK_BACKEND=x11 io.github.alainm23.planify &"
         # "sudo logkeys --start --device event0 --output $HOME/notes/life-logging/key-logging/keyboard.log &"
 
         "aw-server & "
         "aw-watcher-window > /home/matth/log_for_aw.txt"
         "aw-watcher-afk > /home/matth/log_for_aw1.txt"
         "hyprlock"
-        "lifelog-logger &"
+        # "lifelog-logger &"
       ];
 
       "device" = [
@@ -275,7 +279,7 @@ in {
           "ALT, Print, exec, ocr-screenshot && wl-paste -t text/plain > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').txt"
           ",Print, exec, grimblast --notify  --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
 
-          "$mainMod, N, exec, quick-capture"
+          "$mainMod, N, exec, kms-capture"
           "$mainMod ALT, F, exec, kitty --hold --title yazi --name sh -c \"yazi\""
 
           # Move focus with mainMod + arrow keys
@@ -416,8 +420,10 @@ in {
           "move 0 0,title:^(Firefox — Sharing Indicator)$"
           "size 700 450,title:^(Volume Control)$"
           "workspace name:calendar, title:(calendar)"
-          "workspace name:notetaker, title:(notetaker)"
           "move 40 55%,title:^(Volume Control)$"
+
+          "float,title:^(knowledge-management-system-capture)$"
+          "size 960 540,title:^(knowledge-management-system-capture)$"
         ];
 
       # windowrulev2
@@ -469,10 +475,6 @@ in {
 #       # monitor=DP-1,1920x1080,0x1080,auto, transform, 2
 #       monitor=DP-1,preferred,0x1080,1.0
 
-# monitor mod ffe
-      monitor=eDP-1,preferred,0x0,1.0
-      monitor=DP-1,preferred,1920x0,1.0
-      monitor=HDMI-A-1,preferred,-2560x-180,1.0
 
       # this
 
@@ -501,26 +503,31 @@ in {
       # workspace=9, monitor:DP-1
       # workspace=10, monitor:DP-1
 
-      workspace=11, monitor:DP-1
-      workspace=12, monitor:DP-1
-      workspace=13, monitor:DP-1
-      workspace=14, monitor:DP-1
-      workspace=15, monitor:DP-1
-      workspace=16, monitor:DP-1
-      workspace=17, monitor:DP-1
-      workspace=18, monitor:DP-1
-      workspace=19, monitor:DP-1
-      workspace=20, monitor:DP-1
-      # workspace=11, monitor:HDMI-A-1
-      # workspace=12, monitor:HDMI-A-1
-      # workspace=13, monitor:HDMI-A-1
-      # workspace=14, monitor:HDMI-A-1
-      # workspace=15, monitor:HDMI-A-1
-      # workspace=16, monitor:HDMI-A-1
-      # workspace=17, monitor:HDMI-A-1
-      # workspace=18, monitor:HDMI-A-1
-      # workspace=19, monitor:HDMI-A-1
-      # workspace=20, monitor:HDMI-A-1
+      # workspace=11, monitor:DP-1
+      # workspace=12, monitor:DP-1
+      # workspace=13, monitor:DP-1
+      # workspace=14, monitor:DP-1
+      # workspace=15, monitor:DP-1
+      # workspace=16, monitor:DP-1
+      # workspace=17, monitor:DP-1
+      # workspace=18, monitor:DP-1
+      # workspace=19, monitor:DP-1
+      # workspace=20, monitor:DP-1
+      workspace=11, monitor:HDMI-A-1
+      workspace=12, monitor:HDMI-A-1
+      workspace=13, monitor:HDMI-A-1
+      workspace=14, monitor:HDMI-A-1
+      workspace=15, monitor:HDMI-A-1
+      workspace=16, monitor:HDMI-A-1
+      workspace=17, monitor:HDMI-A-1
+      workspace=18, monitor:HDMI-A-1
+      workspace=19, monitor:HDMI-A-1
+      workspace=20, monitor:HDMI-A-1
+
+# monitor mod ffe
+      monitor=eDP-1,preferred,0x0,1.0
+      monitor=DP-1,preferred,1920x0,1.0
+      monitor=HDMI-A-1,preferred,-2560x-1440,1.0
 
 
 gestures {

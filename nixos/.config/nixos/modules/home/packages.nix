@@ -188,7 +188,8 @@ in {
     sc-im
 
     logkeys # keylogger
-    inputs.lifelog.packages.x86_64-linux.lifelog-logger
+    # inputs.lifelog.packages.x86_64-linux.lifelog-logger
+    inputs.kms-capture.packages.x86_64-linux.kms-capture
     # inputs.lifelog.packages.x86_64-linux.lifelog-server
     v4l-utils
     # rustup
@@ -204,5 +205,18 @@ in {
 
     trash-cli
     mermaid-cli # for mermaid diagrams
+
+    busybox # common utils
+    foliate # ebook reader
+    # other ebook readers:
+    calibre
+    nwg-look
+
+    crow-translate
+    ollama
+
+    windsurf
+    electron
+    portaudio
   ];
 }

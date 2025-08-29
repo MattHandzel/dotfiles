@@ -1,6 +1,7 @@
 {
   pkgs,
   config,
+  lib,
   ...
 }: {
   fonts.fontconfig.enable = true;
@@ -20,7 +21,7 @@
       name = "JetBrainsMono Nerd Font";
       size = 11;
     };
-    iconTheme = {
+    iconTheme = lib.mkForce {
       name = "Papirus-Dark";
       package = pkgs.catppuccin-papirus-folders.override {
         flavor = "mocha";

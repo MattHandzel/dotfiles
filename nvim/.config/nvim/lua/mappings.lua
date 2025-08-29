@@ -363,7 +363,7 @@ local function getCurrentWeekNumber()
 	return tonumber(week_number) + 1
 end
 vim.keymap.set("n", "<leader>gl", "<cmd>ObsidianFollowLink<CR>i", { noremap = true })
-vim.keymap.set("n", "<leader>od", "<cmd>ObsidianDailies<CR>i", { noremap = true })
+vim.keymap.set("n", "<leader>od", "<cmd>ObsidianDailies<CR>", { noremap = true })
 vim.keymap.set("n", "<leader>op", "<cmd>ObsidianPasteImg<CR>i", { noremap = true })
 
 function PasteClipboardImage()

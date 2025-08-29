@@ -138,6 +138,7 @@ in {
       open = "xdg-open";
       ls = "lsd";
       lst = "lsd --tree --depth";
+      grep = "grep --color=auto";
 
       rm = "trash";
 
@@ -155,7 +156,7 @@ in {
 
       # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
       rebuild = "pushd ${sharedVariables.rootDirectory} && git add --all . && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host} && popd";
-      rebuildu = "pushd ${sharedVariables.rootDirectory} && cp ${sharedVariables.rootDirectory}flake.lock ${sharedVariables.rootDirectory}flake.$(date +%Y-%m-%d).lock && git add --all . && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}.#${host} && popd";
+      rebuildu = "pushd ${sharedVariables.rootDirectory} && cp ${sharedVariables.rootDirectory}flake.lock ${sharedVariables.rootDirectory}flake.$(date +%Y-%m-%d).lock && git add --all . && sudo nix flake update --flake ${sharedVariables.rootDirectory}/flake.nix ; sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}.#${host} && popd";
       # testing = "echo \"sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host}\"";
       # rebuild = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}#${host}";
       # rebuildu = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}#${host}";

@@ -3,8 +3,19 @@
     enable = true;
   };
 
-  hardware.bluetooth.enable = true;
-  hardware.bluetooth.powerOnBoot = true;
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+    settings = {
+      General = {
+        ControllerMode = "dual";
+        Experimental = true;
+      };
+      Policy = {
+        ReconnectAttempts = 0; # Prevents constant reconnection loops
+      };
+    };
+  };
 
   # adding headset button controls
   systemd.user.services.mpris-proxy = {

@@ -31,6 +31,7 @@
     ++ [(import ./services.nix)]
     ++ [(import ./todoist.nix)]
     ++ [inputs.catppuccin.homeManagerModules.catppuccin]
+    ++ [(import ./foliate.nix)]
     # ++ [(import ./notion.nix)]
     # ++ [(import ./ntfy.nix)]
     ;
@@ -63,5 +64,6 @@
   home.sessionVariables = {
     TERMINAL = "kitty";
     EDITOR = "nvim";
+    # GDK_BACKEND = "x11"; # Forces XWayland for GTK apps like Foliate
   };
 }
