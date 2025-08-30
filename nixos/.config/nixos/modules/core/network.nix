@@ -1,12 +1,11 @@
 {pkgs, ...}: {
   networking = {
-    hostName = "matts-computer";
     networkmanager.enable = true;
     nameservers = ["1.1.1.1"];
     firewall = {
       enable = true;
-      allowedTCPPorts = [22 80 443 59010 59011 8123 443];
-      allowedUDPPorts = [8000 59010 59011 443];
+      allowedTCPPorts = [22 80 443 59010 59011 8123 443 11434];
+      allowedUDPPorts = [22 8000 59010 59011 443];
       # allowedUDPPortRanges = [
       # { from = 4000; to = 4007; }
       # { from = 8000; to = 8010; }

@@ -154,4 +154,6 @@ in {
   home-manager.backupFileExtension = "backup_$(date +%Y-%m-%d_%H-%M-%S)";
 
   services.fprintd.enable = true;
+
+  hostName = "matts-computer";
 }

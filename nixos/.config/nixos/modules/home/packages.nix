@@ -205,7 +205,6 @@ in {
 
     trash-cli
     mermaid-cli # for mermaid diagrams
-
     busybox # common utils
     foliate # ebook reader
     # other ebook readers:
