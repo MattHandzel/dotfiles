@@ -155,5 +155,4 @@ in {
 
   services.fprintd.enable = true;
 
-  hostName = "matts-computer";
 }

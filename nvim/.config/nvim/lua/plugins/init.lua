@@ -840,7 +840,7 @@ return {
 				auto_save = true, -- Enables/disables auto saving session on exit
 				auto_restore = true, -- Enables/disables auto restoring session on start
 				auto_create = true, -- Enables/disables auto creating new session files. Can take a function that should return true/false if a new session file should be created or not
-				suppressed_dirs = { "~/", "~/Downloads", "/", "~/notes" }, -- Suppress session restore/create in certain directories
+				suppressed_dirs = { "~/", "~/Downloads", "/", "~/notes", "~/Obsidian/Main", "~/Obsidian/Main/notes" }, -- Suppress session restore/create in certain directories
 				allowed_dirs = nil, -- Allow session restore/create in certain directories
 				auto_restore_last_session = false, -- On startup, loads the last saved session if session for cwd does not exist
 				use_git_branch = true, -- Include git branch name in session name
@@ -1740,7 +1740,7 @@ return {
 					dim = 0.18, -- dim the color of `message`
 					cleaning_interval = 1250, -- (milliseconds) automatically clean MsgArea after displaying `message`. See :h MsgArea
 				},
-				trigger_events = { "InsertLeave", "TextChanged" }, -- vim events that trigger auto-save. See :h events
+				trigger_events = {}, -- vim events that trigger auto-save. See :h events
 				condition = function(buf)
 					local fn = vim.fn
 					local utils = require("auto-save.utils.data")
@@ -1750,8 +1750,8 @@ return {
 					end
 					return false -- can't save
 				end,
-				write_all_buffers = false, -- write all buffers when the current one meets `condition`
-				debounce_delay = 1000, -- saves the file at most every `debounce_delay` milliseconds
+				write_all_buffers = true, -- write all buffers when the current one meets `condition`
+				debounce_delay = 300000, -- saves the file at most every `debounce_delay` milliseconds
 				callbacks = { -- functions to be executed at different intervals
 					enabling = nil, -- ran when enabling auto-save
 					disabling = nil, -- ran when disabling auto-save

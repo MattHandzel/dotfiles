@@ -41,6 +41,8 @@
     ./scripts/notetaker.sh
     ./scripts/track_window_history.sh
     ./scripts/track_workspace_history.sh
+    ./scripts/reclaim.sh
+    ./scripts/calendar.google.com.sh
   ];
 
   # Create shell script bins
@@ -65,6 +67,8 @@ in {
       wf-recorder
       alsa-utils # for arecord
       ffmpeg
+
+      chromium # for reclaim application script
     ]
     ++ [
       (import ./scripts/ocr-screenshot/default.nix {inherit pkgs;})

@@ -8,7 +8,7 @@
     obsidian = "O";
     thunderbird = "M";
     slack = "K";
-    calendar = "C";
+    "calendar.google.com" = "C";
     # Yazi is defined later b/c it requires citty
     whatsapp-for-linux = "W";
     "io.github.alainm23.planify" = "T";
@@ -415,7 +415,9 @@ in {
           "float,title:^(Firefox — Sharing Indicator)$"
           "move 0 0,title:^(Firefox — Sharing Indicator)$"
           "size 700 450,title:^(Volume Control)$"
-          "workspace name:calendar, title:(calendar)"
+          "workspace name:🗓️, title:(calendar)"
+
+          "workspace name:🗓️, class:.*(chrome-calendar.google.com).*"
           "workspace name:notetaker, title:(notetaker)"
           "move 40 55%,title:^(Volume Control)$"
         ];
@@ -466,11 +468,11 @@ in {
 
 # # # tablet mode
 #       monitor=eDP-1,preferred,0x0,1.0
-#       # monitor=DP-1,1920x1080,0x1080,auto, transform, 2
+#       # monitor=DP-1,3840x2400,0x1080,auto, transform, 2
 #       monitor=DP-1,preferred,0x1080,1.0
 
 # monitor mod ffe
-      monitor=eDP-1,preferred,0x0,1.0
+      monitor=eDP-1,preferred,0x0,2.0
       monitor=DP-1,preferred,1920x0,1.0
       monitor=HDMI-A-1,preferred,-2560x-180,1.0
 
