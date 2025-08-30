@@ -1,4 +1,4 @@
 fish/fish_variables
 *lazy-lock.json
 *usage_data.json
-
+**/hardware_configuration.nix
