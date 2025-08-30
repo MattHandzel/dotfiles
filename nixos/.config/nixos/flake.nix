@@ -15,6 +15,11 @@
     alejandra.url = "github:kamadorueda/alejandra/3.0.0";
 
     nix-gaming.url = "github:fufexan/nix-gaming";
+    kms-capture = {
+      url = "github:MattHandzel/KnowledgeManagementSystem";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # notion-repackaged = {
     #   url = "github:MattHandzel/nix-notion-repackaged/master";
     #

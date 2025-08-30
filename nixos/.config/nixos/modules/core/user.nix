@@ -19,6 +19,18 @@
       home.homeDirectory = "/home/${username}";
       home.stateVersion = "25.05";
       programs.home-manager.enable = true;
+      xdg.desktopEntries.foliate = {
+        name = "Foliate";
+        exec = "env GDK_BACKEND=x11 foliate %U";
+        icon = "com.github.johnfactotum.Foliate";
+        categories = ["Office"];
+      };
+      xdg.desktopEntries.planify = {
+        name = "Planify";
+        exec = "env GDK_BACKEND=x11 planify %U";
+        icon = "io.github.alainm23.planify";
+        categories = ["Office" "X-Productivity"];
+      };
     };
   };
 

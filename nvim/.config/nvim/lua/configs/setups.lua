@@ -237,3 +237,43 @@ lspconfig.ltex.setup({
 --
 --
 --
+--
+
+local function dash_case(str)
+	return str
+		:gsub("%s+", "-") -- Replace spaces with dashes
+		:gsub("[^%w%-]", "") -- Remove non-alphanumeric (except dash)
+		:lower() -- Lowercase everything
+end
+
+function CreateRelationshipNote()
+	local name = vim.fn.input("Person's name: ")
+	if name == "" then
+		print("No name entered.")
+		return
+	end
+
+	local filename = dash_case(name) .. ".md"
+	local dir = vim.fn.expand("~/notes/areas/relationships/")
+	local path = dir .. filename
+
+	-- Optional initial text
+	local extra_text = vim.fn.input("Initial note text (optional): ")
+
+	-- Ensure directory exists
+	vim.fn.mkdir(dir, "p")
+
+	-- Create file content
+	local content = "# " .. name .. "\n\n" .. (extra_text ~= "" and extra_text .. "\n" or "")
+
+	-- Write file
+	local file = io.open(path, "w")
+	file:write(content)
+	file:close()
+
+	-- Open in buffer
+	vim.cmd("edit " .. vim.fn.fnameescape(path))
+
+	-- Save buffer
+	vim.cmd("write")
+end
