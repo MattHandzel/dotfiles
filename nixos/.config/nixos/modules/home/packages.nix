@@ -217,5 +217,6 @@ in {
     windsurf
     electron
     portaudio
+    wtype # type virtual things on the computer
   ];
 }

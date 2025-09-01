@@ -225,11 +225,6 @@ require("dressing").setup({
 	},
 })
 
-local lspconfig = require("lspconfig")
-lspconfig.ltex.setup({
-	checkfrequency = "save",
-	use_spellfile = true,
-})
 -- require("vimtex").setup({})
 
 -- require('magma-nvim').setup({})

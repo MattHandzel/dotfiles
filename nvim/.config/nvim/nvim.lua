@@ -4,6 +4,8 @@ vim.g.python3_host_prog = vim.fn.exepath("python3")
 vim.g.node_host_prog = "${pkgs.nodejs}/bin/node"
 vim.g.mapleader = " "
 vim.g.maplocalleader = ","
+vim.opt.ruler = false
+vim.opt.shortmess:append("FWA")
 
 -- bootstrap lazy and all plugins
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"

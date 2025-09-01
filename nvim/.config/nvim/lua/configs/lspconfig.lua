@@ -8,7 +8,7 @@ lspconfig.rust_analyzer.setup({
 		["rust-analyzer"] = {},
 	},
 })
-lspconfig.buf.setup({})
+
 lspconfig.pyright.setup({})
 lspconfig.ts_ls.setup({
 	on_attach = function(client, bufnr)
@@ -28,8 +28,13 @@ lspconfig.ts_ls.setup({
 		},
 	},
 })
+
 lspconfig.ltex.setup({
+	flags = { debounce_text_changes = 1000 },
+	settings = { ltex = { checkFrequency = "save" } },
+
 	checkfrequency = "save",
+	use_spellfile = true,
 })
 -- lspconfig.rust_analyzer.setup({
 -- 	-- Server-specific settings. See `:help lspconfig-setup`
