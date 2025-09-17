@@ -159,7 +159,7 @@ map("x", "N", "'nN'[v:searchforward]", { expr = true, desc = "Prev search result
 map("o", "N", "'nN'[v:searchforward]", { expr = true, desc = "Prev search result" })
 
 vim.api.nvim_set_keymap("i", "<C-@>", "<C-\\><C-o>db", { noremap = true })
-vim.api.nvim_set_keymap("i", "<C-h>", "<Esc><C-h>", { noremap = true })
+-- vim.api.nvim_set_keymap("i", "<C-h>", "<Esc><C-h>", { noremap = true })
 vim.api.nvim_set_keymap("n", "<leader>gI", "<leader>gIdzt", { noremap = true })
 
 -- expanding vim keybindings
@@ -317,9 +317,9 @@ vim.keymap.set({ "i", "n", "t" }, "<C-j>", "<cmd>TmuxNavigateDown<CR>", { norema
 vim.keymap.set({ "i", "n", "t" }, "<C-h>", "<cmd>TmuxNavigateLeft<CR>", { noremap = true, silent = true })
 vim.keymap.set({ "i", "n", "t" }, "<C-l>", "<cmd>TmuxNavigateRight<CR>", { noremap = true, silent = true })
 
-vim.keymap.set("n", "<leader>ls", require("auto-session.session-lens").search_session, {
-	noremap = true,
-})
+-- vim.keymap.set("n", "<leader>ls", require("auto-session.session-lens").search_session, {
+-- 	noremap = true,
+-- })
 -- vim.keymap.set("n", "<leader>qs", ":SessionRestore<CR>", { noremap = true })
 -- vim.api.nvim_set_keymap("i", "<F2>", '<cmd>lua require("renamer").rename()<cr>', { noremap = true, silent = true })
 -- vim.api.nvim_set_keymap(

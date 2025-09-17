@@ -194,3 +194,43 @@ require("sc-im").setup({
 cmp.setup(options)
 
 require("configs.dap")
+
+function EvalAndReplace()
+	-- get visual selection
+	local _, csrow, cscol, cerow, cecol = unpack(vim.fn.getpos("'<"))
+	local _, _, _, _ = unpack(vim.fn.getpos("'>"))
+	local lines = vim.fn.getline(csrow, cerow)
+
+	if #lines == 0 then
+		return
+	end
+
+	-- if multiple lines, join with spaces
+	local text
+	if #lines == 1 then
+		text = string.sub(lines[1], cscol, cecol)
+	else
+		lines[1] = string.sub(lines[1], cscol)
+		lines[#lines] = string.sub(lines[#lines], 1, cecol)
+		text = table.concat(lines, " ")
+	end
+
+	-- try evaluating the math expression
+	local f, err = load("return " .. text)
+	local result
+	if f then
+		local ok, val = pcall(f)
+		if ok and type(val) == "number" then
+			result = tostring(val)
+		else
+			result = "ERR"
+		end
+	else
+		result = "ERR"
+	end
+
+	-- replace selection
+	vim.api.nvim_buf_set_text(0, csrow - 1, cscol - 1, cerow - 1, cecol, { result })
+end
+
+vim.api.nvim_set_keymap("v", "<leader>m", ":lua EvalAndReplace()<CR>", { noremap = true, silent = true })

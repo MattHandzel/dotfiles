@@ -189,7 +189,7 @@ in {
 
     logkeys # keylogger
     # inputs.lifelog.packages.x86_64-linux.lifelog-logger
-    inputs.kms-capture.packages.x86_64-linux.kms-capture
+    # inputs.kms-capture.packages.x86_64-linux.kms-capture
     # inputs.lifelog.packages.x86_64-linux.lifelog-server
     v4l-utils
     # rustup
@@ -218,5 +218,7 @@ in {
     electron
     portaudio
     wtype # type virtual things on the computer
+    taskwarrior
+    vit
   ];
 }

@@ -11,7 +11,7 @@
     "calendar.google.com" = "C";
     # Yazi is defined later b/c it requires citty
     whatsapp-for-linux = "W";
-    "io.github.alainm23.planify" = "T";
+    "vit-todo" = "T";
     "notetaker" = "N";
     gimp = "G";
   };
@@ -90,7 +90,7 @@ in {
         "wl-paste --watch cliphist store -max-items 25000 &"
         "gammastep -l  0.1047:-100.2062 -t 5700:2500 -b 1:.7 &"
         "sudo chmod 666 /dev/i2c-* &"
-        "GDK_BACKEND=x11 io.github.alainm23.planify &"
+        # "GDK_BACKEND=x11 io.github.alainm23.planify &"
         # "sudo logkeys --start --device event0 --output $HOME/notes/life-logging/key-logging/keyboard.log &"
 
         "aw-server & "
@@ -279,7 +279,7 @@ in {
           "ALT, Print, exec, ocr-screenshot && wl-paste -t text/plain > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').txt"
           ",Print, exec, grimblast --notify  --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
 
-          "$mainMod, N, exec, kms-capture"
+          "$mainMod, N, exec, ~/Projects/KnowledgeManagementSystem/result/bin/kms-capture"
           "$mainMod ALT, F, exec, kitty --hold --title yazi --name sh -c \"yazi\""
 
           # Move focus with mainMod + arrow keys
@@ -375,6 +375,8 @@ in {
           "$mainMod, mouse_up, workspace, e+1"
           "$mainMod SHIFT CONTROL, q, exec, reboot"
 
+          "$mainMod ALT, s, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh"
+
           "$mainMod, Tab, focuscurrentorlast"
           # laptop brigthness
           ",XF86MonBrightnessUp, exec, brightness -i 1"
@@ -390,7 +392,7 @@ in {
 
           # clipboard manager
           "$mainMod, V, exec, cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"
-          "$mainMod ALT, V, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/llm-clipboard-processor.sh"
+          "$mainMod ALT, V, exec, wl-paste | /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/prompt-llm.py | wl-copy ; notify-send -u normal -i dialog-information 'Copied to clipboard' ''"
         ];
 
       # mouse binding
@@ -427,7 +429,7 @@ in {
           "move 40 55%,title:^(Volume Control)$"
 
           "float,title:^(knowledge-management-system-capture)$"
-          "size 960 540,title:^(knowledge-management-system-capture)$"
+          "size 875 875,title:^(knowledge-management-system-capture)$"
         ];
 
       # windowrulev2

@@ -43,6 +43,7 @@
     ./scripts/track_workspace_history.sh
     ./scripts/reclaim.sh
     ./scripts/calendar.google.com.sh
+    ./scripts/vit-todo.sh
   ];
 
   # Create shell script bins
@@ -69,6 +70,8 @@ in {
       ffmpeg
 
       chromium # for reclaim application script
+
+      websocat # for websockets, whisper
     ]
     ++ [
       (import ./scripts/ocr-screenshot/default.nix {inherit pkgs;})

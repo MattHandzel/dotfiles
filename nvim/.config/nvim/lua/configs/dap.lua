@@ -32,3 +32,18 @@ dap.configurations.rust = {
 		args = {},
 	},
 }
+
+dap.adapters.java = {
+	type = "server",
+	host = "127.0.0.1",
+	port = 5005,
+}
+
+dap.configurations.java = {
+	{
+		type = "java",
+		name = "Debug Test",
+		request = "launch",
+		mainClass = "your.test.ClassName", -- Replace with your test class
+	},
+}

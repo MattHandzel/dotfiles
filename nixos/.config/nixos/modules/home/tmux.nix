@@ -18,8 +18,13 @@ in {
     extraConfig = ''
         set-option -sa terminal-overrides ",xterm*:Tc"
 
+        unbind -T root C-h
         unbind C-b
+        unbind C-l
+        unbind C-j
+        unbind C-k
         bind-key C-Space send-prefix
+
 
         unbind %
         bind | split-window -h -c "#{pane_current_path}"
@@ -52,10 +57,10 @@ in {
         # bind-key -n 'C-j' if-shell "$is_vim" 'send-keys C-j' 'select-pane -D'
         # bind-key -n 'C-k' if-shell "$is_vim" 'send-keys C-k' 'select-pane -U'
         # bind-key -n 'C-l' if-shell "$is_vim" 'send-keys C-l' 'select-pane -R'
-      bind -n C-h if -F '#{m:#{pane_current_command},(^|/|g)?(view|l?n?vim?x?|fzf)(diff)?$}' 'send-keys C-h' 'select-pane -L'
-      bind -n C-j if -F '#{m:#{pane_current_command},(^|/|g)?(view|l?n?vim?x?|fzf)(diff)?$}' 'send-keys C-j' 'select-pane -D'
-      bind -n C-k if -F '#{m:#{pane_current_command},(^|/|g)?(view|l?n?vim?x?|fzf)(diff)?$}' 'send-keys C-k' 'select-pane -U'
-      bind -n C-l if -F '#{m:#{pane_current_command},(^|/|g)?(view|l?n?vim?x?|fzf)(diff)?$}' 'send-keys C-l' 'select-pane -R'
+      # bind -n C-h if -F '#{m:#{pane_current_command},(^|/|g)?(view|l?n?vim?x?|fzf)(diff)?$}' 'send-keys C-h' 'select-pane -L'
+      # bind -n C-j if -F '#{m:#{pane_current_command},(^|/|g)?(view|l?n?vim?x?|fzf)(diff)?$}' 'send-keys C-j' 'select-pane -D'
+      # bind -n C-k if -F '#{m:#{pane_current_command},(^|/|g)?(view|l?n?vim?x?|fzf)(diff)?$}' 'send-keys C-k' 'select-pane -U'
+      # bind -n C-l if -F '#{m:#{pane_current_command},(^|/|g)?(view|l?n?vim?x?|fzf)(diff)?$}' 'send-keys C-l' 'select-pane -R'
 
         set -sg escape-time 10
         set -g renumber-windows on
@@ -87,6 +92,8 @@ in {
 
         # Plugins
         run '~/.tmux/plugins/tpm/tpm'
+
+        unbind -T root C-h
     '';
 
     plugins = with tmuxPlugins; [
