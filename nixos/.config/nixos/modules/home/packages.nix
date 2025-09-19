@@ -137,7 +137,7 @@ in {
     stylua
     luarocks-nix
 
-    prusa-slicer # prusa-slicer
+    # prusa-slicer # prusa-slicer
 
     openssh
 
@@ -146,13 +146,13 @@ in {
 
     sshfs
     fastfetch
-    whatsapp-for-linux
+    # whatsapp-for-linux
 
     inputs.zen-browser.packages."${system}".default # This is for zen-browser
     tigervnc
     espanso-wayland
 
-    planify
+    # planify
     speedcrunch
     ntfy-sh
 
@@ -176,7 +176,7 @@ in {
     # inputs.notion-repackaged.packages.x86_64-linux.notion-repackaged
     kdePackages.kdenlive
     qbittorrent-enhanced
-    platformio
+    # platformio
 
     docker
     vdhcoapp # for browser extensio
@@ -201,7 +201,7 @@ in {
     xdg-desktop-portal
     kdePackages.xdg-desktop-portal-kde #    xdg-desktop-portal-kde
 
-    surrealdb
+    # surrealdb
 
     trash-cli
     mermaid-cli # for mermaid diagrams

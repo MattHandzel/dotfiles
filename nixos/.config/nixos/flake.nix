@@ -5,7 +5,7 @@
     whisper-overlay.url = "github:oddlama/whisper-overlay";
     whisper-overlay.inputs.nixpkgs.follows = "nixpkgs";
 
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     nur.url = "github:nix-community/NUR";
 

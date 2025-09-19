@@ -118,7 +118,7 @@ in {
         kb_options = "grp:alt_caps_toggle";
         numlock_by_default = true;
         follow_mouse = 1;
-        sensitivity = 0.3;
+        sensitivity = 0.2;
         touchpad = {
           natural_scroll = true;
           tap-to-click = true;
@@ -481,7 +481,7 @@ in {
 #       # monitor=DP-1,3840x2400,0x1080,auto, transform, 2
 #       monitor=DP-1,preferred,0x1080,1.0
 
-      monitor=eDP-1,preferred,0x0,2.0
+      monitor=eDP-1,preferred,0x0,1.0
       monitor=DP-3,preferred,1920x0,1.0
       # monitor=HDMI-A-1,preferred,-2560x-180,1.0
 

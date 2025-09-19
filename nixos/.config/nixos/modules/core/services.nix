@@ -16,13 +16,14 @@
 
   services.logind = {
     lidSwitch = "suspend";
-    extraConfig = ''
-      IdleAction=suspend
-      IdleActionSec=15min
-      HandlePowerKey=suspend
-      # HibernateDelaySec=30m
-      SuspendState=mem
-    '';
+    # TODO: How to do this with the module?
+    # extraConfig = ''
+    #   IdleAction=suspend
+    #   IdleActionSec=15min
+    #   HandlePowerKey=suspend
+    #   # HibernateDelaySec=30m
+    #   SuspendState=mem
+    # '';
   };
 
   virtualisation.docker.enable = true;

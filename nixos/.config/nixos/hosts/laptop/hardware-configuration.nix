@@ -12,24 +12,34 @@
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
+  fileSystems."/" = {
+    device = "/dev/disk/by-uuid/74730e39-2dc6-46dd-bf48-bef37fea93e4";
+    fsType = "btrfs";
+    options = ["subvol=@"];
+  };
+
+  fileSystems."/boot" = {
+    device = "/dev/disk/by-uuid/27D5-9EB7";
+    fsType = "vfat";
+    options = ["fmask=0077" "dmask=0077"];
+  };
+
+  fileSystems."/home" = {
+    device = "/dev/disk/by-uuid/f1ea84a7-772c-480f-916b-eb4d4cb2ce49";
+    fsType = "btrfs";
+  };
+
   boot.initrd.availableKernelModules = ["thunderbolt" "nvme" "xhci_pci" "usb_storage" "sd_mod"];
   boot.initrd.kernelModules = [];
   boot.kernelModules = ["kvm-intel" "i2c-dev"];
   boot.extraModulePackages = [];
 
-
-  fileSystems."/" =
-    { device = "/dev/disk/by-uuid/1579e240-d4cb-4781-a303-4511747d5594";
-      fsType = "ext4";
-    };
-
-  fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/B284-3047";
-      fsType = "vfat";
-      options = [ "fmask=0077" "dmask=0077" ];
-    };
-
-swapDevices = [ { device = "/var/lib/swapfile"; size = 16*1024; } ];
+  swapDevices = [
+    {
+      device = "/var/lib/swapfile";
+      size = 16 * 1024;
+    }
+  ];
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
   # (the default) this is the recommended approach. When using systemd-networkd it's
@@ -41,7 +51,7 @@ swapDevices = [ { device = "/var/lib/swapfile"; size = 16*1024; } ];
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   # hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   # hardware.enableAllFirmware = true;
-hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 
   # hardware.graphics.enable = true;
   # services.xserver.videoDrivers = [ "amdgpu" ];
