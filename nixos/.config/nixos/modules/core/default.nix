@@ -6,7 +6,7 @@
   host,
   ...
 }: let
-  desktop-imports = [(import ./home-assistant.nix) (import ./default.desktop.nix)];
+  desktop-imports = [(import ./home-assistant.nix) (import ./default.desktop.nix) (import ./faster-whisper-server.nix)];
 in {
   imports =
     [
@@ -23,6 +23,10 @@ in {
       (import ./wayland.nix)
       (import ./virtualization.nix)
       (import ./bluetooth.nix)
+
+      (import ./firefly-iii.nix)
+      (import ./freshrss.nix)
+      (import ./mcp-server.nix)
     ]
     ++ (
       if host == "desktop"
