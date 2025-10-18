@@ -54,6 +54,8 @@
       pkgs.vimPlugins.nvim-dap-python
       pkgs.vimPlugins.nvim-dap-ui
 
+      pkgs.python3Packages.debugpy # debug adapter for python
+
       pkgs.sc-im
     ];
     # TODO: Fix this so it doesn't care about the user

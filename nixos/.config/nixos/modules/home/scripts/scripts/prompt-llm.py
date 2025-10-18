@@ -19,6 +19,7 @@ import datetime
 
 
 # IMPRPOVEMENTS
+# The purpose of this script is so that it's easy for me to pass in information through an LLM. But there's a way to improve this script. So specifically for the... VoiceMemoCleanup prompt. It appears that the voice memo cleanup prompt tends to fail, or something that it does not do is correctly infer things such as the words that I speak. It doesn't clean up my text. I think that it could do better if it understood the context. So I want you to add a pre-processing step before giving it to the voicemail cleanup prompt. I want you to first prompt the LLM with the original text and ask it to identify what is the general topic and intent, and then... pass it through the voice memo cleanup.
 
 # === CONFIG ===
 OLLAMA_HOST = "http://76.191.29.237:11434"
@@ -47,6 +48,39 @@ class Prompt:
 
 
 PROMPTS: Dict[str, Prompt] = {
+    "🎙️ voice_memo_cleanup": Prompt(
+        header="You are a voice memo cleanup assistant.",
+        task="You are given a raw transcript of a voice note. Your job is to refine it into a clearly typed, polished note while keeping the original wording, tone, and intent as intact as possible.",
+        rules=[
+            "Remove filler words (ums, ahs, likes, etc.) and repetitions",
+            "Replace conversational phrases (“so”, “when it comes to”) with formal connectors (“these applications involve”, “for example”)."
+            "Merge short sentences, remove redundancies, connect ideas with transitions.",
+            "Merge definition into apposition, remove filler phrasing",
+            "Do not introduce new ideas, omit key details, or significantly rephrase the speaker’s wording. Instead:",
+            "Preserve all factual details and relevant content.",
+            "Cut off-topic digressions and obvious rambles.",
+            "Process spelled out acronyms and abbreviations correctly (S-A-R-G -> SARG).",
+            "The voice note might contain false starts, mid-sentence topic changes, and incomplete thoughts. Use your best judgment to reconstruct the intended meaning.",
+            "Preserve the speaker’s phrasing and style so it still sounds like them.",
+            "Combine fragmented sentences into coherent ones.",
+            "Correct punctuation, grammar, and capitalization.",
+            "Fix grammar and sentence flow.",
+            "Fix mis-transcriptions in the transcript based on the surrounding context",
+            "Fix mispellings.",
+            "THE RESULT SHOULD READ LIKE A CLEAN, WELL-STRUCTURED, WRITTEN VERSION OF THE SPOKEN NOTE, AS IF THE SPEAKER HAD TIME TO MANUALLY EDIT IT.",
+        ],
+    ),
+    "📑 markdown_formatter": Prompt(
+        header="You are a Markdown formatter.",
+        task="Reformat the input text into clean, valid, and well-structured Markdown.",
+        rules=[
+            "Do not shorten, rewrite, or paraphrase the text — preserve all wording exactly.",
+            "Preserve order of information strictly.",
+            "Use Markdown elements when appropriate: headings, lists, code fences, blockquotes, links, emphasis, tables.",
+            "Do not interpret, summarize, or add extra content.",
+            "If text is already valid Markdown, return it unchanged.",
+        ],
+    ),
     "📝 summarize": Prompt(
         header="You are a precise summarizer.",
         task="Produce a concise summary of the input text.",
@@ -69,42 +103,12 @@ PROMPTS: Dict[str, Prompt] = {
             "If text is already in the target language, return it unchanged.",
         ],
     ),
-    "📑 markdown_formatter": Prompt(
-        header="You are a Markdown formatter.",
-        task="Reformat the input text into clean, valid, and well-structured Markdown.",
-        rules=[
-            "Do not shorten, rewrite, or paraphrase the text — preserve all wording exactly.",
-            "Preserve order of information strictly.",
-            "Use Markdown elements when appropriate: headings, lists, code fences, blockquotes, links, emphasis, tables.",
-            "Do not interpret, summarize, or add extra content.",
-            "If text is already valid Markdown, return it unchanged.",
-        ],
-    ),
     # ```
     # So, there's this technique called S-A-R-G, and the purpose of SARG is to allow LLMs to do better reasoning. And I wanted to extract a principle of how LLMs can be used from this paper. The idea is that you have this corpus of documents, and then you extract triples of cause, relation, and effect. You construct a causal graph, and from this causal graph, you have a query of why did XYZ happen. You can then use this causal graph to learn why that happened using an LLM. But I think that this is very obvious, and it shows that the purpose of an LLM is, if you have some data structure, and a human can look through that data structure and answer a question, then an LLM can do it. I think this is a powerful principle that can lead to other interesting research topics slash results.
     # ```
     # ```
     # There is a technique, SARG, whose purpose is to allow LLMs to do better reasoning. I wanted to extract a principle of the uses of LLMs from this paper. The idea is you have this corpus of documents, you extract triples of cause, relation, and effect, construct a causal graph, and from this causal graph, you have a query of why XYZ happen. You can then use this causal graph to learn why XYZ happened using an LLM. I think this is very obvious, and it shows a principle of an LLM is: given a data structure, if a human can look through that data structure and answer a question, then an LLM can do it. I think this is a powerful principle that can lead to other interesting research topics or results.
     # ```
-    "🎙️ voice_memo_cleanup": Prompt(
-        header="You are a voice memo cleanup assistant.",
-        task="You are given a raw transcript of a voice note. Your job is to refine it into a clearly typed, polished paragraph while keeping the original wording, tone, and intent as intact as possible.",
-        rules=[
-            "Remove filler words (ums, ahs, likes, etc.) and repetitions",
-            "Do not introduce new ideas, omit key details, or significantly rephrase the speaker’s wording. Instead:",
-            "Preserve all factual details and relevant content.",
-            "Cut off-topic digressions and obvious rambles.",
-            "Process spelled out acronyms and abbreviations correctly (S-A-R-G -> SARG).",
-            "The voice note might contain false starts, mid-sentence topic changes, and incomplete thoughts. Use your best judgment to reconstruct the intended meaning.",
-            "Preserve the speaker’s phrasing and style so it still sounds like them.",
-            "Combine fragmented sentences into coherent ones.",
-            "Correct punctuation, grammar, and capitalization.",
-            "Fix grammar and sentence flow.",
-            "Fix mis-transcriptions in the transcript based on the surrounding context",
-            "Fix mispellings.",
-            "THE RESULT SHOULD READ LIKE A CLEAN, WELL-STRUCTURED, WRITTEN VERSION OF THE SPOKEN NOTE, AS IF THE SPEAKER HAD TIME TO MANUALLY EDIT IT.",
-        ],
-    ),
     # "🎙️ voice_memo_cleanup": Prompt(
     #     header="You are a voice memo cleanup assistant.",
     #     task="Clean up the input text so it reads like a clearly typed note.",

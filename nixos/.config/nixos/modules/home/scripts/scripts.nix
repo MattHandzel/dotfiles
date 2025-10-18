@@ -43,7 +43,9 @@
     ./scripts/track_workspace_history.sh
     ./scripts/reclaim.sh
     ./scripts/calendar.google.com.sh
+    ./scripts/chatgpt.com.sh
     ./scripts/vit-todo.sh
+    ./scripts/open-website-as-standalone-app.sh
   ];
 
   # Create shell script bins
@@ -67,7 +69,7 @@ in {
       grim
       wf-recorder
       alsa-utils # for arecord
-      ffmpeg
+      ffmpeg-full
 
       chromium # for reclaim application script
 

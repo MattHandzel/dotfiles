@@ -1,5 +1,6 @@
 {pkgs, ...}: {
   networking = {
+    firewall.checkReversePath = false;
     networkmanager.enable = true;
     nameservers = ["1.1.1.1"];
     firewall = {
@@ -24,5 +25,9 @@
     networkmanagerapplet
     openconnect
     networkmanager-openconnect
+
+    # VPN
+    wireguard-tools
+    protonvpn-gui
   ];
 }

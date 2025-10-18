@@ -26,12 +26,12 @@ in let
   singleton_windows = sharedVariables.singletonApplications;
   floating_windows = ["imv" ".blueman-manager-wrapped" "Volume Control" "org.speedcrunch."];
   generateFloatingRules = floating_window: [
-    "float,title:^(${floating_window})$"
-    "center,title:^(${floating_window})$"
-    "size 1200 725,title:^(${floating_window})$"
-    "float,^(${floating_window})$"
-    "center,^(${floating_window})$"
-    "size 1200 725,^(${floating_window})$"
+    "float, title:^(${floating_window})$"
+    "center, title:^(${floating_window})$"
+    "size 1200 725, title:^(${floating_window})$"
+    "float, class:^(${floating_window})$"
+    "center, class:^(${floating_window})$"
+    "size 1200 725, class:^(${floating_window})$"
   ];
   generateSignletonWindowRules = singleton: let
     not_case_sensitive = makeStringToIncaseSensitiveRegex singleton;
@@ -87,7 +87,7 @@ in {
         "poweralertd &"
         "waybar &"
         "swaync &"
-        "wl-paste --watch cliphist store -max-items 25000 &"
+        "wl-paste --watch cliphist store -max-items 25000000 &"
         "gammastep -l  0.1047:-100.2062 -t 5700:2500 -b 1:.7 &"
         "sudo chmod 666 /dev/i2c-* &"
         # "GDK_BACKEND=x11 io.github.alainm23.planify &"
@@ -100,16 +100,46 @@ in {
         # "lifelog-logger &"
       ];
 
+      # device-specific configurations
+      # "pixa3838:00-093a:3838-touchpad" = {
+      #   sensitivity = 0.0;
+      #   natural_scroll = true;
+      #   tap_button_map = "lrm";
+      #   clickfinger_behavior = true;
+      #   middle_button_emulation = true;
+      #   tap-to-click = true;
+      #   tap-and-drag = true;
+      #   drag_lock = false;
+      #   scroll_method = "2fg";
+      # };
+      #
+      # Fixed device configuration section
       "device" = [
         {
-          "name" = ''            wingcool-inc.-touchscreen
-                             output = DP-1
-          '';
+          "name" = "pixa3838:00-093a:3838-touchpad";
+          sensitivity = 0.25;
+          natural_scroll = true;
+          tap_button_map = "lrm";
+          clickfinger_behavior = true;
+          middle_button_emulation = true;
+          tap-to-click = true;
+          tap-and-drag = true;
+          drag_lock = false;
+          scroll_method = "2fg";
         }
         {
-          "name" = ''            wingcool-inc.-touchscreen-1
-                             output = DP-1
-          '';
+          "name" = "pixa3838:00-093a:3838-mouse";
+          sensitivity = 0.25;
+          natural_scroll = true;
+          middle_button_emulation = true;
+        }
+        {
+          "name" = "wingcool-inc.-touchscreen";
+          output = "DP-1";
+        }
+        {
+          "name" = "wingcool-inc.-touchscreen-1";
+          output = "DP-1";
         }
       ];
 
@@ -118,17 +148,22 @@ in {
         kb_options = "grp:alt_caps_toggle";
         numlock_by_default = true;
         follow_mouse = 1;
-        sensitivity = 0.2;
+        sensitivity = 0.25;
         touchpad = {
           natural_scroll = true;
           tap-to-click = true;
-          drag_lock = true;
+          tap-and-drag = true;
+          drag_lock = false;
           middle_button_emulation = true;
           scroll_factor = 0.5;
+          clickfinger_behavior = true;
+          # scroll_method = "2fg";
+          tap_button_map = "lrm";
         };
 
         touchdevice = {
           output = "eDP-1";
+          transform = 0;
         };
       };
 
@@ -136,6 +171,7 @@ in {
         "$mainMod" = "SUPER";
         "$term" = "kitty";
         "$browser" = "zen";
+        "$copilot" = "code:201";
 
         layout = "dwindle";
         gaps_in = 0;
@@ -143,7 +179,6 @@ in {
         border_size = 2;
         "col.active_border" = "rgb(cba6f7) rgb(94e2d5) 45deg";
         "col.inactive_border" = "0x00000000";
-        border_part_of_window = true;
         no_border_on_floating = false;
       };
 
@@ -257,8 +292,8 @@ in {
           "$mainMod, Space, togglefloating,"
           "$mainMod, A, exec, fuzzel"
           "$mainMod, Escape, exec, systemctl suspend"
-          "$mainMod SHIFT, Escape, exec, shutdown-script"
           "$mainMod, E, exec, wofi-emoji"
+          "$mainMod SHIFT, Escape, exec, shutdown-script"
           "$mainMod, P, pseudo,"
           "$mainMod, S, togglesplit,"
           "$mainMod SHIFT, B, exec, pkill -SIGUSR1 .waybar-wrapped"
@@ -267,6 +302,7 @@ in {
           "$mainMod SHIFT, W, exec, vm-start"
           "$mainMod, B, exec, zen"
           "$mainMod, Y, exec, swaync-client --close-latest"
+          "SUPER SHIFT, $copilot, exec, focus_app chatgpt.com"
 
           "$mainMod SHIFT, R, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\" && rebuild && notify-if-command-is-successful rebuild"
 
@@ -277,7 +313,7 @@ in {
 
           # screenshot
           "ALT, Print, exec, ocr-screenshot && wl-paste -t text/plain > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').txt"
-          ",Print, exec, grimblast --notify  --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
+          ",Print, exec, grimblast --notify --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
 
           "$mainMod, N, exec, ~/Projects/KnowledgeManagementSystem/result/bin/kms-capture"
           "$mainMod ALT, F, exec, kitty --hold --title yazi --name sh -c \"yazi\""
@@ -375,7 +411,14 @@ in {
           "$mainMod, mouse_up, workspace, e+1"
           "$mainMod SHIFT CONTROL, q, exec, reboot"
 
-          "$mainMod ALT, s, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh"
+          ", KP_1, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --copy"
+          ", KP_End, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --copy"
+          ", KP_2, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --type"
+          ", KP_Down, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --type"
+          ", KP_4, exec, wl-paste | /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/prompt-llm.py | wl-copy ; notify-send -u normal -i dialog-information 'Copied to clipboard' ''"
+          ", KP_Left, exec, wl-paste | /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/prompt-llm.py | wl-copy ; notify-send -u normal -i dialog-information 'Copied to clipboard' ''"
+          ", KP_7, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://www.youtube.com/playlist?list=PL7tg9zG8d6EZ_NEPG8WMVffW2fFGDAXpQ'"
+          ", KP_Home, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://www.youtube.com/playlist?list=PL7tg9zG8d6EZ_NEPG8WMVffW2fFGDAXpQ'"
 
           "$mainMod, Tab, focuscurrentorlast"
           # laptop brigthness
@@ -392,7 +435,8 @@ in {
 
           # clipboard manager
           "$mainMod, V, exec, cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"
-          "$mainMod ALT, V, exec, wl-paste | /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/prompt-llm.py | wl-copy ; notify-send -u normal -i dialog-information 'Copied to clipboard' ''"
+
+          "$mainMod SHIFT, F23, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\""
         ];
 
       # mouse binding
@@ -401,40 +445,39 @@ in {
         "$mainMod, mouse:273, resizewindow"
       ];
 
-      # windowrule
-      windowrule =
-        generated_floating_windowrule
-        ++ [
-          "tile,Aseprite"
-          "float,title:^(float_kitty)$"
-          "center,title:^(float_kitty)$"
-          "size 950 600,title:^(float_kitty)$"
-
-          "float,audacious"
-          # "pin,wofi"
-          # "float,wofi"
-          # "noborder,wofi"
-          "tile, neovide"
-          "idleinhibit focus,mpv"
-          "float,udiskie"
-          "float,title:^(Transmission)$"
-          "float,title:^(Volume Control)$"
-          "float,title:^(Firefox — Sharing Indicator)$"
-          "move 0 0,title:^(Firefox — Sharing Indicator)$"
-          "size 700 450,title:^(Volume Control)$"
-          "workspace name:🗓️, title:(calendar)"
-
-          "workspace name:🗓️, class:.*(chrome-calendar.google.com).*"
-          "workspace name:notetaker, title:(notetaker)"
-          "move 40 55%,title:^(Volume Control)$"
-
-          "float,title:^(knowledge-management-system-capture)$"
-          "size 875 875,title:^(knowledge-management-system-capture)$"
-        ];
+      # windowrule - keeping minimal legacy rules
+      windowrule = [];
 
       # windowrulev2
       windowrulev2 =
         generated_singleton_windowrule
+        ++ generated_floating_windowrule
+        ++ [
+          "workspace name:chatgpt, class:.*(chatgpt).*"
+          "workspace name:chatgpt, title:.*(chatgpt).*"
+          # Legacy windowrule entries moved to windowrulev2
+          "tile, class:^(Aseprite)$"
+          "float, title:^(float_kitty)$"
+          "center, title:^(float_kitty)$"
+          "size 950 600, title:^(float_kitty)$"
+
+          "float, class:^(audacious)$"
+          "tile, class:^(neovide)$"
+          "idleinhibit focus, class:^(mpv)$"
+          "float, class:^(udiskie)$"
+          "float, title:^(Transmission)$"
+          "float, title:^(Volume Control)$"
+          "float, title:^(Firefox — Sharing Indicator)$"
+          "move 0 0, title:^(Firefox — Sharing Indicator)$"
+          "size 700 450, title:^(Volume Control)$"
+          "workspace name:🗓️, title:(calendar)"
+          "workspace name:🗓️, class:.*(chrome-calendar.google.com).*"
+          "workspace name:notetaker, title:(notetaker)"
+          "move 40 55%, title:^(Volume Control)$"
+
+          "float, title:^(knowledge-management-system-capture)$"
+          "size 875 875, title:^(knowledge-management-system-capture)$"
+        ]
         ++ [
           "float, title:^(Picture-in-Picture)$"
           "opacity 1.0 override 1.0 override, title:^(Picture-in-Picture)$"
@@ -482,7 +525,7 @@ in {
 #       monitor=DP-1,preferred,0x1080,1.0
 
       monitor=eDP-1,preferred,0x0,1.0
-      monitor=DP-3,preferred,1920x0,1.0
+      monitor=DP-1,preferred,1920x0,1.0
       # monitor=HDMI-A-1,preferred,-2560x-180,1.0
 
       # this
@@ -512,16 +555,16 @@ in {
       # workspace=9, monitor:DP-1
       # workspace=10, monitor:DP-1
 
-      workspace=11, monitor:DP-3
-      workspace=12, monitor:DP-3
-      workspace=13, monitor:DP-3
-      workspace=14, monitor:DP-3
-      workspace=15, monitor:DP-3
-      workspace=16, monitor:DP-3
-      workspace=17, monitor:DP-3
-      workspace=18, monitor:DP-3
-      workspace=19, monitor:DP-3
-      workspace=20, monitor:DP-3
+      workspace=11, monitor:DP-1
+      workspace=12, monitor:DP-1
+      workspace=13, monitor:DP-1
+      workspace=14, monitor:DP-1
+      workspace=15, monitor:DP-1
+      workspace=16, monitor:DP-1
+      workspace=17, monitor:DP-1
+      workspace=18, monitor:DP-1
+      workspace=19, monitor:DP-1
+      workspace=20, monitor:DP-1
       # workspace=11, monitor:HDMI-A-1
       # workspace=12, monitor:HDMI-A-1
       # workspace=13, monitor:HDMI-A-1
@@ -539,7 +582,7 @@ in {
 
 
 gestures {
-  workspace_swipe = true
+  # workspace_swipe = on
   workspace_swipe_cancel_ratio = 0.15
 }
 

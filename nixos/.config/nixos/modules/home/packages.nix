@@ -52,7 +52,7 @@ in {
     bleachbit # cache cleaner
     cmatrix
     gparted # partition manager
-    ffmpeg
+    ffmpeg-full
     imv # image viewer
     killall
     libnotify
@@ -205,7 +205,7 @@ in {
 
     trash-cli
     mermaid-cli # for mermaid diagrams
-    busybox # common utils
+    # busybox # common utils
     foliate # ebook reader
     # other ebook readers:
     calibre
@@ -220,5 +220,13 @@ in {
     wtype # type virtual things on the computer
     taskwarrior
     vit
+
+    python313Packages.debugpy
+
+    procps # needed for pidof, otherwise grimblast breaks
+
+    python312Packages.webrtcvad
+    python312Packages.requests
+    python312Packages.setuptools # for stt-rrecord
   ];
 }
