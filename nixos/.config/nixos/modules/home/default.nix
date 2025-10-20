@@ -19,6 +19,7 @@
     ++ [(import ./swaync/swaync.nix)] # notification deamon
     ++ [(import ./nvim.nix)] # neovim editor
     ++ [(import ./packages.nix)] # other packages
+    ++ [(import ./espanso.nix)] # text expander service
     ++ [(import ./scripts/scripts.nix)] # personal scripts
     # ++ [(import ./spicetify.nix)] # spotify client
     ++ [(import ./starship.nix)] # shell prompt

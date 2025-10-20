@@ -6,7 +6,10 @@
     fstrim.enable = true;
     printing.enable = true;
     netdata.enable = true;
-    espanso.enable = true;
+    espanso = {
+      enable = true;
+      package = pkgs.espanso-wayland;
+    };
     avahi.enable = true;
     avahi.nssmdns4 = true;
     avahi.openFirewall = true;

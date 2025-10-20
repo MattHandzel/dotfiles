@@ -43,19 +43,18 @@ in {
     auto-cpufreq.enable = true;
     auto-cpufreq.settings = {
       battery = {
-        governor = "power";
-        turbo = "never";
+        governor = "powersave";
       };
       charger = {
         governor = "performance";
-        turbo = "auto";
       };
     };
 
     syncthing = {
       enable = true;
       user = "matth";
-      dataDir = "/home/matth/.config/syncthing/";
+      dataDir = "/home/matth/.config/syncthing";
+      configDir = "/home/matth/.config/syncthing";
     };
 
     # logkeys = {
@@ -135,8 +134,7 @@ in {
     };
   };
 
-  powerManagement.enable = true;
-  powerManagement.cpuFreqGovernor = "performance";
+  powerManagement.enable = false; # auto-cpufreq handles scaling policies
 
   boot = {
     kernelModules = ["acpi_call"];
