@@ -186,6 +186,7 @@ in {
       gcoe = "git config user.email";
       gcon = "git config user.name";
       glazy = "git add --all ; git commit -am \"This is an automated commit by $USER because they were too lazy\" ; git pull && git push";
+      md2substack = "pandoc -f markdown -t html | wl-copy -t text/html";
 
       # python
       piv = "python -m venv .venv";
