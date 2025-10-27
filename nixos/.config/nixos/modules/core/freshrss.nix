@@ -44,12 +44,6 @@ in {
 
   # --- Web server (nginx) with ACME ---
   services.nginx = {
-    enable = true;
-    recommendedGzipSettings = true;
-    recommendedOptimisation = true;
-    recommendedProxySettings = true;
-    recommendedTlsSettings = true;
-
     virtualHosts.${domain} = {
       enableACME = true;
       forceSSL = true;

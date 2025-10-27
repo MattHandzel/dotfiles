@@ -20,6 +20,7 @@ in {
       (import ./services.nix)
       (import ./system.nix)
       (import ./user.nix)
+      (import ./tor.nix)
       (import ./wayland.nix)
       (import ./virtualization.nix)
       (import ./bluetooth.nix)
@@ -27,6 +28,7 @@ in {
       (import ./firefly-iii.nix)
       (import ./freshrss.nix)
       (import ./mcp-server.nix)
+      (import ./nginx.nix)
     ]
     ++ (
       if host == "desktop"
