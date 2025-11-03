@@ -31,7 +31,7 @@
     ++ [(import ./tmux.nix)] # terminal multiplexer
     ++ [(import ./services.nix)]
     ++ [(import ./todoist.nix)]
-    ++ [inputs.catppuccin.homeManagerModules.catppuccin]
+    ++ [inputs.catppuccin.homeModules.catppuccin]
     ++ [(import ./foliate.nix)]
     # ++ [(import ./notion.nix)]
     # ++ [(import ./ntfy.nix)]
@@ -42,6 +42,7 @@
     enable = true;
     # nvim.enable = false;
   };
+  catppuccin.delta.enable = false;
 
   xdg.mimeApps = {
     enable = true;

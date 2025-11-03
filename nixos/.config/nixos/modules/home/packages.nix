@@ -228,5 +228,7 @@ in {
     python312Packages.webrtcvad
     python312Packages.requests
     python312Packages.setuptools # for stt-rrecord
+
+    gemini-cli
   ];
 }

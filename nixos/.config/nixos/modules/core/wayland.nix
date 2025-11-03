@@ -17,7 +17,6 @@
   };
 
   environment.systemPackages = with pkgs; [
-    kdePackages.xwaylandvideobridge
     mesa
     libglvnd
   ];

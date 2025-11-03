@@ -525,8 +525,8 @@ in {
 #       monitor=DP-1,preferred,0x1080,1.0
 
       monitor=eDP-1,preferred,0x0,1.0
-      monitor=DP-1,preferred,1920x0,1.0
-      # monitor=HDMI-A-1,preferred,-2560x-180,1.0
+      # monitor=DP-1,preferred,2880x0,1.0
+      monitor=HDMI-A-1,preferred,2880x0,1.0
 
       # this
 
@@ -555,26 +555,26 @@ in {
       # workspace=9, monitor:DP-1
       # workspace=10, monitor:DP-1
 
-      workspace=11, monitor:DP-1
-      workspace=12, monitor:DP-1
-      workspace=13, monitor:DP-1
-      workspace=14, monitor:DP-1
-      workspace=15, monitor:DP-1
-      workspace=16, monitor:DP-1
-      workspace=17, monitor:DP-1
-      workspace=18, monitor:DP-1
-      workspace=19, monitor:DP-1
-      workspace=20, monitor:DP-1
-      # workspace=11, monitor:HDMI-A-1
-      # workspace=12, monitor:HDMI-A-1
-      # workspace=13, monitor:HDMI-A-1
-      # workspace=14, monitor:HDMI-A-1
-      # workspace=15, monitor:HDMI-A-1
-      # workspace=16, monitor:HDMI-A-1
-      # workspace=17, monitor:HDMI-A-1
-      # workspace=18, monitor:HDMI-A-1
-      # workspace=19, monitor:HDMI-A-1
-      # workspace=20, monitor:HDMI-A-1
+      # workspace=11, monitor:DP-1
+      # workspace=12, monitor:DP-1
+      # workspace=13, monitor:DP-1
+      # workspace=14, monitor:DP-1
+      # workspace=15, monitor:DP-1
+      # workspace=16, monitor:DP-1
+      # workspace=17, monitor:DP-1
+      # workspace=18, monitor:DP-1
+      # workspace=19, monitor:DP-1
+      # workspace=20, monitor:DP-1
+      workspace=11, monitor:HDMI-A-1
+      workspace=12, monitor:HDMI-A-1
+      workspace=13, monitor:HDMI-A-1
+      workspace=14, monitor:HDMI-A-1
+      workspace=15, monitor:HDMI-A-1
+      workspace=16, monitor:HDMI-A-1
+      workspace=17, monitor:HDMI-A-1
+      workspace=18, monitor:HDMI-A-1
+      workspace=19, monitor:HDMI-A-1
+      workspace=20, monitor:HDMI-A-1
 
       # monitor=eDP-1,preferred,0x0,1.0
       # monitor=DP-1,preferred,1920x0,1.0

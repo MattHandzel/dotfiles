@@ -1,6 +1,8 @@
 #!/home/matth/.venvs/stt/bin/python
 # -*- coding: utf-8 -*-
 
+# NOTE: If there any errors with this script (some mismatch) then it is because the venv in ~/.venvs/... is not working. Run `cd ~/.venvs/stt && ns -p python3Packages.pip --run "bin/pip install webrtcvad "
+
 import argparse
 import collections
 import contextlib
@@ -14,10 +16,7 @@ import tempfile
 import time
 from typing import Deque, List, Tuple, Optional
 
-try:
-    import webrtcvad
-except Exception:
-    webrtcvad = None
+import webrtcvad
 
 
 # ----------------------- Helpers -----------------------

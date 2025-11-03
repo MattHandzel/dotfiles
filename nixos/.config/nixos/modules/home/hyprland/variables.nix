@@ -17,6 +17,9 @@ in {
     QT_QPA_PLATFORM = "xcb";
     QT_QPA_PLATFORMTHEME = "qt5ct";
     QT_STYLE_OVERRIDE = "kvantum";
+    AQ_NO_MODIFIERS = "1";
+    # keep the older wlroots knob too in case your Hyprland build still reads it
+    WLR_DRM_NO_MODIFIERS = "1";
     MOZ_ENABLE_WAYLAND = "1";
     WLR_BACKEND = "vulkan";
     WLR_RENDERER = "vulkan";
@@ -26,6 +29,7 @@ in {
     CLUTTER_BACKEND = "wayland";
     GTK_THEME = "catppuccin";
     NIXOS_ROOT_DIR = sharedVariables.rootDirectory;
+    SERVER_IP_ADDRESS = sharedVariables.serverIpAddress;
     BROWSER = "zen";
   };
 }

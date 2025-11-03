@@ -4,7 +4,9 @@
   lib,
   inputs,
   ...
-}: {
+}: let
+  sharedVariables = import ../../shared_variables.nix;
+in {
   #imports = [ inputs.nix-gaming.nixosModules.default ];
   nix = {
     settings = {
@@ -21,7 +23,7 @@
   };
   nixpkgs = {
     overlays = [
-      inputs.nur.overlay
+      inputs.nur.overlays.default
       (import ./overlays/command-not-found.nix)
       # (import ./overlays/hyprsession.nix)
     ];
@@ -60,4 +62,6 @@
 
   nixpkgs.config.allowUnfree = true;
   system.stateVersion = "25.11";
+
+  environment.variables.SERVER_IP_ADDRESS = sharedVariables.serverIpAddress;
 }

@@ -53,7 +53,7 @@ ARGS=(
   --max-utterance-ms 30000
   --min-seconds 1.0
   --context-chars 800
-  --chunk-sep " "
+  --chunk-sep \" \"
   --whisper-arg beam_size=8
   --whisper-arg best_of=8
   --whisper-arg temperature=0.2
@@ -80,6 +80,8 @@ paste_text_with_wtype() {
   copy_clipboard
   if command -v wtype >/dev/null 2>&1; then
       wtype -M shift -M ctrl "v" 
+      sleep 0.05
+      wtype -m shift -m ctrl
     # cat "$OUTFILE"  | wtype -
   fi
 }
@@ -131,7 +133,9 @@ toggle_on() {
   echo "[toggle] Starting $(date)" >>"$LOGFILE"
   : >"$OUTFILE"
 
-  nohup "$SCRIPT" "${ARGS[@]}" >"$OUTFILE" 2>>"$LOGFILE" & disown
+  echo "$SCRIPT ${ARGS[*]}" >>"$LOGFILE"
+  nohup nix-shell -p python311 python311Packages.webrtcvad python311Packages.setuptools --run "$SCRIPT ${ARGS[*]}" >"$OUTFILE" 2>>"$LOGFILE" & 
+  disown
   # wait up to 2 s for PIDFILE to appear
   for _ in {1..20}; do
     [[ -f "$PIDFILE" ]] && break
@@ -160,3 +164,8 @@ if [[ -f "$PIDFILE" ]]; then
 else
   toggle_on
 fi
+
+
+# /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/stt_record.py --server http://76.191.29.237:47770 --pidfile /run/user/1000/stt-rec.pid --backend pulse --device alsa_input.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.HiFi__Mic1__source --rate 16000 --channels 1 --stream --vad-level 3 --frame-ms 20 --silence-ms 900 --pre-roll-ms 350 --max-utterance-ms 30000 --min-seconds 1.0 --context-chars 800 --chunk-sep " " --whisper-arg beam_size=8 --whisper-arg best_of=8 --whisper-arg temperature=0.2 --whisper-arg condition_on_previous_text=true --whisper-arg vad_filter=true --whisper-arg no_speech_threshold=0.85 --whisper-arg compression_ratio_threshold=2.3 --whisper-arg logprob_threshold=-0.2
+
+# nix-shell -p gcc cmake 'python311.withPackages (ps: [ps.webrtcvad ps.setuptools])' --run "/home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/stt_record.py --server http://76.191.29.237:47770 --pidfile /run/user/1000/stt-rec.pid --backend pulse -vice alsa_input.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.HiFi__Mic1__source --rate 16000 --channels 1 --stream --vad-level 3 --fe-ms 20 --silence-ms 900 --pre-roll-ms 350 --max-utterance-ms 30000 --min-seconds 1.0 --context-chars 800 --chunk-sep \" \" --whisper"

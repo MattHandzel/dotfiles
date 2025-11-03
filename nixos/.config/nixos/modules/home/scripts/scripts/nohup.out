@@ -1,0 +1,26 @@
+error: unrecognised flag '--pidfile'
+Try 'nix-shell --help' for more information.
+error:
+       … while calling the 'derivationStrict' builtin
+         at <nix/derivation-internal.nix>:37:12:
+           36|
+           37|   strict = derivationStrict drvAttrs;
+             |            ^
+           38|
+
+       … while evaluating derivation 'shell'
+         whose name attribute is located at /nix/store/jbjpzwqzf0vq989s6y302jy1dff4z321-source/pkgs/stdenv/generic/make-derivation.nix:544:13
+
+       … while evaluating attribute 'buildInputs' of derivation 'shell'
+         at /nix/store/jbjpzwqzf0vq989s6y302jy1dff4z321-source/pkgs/stdenv/generic/make-derivation.nix:596:13:
+          595|             depsHostHost = elemAt (elemAt dependencies 1) 0;
+          596|             buildInputs = elemAt (elemAt dependencies 1) 1;
+             |             ^
+          597|             depsTargetTarget = elemAt (elemAt dependencies 2) 0;
+
+       (stack trace truncated; use '--show-trace' to show the full, detailed trace)
+
+       error: attempt to call something which is not a function but a set: { type = "derivation"; NIX_MAIN_PROGRAM = «thunk»; __ignoreNulls = true; __structuredAttrs = false; all = «thunk»; args = «thunk»; buildInputs = «thunk»; builder = «thunk»; cmakeFlags = «thunk»; configureFlags = «thunk»; «39 attributes elided» }
+       at «string»:1:168:
+            1| {...}@args: with import <nixpkgs> args; (pkgs.runCommandCC or pkgs.runCommand) "shell" { buildInputs = [ (python311Packages.webrtcvad) (python311Packages.setuptools) (which python) ]; } ""
+             |                                                                                                                                                                        ^

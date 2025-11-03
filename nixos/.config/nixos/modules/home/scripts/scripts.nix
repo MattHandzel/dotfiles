@@ -30,6 +30,7 @@
     ./scripts/run-command-based-on-type-of-workspace.sh
     ./scripts/kill-window-and-switch.sh
     ./scripts/take-note.sh
+    ./scripts/server-status.sh
     ./scripts/calendar.sh
     ./scripts/quick-capture.sh
     ./scripts/copy-to-clipboard.sh
@@ -74,6 +75,8 @@ in {
       chromium # for reclaim application script
 
       websocat # for websockets, whisper
+      python311Packages.webrtcvad
+      python311Packages.setuptools
     ]
     ++ [
       (import ./scripts/ocr-screenshot/default.nix {inherit pkgs;})

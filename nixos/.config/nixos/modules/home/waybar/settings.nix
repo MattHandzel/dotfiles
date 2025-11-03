@@ -24,6 +24,7 @@ in {
       "pulseaudio"
       "battery"
       "network"
+      "custom/server-status"
       "custom/notification"
     ];
     clock = {
@@ -34,6 +35,12 @@ in {
       tooltip = "true";
       tooltip-format = "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>";
       format-alt = " {:%Y-%m-%d %H:%M}";
+    };
+    "custom/server-status" = {
+      interval = 15;
+      return-type = "json";
+      exec-if = "command -v server-status";
+      exec = "server-status";
     };
     "hyprland/workspaces" = {
       active-only = false;

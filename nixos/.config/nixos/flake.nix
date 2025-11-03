@@ -5,7 +5,7 @@
     whisper-overlay.url = "github:oddlama/whisper-overlay";
     whisper-overlay.inputs.nixpkgs.follows = "nixpkgs";
 
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
 
     nur.url = "github:nix-community/NUR";
 
@@ -70,7 +70,7 @@
     username = "matth";
     system = "x86_64-linux";
 
-    sharedVariables = import ./shared-variables.nix;
+    sharedVariables = import ./shared_variables.nix;
   in {
     # nixpkgs = {
     #   overlay = final: prev: {

@@ -3,4 +3,5 @@
   # distractions "spotify"
   singletonApplications = ["calendar.google.com" "reclaim" "cura" "obsidian" "slack" "btop" "notetaker" "nautilus" "whatsapp-for-linux" "io.github.alainm23.planify" "anki" "planify" "PrusaSlicer" "discord" "thunderbird" "gimp" "yazi" "vit-todo" "chatgpt.com"];
   rootDirectory = "/home/matth/dotfiles/nixos/.config/nixos/"; #builtins.toString (builtins.path {path = ./.;});
+  serverIpAddress = "76.191.29.237";
 }

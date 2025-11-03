@@ -3,6 +3,7 @@
   config,
   pkgs,
   host,
+  lib,
   ...
 }: let
   sharedVariables = import ../../shared_variables.nix;
@@ -75,52 +76,46 @@ in {
       plugins = ["git" "fzf" "colored-man-pages"];
     };
 
-    initExtraFirst = ''
+    initContent = lib.mkBefore ''
       DISABLE_MAGIC_FUNCTIONS=true
       export "MICRO_TRUECOLOR=1"
       # Set window title to the current directory
       precmd() {
         printf "\033]0;%s\007" "$(basename "$PWD")"
       }
-    '';
 
-    initExtra = ''
+      function note() {
+        take-note "$*"
+      }
+      function notec() {
+        take-note -c "$*"
+      }
+      # eval $(pay-respects --alias) # gets fuck command running
 
+      # export TODOIST_API_KEY="$(pass Todoist/API)"
 
-            function note(){
-              take-note "$*"
-              }
-            function notec(){
-              take-note -c "$*"
-              }
-            # eval $(pay-respects --alias) # gets fuck command running
+      # __conda_setup="$('/home/matth/.conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+      # if [ $? -eq 0 ]; then
+      #   eval "$__conda_setup"
+      # else
+      #   if [ -f "/home/matth/.conda/etc/profile.d/conda.sh" ]; then
+      #     . "/home/matth/.conda/etc/profile.d/conda.sh"
+      #   else
+      #     export PATH="/home/matth/.conda/bin:$PATH"
+      #   fi
+      # fi
+      # unset __conda_setup
 
-            # export TODOIST_API_KEY="$(pass Todoist/API)"
-
-            # __conda_setup="$('/home/matth/.conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-            # if [ $? -eq 0 ]; then
-            #     eval "$__conda_setup"
-            # else
-            #     if [ -f "/home/matth/.conda/etc/profile.d/conda.sh" ]; then
-            #         . "/home/matth/.conda/etc/profile.d/conda.sh"
-            #     else
-            #         export PATH="/home/matth/.conda/bin:$PATH"
-            #     fi
-            # fi
-            # unset __conda_setup
-
-
-            function y() {
-              local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-              yazi "$@" --cwd-file="$tmp"
-              if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-                builtin cd -- "$cwd"
-              fi
-              rm -f -- "$tmp"
-            }
+      function y() {
+        local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+        yazi "$@" --cwd-file="$tmp"
+        if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+          builtin cd -- "$cwd"
+        fi
+        rm -f -- "$tmp"
+      }
 
       export PATH="$HOME/.npm-packages/bin:$PATH"
-
     '';
 
     shellAliases = {
@@ -187,6 +182,7 @@ in {
       gcon = "git config user.name";
       glazy = "git add --all ; git commit -am \"This is an automated commit by $USER because they were too lazy\" ; git pull && git push";
       md2substack = "pandoc -f markdown -t html | wl-copy -t text/html";
+      server = "ssh matth@ssh.matthandzel.com";
 
       # python
       piv = "python -m venv .venv";
