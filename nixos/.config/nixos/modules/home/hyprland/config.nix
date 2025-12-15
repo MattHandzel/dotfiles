@@ -14,6 +14,7 @@
     "vit-todo" = "T";
     "notetaker" = "N";
     gimp = "G";
+    beeper = "H";
   };
 in let
   makeStringToIncaseSensitiveRegex = str: let
@@ -88,7 +89,7 @@ in {
         "waybar &"
         "swaync &"
         "wl-paste --watch cliphist store -max-items 25000000 &"
-        "gammastep -l  0.1047:-100.2062 -t 5700:2500 -b 1:.7 &"
+        "gammastep -l  50:-95.2062 -t 5400:2500 -b 1:.7 &"
         "sudo chmod 666 /dev/i2c-* &"
         # "GDK_BACKEND=x11 io.github.alainm23.planify &"
         # "sudo logkeys --start --device event0 --output $HOME/notes/life-logging/key-logging/keyboard.log &"
@@ -302,7 +303,7 @@ in {
           "$mainMod SHIFT, W, exec, vm-start"
           "$mainMod, B, exec, zen"
           "$mainMod, Y, exec, swaync-client --close-latest"
-          "SUPER SHIFT, $copilot, exec, focus_app chatgpt.com"
+          "SUPER SHIFT, $copilot, exec, focus_app gemini.google.com"
 
           "$mainMod SHIFT, R, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\" && rebuild && notify-if-command-is-successful rebuild"
 
@@ -417,8 +418,8 @@ in {
           ", KP_Down, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --type"
           ", KP_4, exec, wl-paste | /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/prompt-llm.py | wl-copy ; notify-send -u normal -i dialog-information 'Copied to clipboard' ''"
           ", KP_Left, exec, wl-paste | /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/prompt-llm.py | wl-copy ; notify-send -u normal -i dialog-information 'Copied to clipboard' ''"
-          ", KP_7, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://www.youtube.com/playlist?list=PL7tg9zG8d6EZ_NEPG8WMVffW2fFGDAXpQ'"
-          ", KP_Home, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://www.youtube.com/playlist?list=PL7tg9zG8d6EZ_NEPG8WMVffW2fFGDAXpQ'"
+          ", KP_7, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://gemini.google.com/gem/6dbcf84e326c'"
+          ", KP_Home, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://gemini.google.com/gem/6dbcf84e326c'"
 
           "$mainMod, Tab, focuscurrentorlast"
           # laptop brigthness
@@ -432,9 +433,12 @@ in {
           "SHIFT CONTROL ALT,XF86MonBrightnessDown, exec, secondary-monitor-update"
           "$mainMod, XF86MonBrightnessUp, exec, brightness -s 100"
           "$mainMod, XF86MonBrightnessDown, exec, brightness -s 0"
+          # # make it so control alt v pastes the second item in clipboard history without changing the clipboard history
+          "CONTROL ALT, V, exec, wtype -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
+          "SHIFT CONTROL ALT, V, exec, wtype -m shift -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M shift -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
 
           # clipboard manager
-          "$mainMod, V, exec, cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"
+          "$mainMod, V, exec, cliphist list -max-iterms 1000 -preview-width 1000 | fuzzel --dmenu | cliphist decode | wl-copy"
 
           "$mainMod SHIFT, F23, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\""
         ];
@@ -453,8 +457,8 @@ in {
         generated_singleton_windowrule
         ++ generated_floating_windowrule
         ++ [
-          "workspace name:chatgpt, class:.*(chatgpt).*"
-          "workspace name:chatgpt, title:.*(chatgpt).*"
+          "workspace name:gemini, class:.*(gemini).*"
+          "workspace name:gemini, title:.*(gemini).*"
           # Legacy windowrule entries moved to windowrulev2
           "tile, class:^(Aseprite)$"
           "float, title:^(float_kitty)$"
@@ -525,8 +529,8 @@ in {
 #       monitor=DP-1,preferred,0x1080,1.0
 
       monitor=eDP-1,preferred,0x0,1.0
-      # monitor=DP-1,preferred,2880x0,1.0
-      monitor=HDMI-A-1,preferred,2880x0,1.0
+      monitor=DP-1,preferred,2880x0,1
+      monitor=HDMI-A-1,preferred,-1920x0,1.0
 
       # this
 
@@ -555,27 +559,28 @@ in {
       # workspace=9, monitor:DP-1
       # workspace=10, monitor:DP-1
 
-      # workspace=11, monitor:DP-1
-      # workspace=12, monitor:DP-1
-      # workspace=13, monitor:DP-1
-      # workspace=14, monitor:DP-1
-      # workspace=15, monitor:DP-1
-      # workspace=16, monitor:DP-1
-      # workspace=17, monitor:DP-1
-      # workspace=18, monitor:DP-1
-      # workspace=19, monitor:DP-1
-      # workspace=20, monitor:DP-1
-      workspace=11, monitor:HDMI-A-1
-      workspace=12, monitor:HDMI-A-1
-      workspace=13, monitor:HDMI-A-1
-      workspace=14, monitor:HDMI-A-1
-      workspace=15, monitor:HDMI-A-1
-      workspace=16, monitor:HDMI-A-1
-      workspace=17, monitor:HDMI-A-1
-      workspace=18, monitor:HDMI-A-1
-      workspace=19, monitor:HDMI-A-1
-      workspace=20, monitor:HDMI-A-1
+      workspace=11, monitor:DP-1
+      workspace=12, monitor:DP-1
+      workspace=13, monitor:DP-1
+      workspace=14, monitor:DP-1
+      workspace=15, monitor:DP-1
+      workspace=16, monitor:DP-1
+      workspace=17, monitor:DP-1
+      workspace=18, monitor:DP-1
+      workspace=19, monitor:DP-1
+      workspace=20, monitor:DP-1
 
+      # workspace=11, monitor:HDMI-A-1
+      # workspace=12, monitor:HDMI-A-1
+      # workspace=13, monitor:HDMI-A-1
+      # workspace=14, monitor:HDMI-A-1
+      # workspace=15, monitor:HDMI-A-1
+      # workspace=16, monitor:HDMI-A-1
+      # workspace=17, monitor:HDMI-A-1
+      # workspace=18, monitor:HDMI-A-1
+      # workspace=19, monitor:HDMI-A-1
+      # workspace=20, monitor:HDMI-A-1
+      #
       # monitor=eDP-1,preferred,0x0,1.0
       # monitor=DP-1,preferred,1920x0,1.0
       # monitor=HDMI-A-1,preferred,-2560x-1440,1.0

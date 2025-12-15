@@ -17,8 +17,9 @@ in {
     fd # find replacement
     file # Show file information
     fzf # fuzzy finder
-    gtt # google translate TUI
-    gifsicle # gif utility
+    # gtt # google translate TUI
+    # gifsicle # gif utility
+
     gimp
     gtrash # rm replacement, put deleted files in system trash
     hexdump
@@ -26,9 +27,9 @@ in {
     lazygit
     libreoffice
     nautilus # file manager
-    nitch # systhem fetch util
+    # nitch # systhem fetch util
     nix-prefetch-github
-    pipes # terminal screensaver
+    # pipes # terminal screensaver
     ripgrep # grep replacement
     soundwireserver # pass audio to android phone
     tdf # cli pdf viewer
@@ -113,7 +114,7 @@ in {
     feh
     texliveFull
 
-    morgen
+    # morgen
 
     wlroots
     wl-gammactl
@@ -230,5 +231,10 @@ in {
     python312Packages.setuptools # for stt-rrecord
 
     gemini-cli
+    duf # better df
+    procs # process viewer
+    tig # git repository browser
+
+    beeper
   ];
 }

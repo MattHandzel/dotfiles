@@ -27,7 +27,7 @@ export PATH="/run/current-system/sw/bin:${HOME}/.nix-profile/bin:${PATH}"
 
 PIDFILE="${XDG_RUNTIME_DIR}/stt-rec.pid"
 SCRIPT="/home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/stt_record.py"
-SERVER="http://76.191.29.237:47770"
+SERVER="http://$SERVER_IP_ADDRESS:47770"
 
 OUTFILE="/tmp/stt-output.txt"
 LOGFILE="/tmp/stt.log"
@@ -54,6 +54,7 @@ ARGS=(
   --min-seconds 1.0
   --context-chars 800
   --chunk-sep \" \"
+  --whisper-arg prompt=\"Glossary:\ Aimiee\"
   --whisper-arg beam_size=8
   --whisper-arg best_of=8
   --whisper-arg temperature=0.2

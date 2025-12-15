@@ -7,6 +7,12 @@
   ...
 }: let
   sharedVariables = import ../../shared_variables.nix;
+  transcribe_file_script = pkgs.writeShellScript "transcribe_file.sh" ''
+    #!/usr/bin/env bash
+    # replace ~ with home directory
+    input_file="$${1/#\~/$HOME}"
+    curl -sS http://${sharedVariables.serverIpAddress}/v1/audio/transcriptions -F file=@"$input_file"
+  '';
 in {
   home.packages = with pkgs; [
     direnv
@@ -133,9 +139,14 @@ in {
       findw = "grep -rl";
       pdf = "tdf";
       open = "xdg-open";
-      ls = "lsd";
-      lst = "lsd --tree --depth";
+      ls = "eza";
+      lst = "eza --tree --level=";
+
       grep = "grep --color=auto";
+      ps = "procs";
+      glo = "tig";
+      df = "duf";
+      ping = "gping";
 
       rm = "trash";
 
@@ -160,10 +171,11 @@ in {
       nix-flake-update = "sudo nix flake update ${sharedVariables.rootDirectory}#";
       nix-clean = "sudo nix-collect-garbage && sudo nix-collect-garbage -d && sudo rm /nix/var/nix/gcroots/auto/* && nix-collect-garbage && nix-collect-garbage -d";
 
-      cum = "echo TEST";
       # Git
+
       ga = "git add";
       gaa = "git add --all";
+      gst = "git stash";
       gs = "git status";
       gb = "git branch";
       gm = "git merge";
@@ -183,6 +195,9 @@ in {
       glazy = "git add --all ; git commit -am \"This is an automated commit by $USER because they were too lazy\" ; git pull && git push";
       md2substack = "pandoc -f markdown -t html | wl-copy -t text/html";
       server = "ssh matth@ssh.matthandzel.com";
+      serverfs = "sshfs matth@ssh.matthandzel.com:/home/matth/";
+      # make transcribe available as a command
+      transcribe = "${transcribe_file_script}";
 
       # python
       piv = "python -m venv .venv";

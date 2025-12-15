@@ -167,7 +167,8 @@ vim.api.nvim_set_keymap("n", "<M-o>", "o<Esc>", { noremap = true })
 vim.api.nvim_set_keymap("n", "<M-O>", "O<Esc>", { noremap = true })
 
 vim.api.nvim_set_keymap("v", "<M-d>", '"_d', { noremap = true, silent = true })
-vim.api.nvim_set_keymap("v", "<M-p>", '"_dP', { noremap = true, silent = true })
+vim.api.nvim_set_keymap("v", "<M-p>", '"_dp', { noremap = true, silent = true })
+vim.api.nvim_set_keymap("v", "<M-P>", '"_dP', { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", "<M-d>d", '"_d', { noremap = true, silent = true })
 
 -- Map the function to a key combination in visual mode
@@ -409,8 +410,37 @@ vim.keymap.set("n", "<leader>ow", function()
 end, { noremap = true })
 
 vim.keymap.set("n", "<leader>ot", ":ObsidianTemplate<CR>")
+local make_reflection = function()
+	-- 1. Define your date format and command
+	--    (Use "gdate" here if you are on macOS and need nanoseconds)
+	local date_cmd = "date -u +'%Y-%m-%dT%H:%M:%S.%6N+00:00'"
 
-map("n", "<leader>of", "<cmd>ObsidianSearch<CR>", { desc = "Obsidian Find" })
+	-- 2. Get the timestamp from the shell
+	--    vim.fn.system() does NOT have the same '%' problem as '!'
+	local timestamp = vim.fn.system(date_cmd)
+	timestamp = vim.fn.trim(timestamp) -- Remove the trailing newline
+
+	-- 3. Define your source and destination paths
+	local template = vim.fn.expand("~/notes/templates/task-template.md")
+	local destination_dir = vim.fn.expand("~/notes/capture/raw_capture/")
+	local destination_file = destination_dir .. timestamp .. ".md"
+
+	-- 4. Use NeoVim's built-in file copy
+	--    This is better than shelling out to 'cp'
+	vim.loop.fs_copyfile(template, destination_file)
+
+	print("Template copied to: " .. destination_file)
+
+	-- now open the file with `:edit`
+	vim.api.nvim_command(":edit " .. destination_file)
+	vim.api.nvim_command(":save")
+end
+
+vim.keymap.set("n", "<leader>or", function()
+	make_reflection()
+end, { noremap = true })
+
+map("n", "<leader>of", "<cmd>ObsidianTOC<CR>", { desc = "Obsidian Find" })
 
 -- text-case
 --<CMD>lua require('textcase').current_word('to_snake_case')<CR>

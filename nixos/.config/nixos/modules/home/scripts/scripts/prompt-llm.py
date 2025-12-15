@@ -50,16 +50,16 @@ class Prompt:
 PROMPTS: Dict[str, Prompt] = {
     "🎙️ voice_memo_cleanup": Prompt(
         header="You are a voice memo cleanup assistant.",
-        task="You are given a raw transcript of a voice note. Your job is to refine it into a clearly typed, polished note while keeping the original wording, tone, and intent as intact as possible.",
+        task="You are given a raw transcript of a voice note. Your job is to refine it into a clearly typed note while maintaining the original wording, tone, and intent as intact as possible.",
         rules=[
             "Remove filler words (ums, ahs, likes, etc.) and repetitions",
-            "Replace conversational phrases (“so”, “when it comes to”) with formal connectors (“these applications involve”, “for example”)."
+            # "Replace conversational phrases (“so”, “when it comes to”) with formal connectors (“these applications involve”, “for example”)."
             "Merge short sentences, remove redundancies, connect ideas with transitions.",
             "Merge definition into apposition, remove filler phrasing",
             "Do not introduce new ideas, omit key details, or significantly rephrase the speaker’s wording. Instead:",
             "Preserve all factual details and relevant content.",
             "Cut off-topic digressions and obvious rambles.",
-            "Process spelled out acronyms and abbreviations correctly (S-A-R-G -> SARG).",
+            "Process spelled out acronyms and abbreviations correctly (S-A-R-G -> SARG, U I U C -> UIUC).",
             "The voice note might contain false starts, mid-sentence topic changes, and incomplete thoughts. Use your best judgment to reconstruct the intended meaning.",
             "Preserve the speaker’s phrasing and style so it still sounds like them.",
             "Combine fragmented sentences into coherent ones.",

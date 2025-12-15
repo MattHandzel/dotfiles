@@ -44,7 +44,7 @@
     ./scripts/track_workspace_history.sh
     ./scripts/reclaim.sh
     ./scripts/calendar.google.com.sh
-    ./scripts/chatgpt.com.sh
+    ./scripts/gemini.google.com.sh
     ./scripts/vit-todo.sh
     ./scripts/open-website-as-standalone-app.sh
   ];

@@ -234,3 +234,91 @@ function EvalAndReplace()
 end
 
 vim.api.nvim_set_keymap("v", "<leader>m", ":lua EvalAndReplace()<CR>", { noremap = true, silent = true })
+
+-- Maybe this should go into a separate file later.
+--
+-- Searches the current buffer's frontmatter for the 'id:' field.
+-- @return string|nil The found ID, or nil if not found.
+---
+local function get_current_note_id()
+	-- Save cursor and window view to restore it later
+	local save_view = vim.fn.winsaveview()
+
+	-- Go to the first line to start the search
+	vim.cmd("1")
+
+	-- Search for a line starting with 'id:', 'W' means no wrap
+	local line_num = vim.fn.search("^id:", "W")
+
+	-- Restore the original view (cursor and window position)
+	vim.fn.winrestview(save_view)
+
+	if line_num == 0 then
+		-- If search failed (line_num is 0)
+		vim.notify("Error: Could not find 'id:' in frontmatter.", vim.log.levels.ERROR, { title = "Yank with ID" })
+		return nil
+	end
+
+	-- Get the content of the line where 'id:' was found
+	local id_line = vim.fn.getline(line_num)
+
+	-- Extract the ID using Lua's string matching
+	-- ^id:%s* : matches 'id:' at the start, followed by optional whitespace
+	-- (.*)      : captures the rest of the line
+	local id = id_line:match("^id:%s*(.*)")
+
+	if id then
+		-- Trim any extra whitespace from the captured ID
+		return id:match("^%s*(.-)%s*$")
+	else
+		-- This should be rare if the search succeeded, but it's good practice
+		vim.notify("Error: Found 'id:' line but could not parse ID.", vim.log.levels.ERROR, { title = "Yank with ID" })
+		return nil
+	end
+end
+
+---
+-- Global function to be called from the keymap.
+-- Yanks the visually selected text (from 'v' register)
+-- and appends the note ID, then copies to clipboard.
+---
+function _G.YankSelectedWithNoteID()
+	-- 1. Get the note ID from our helper function
+	local note_id = get_current_note_id()
+	if not note_id then
+		return -- Error was already notified
+	end
+
+	-- 2. Get the visually selected text (yanked to 'v' register by the keymap)
+	local selected_text = vim.fn.getreg("v")
+	if not selected_text or selected_text == "" then
+		vim.notify(
+			"Error: No text selected or 'v' register is empty.",
+			vim.log.levels.ERROR,
+			{ title = "Yank with ID" }
+		)
+		return
+	end
+
+	-- 3. Clean up the selected text
+	--    - Replace one or more newlines/carriage returns with a single space
+	--    - Trim leading/trailing whitespace
+	local clean_text = selected_text:gsub("[\r\n]+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+
+	-- 4. Format the final string as requested
+	local final_string = string.format("%s [[%s]]", clean_text, note_id)
+
+	-- 5. Set the system clipboard register '+'
+	vim.fn.setreg("+", final_string)
+
+	-- 6. Provide success feedback
+	vim.notify("Copied link to clipboard!", vim.log.levels.INFO, { title = "Yank with ID" })
+end
+
+-- Map 'L' in visual mode to yank to 'v' register, then call our function
+vim.keymap.set(
+	"v",
+	"L",
+	'"vy:lua _G.YankSelectedWithNoteID()<CR>',
+	{ silent = true, desc = "Yank text with note ID link" }
+)

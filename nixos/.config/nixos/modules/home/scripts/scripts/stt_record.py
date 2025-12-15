@@ -218,6 +218,12 @@ def main():
         help="How many trailing characters of prior text to feed as initial_prompt",
     )
     ap.add_argument(
+        "--prompt",
+        type=str,
+        default="",
+        help="Initial prompt to guide transcription",
+    )
+    ap.add_argument(
         "--chunk-sep",
         default=" ",
         help="String printed between chunks (default single space)",
@@ -287,7 +293,6 @@ def main():
                 pre_roll_ms=args.pre_roll_ms,
                 max_utterance_ms=args.max_utterance_ms,
             )
-
             last_text = ""  # accumulate context across chunks
             printed_so_far = ""  # for dedup/overlap trimming in output
 
@@ -310,10 +315,14 @@ def main():
 
                     fields = list(extra_fields)
                     # Always feed context for coherence
-                    if args.context_chars > 0 and last_text.strip():
-                        fields.append(
-                            ("initial_prompt", last_text[-args.context_chars :])
+                    fields.append(
+                        (
+                            "initial_prompt",
+                            args.prompt
+                            + ". "
+                            + last_text[-args.context_chars + 2 + len(args.prompt) :],
                         )
+                    )
 
                     raw = upload_file_curl(args.server, tf.name, args.language, fields)
 

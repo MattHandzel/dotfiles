@@ -15,10 +15,11 @@ in {
       substituters = ["https://nix-gaming.cachix.org"];
       trusted-public-keys = ["nix-gaming.cachix.org-1:nbjlureqMbRAxR1gJ/f3hxemL9svXaZF/Ees8vCUUs4="];
     };
+
     gc = {
       automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 90d";
+      dates = "weekly"; # Or "daily", "monthly", etc.
+      options = "--delete-older-than 14d +3"; # Keeps 31 days of generations
     };
   };
   nixpkgs = {

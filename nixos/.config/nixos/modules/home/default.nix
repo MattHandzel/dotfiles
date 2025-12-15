@@ -33,6 +33,7 @@
     ++ [(import ./todoist.nix)]
     ++ [inputs.catppuccin.homeModules.catppuccin]
     ++ [(import ./foliate.nix)]
+    ++ [(import ./uri-handlers.nix)]
     # ++ [(import ./notion.nix)]
     # ++ [(import ./ntfy.nix)]
     ;
@@ -60,6 +61,26 @@
       "text/*" = "nvim.desktop";
       "application/json" = "nvim.desktop";
       "application/x-shellscript" = "nvim.desktop";
+      "application/pdf" = "zathura.desktop";
+    };
+  };
+
+  programs.atuin = {
+    enable = true;
+    settings = {
+      accept_past_line_end = true;
+      auto_sync = true;
+      sync_frequency = "5m";
+      sync_address = "https://api.atuin.sh";
+      search_mode = "fuzzy";
+    };
+  };
+
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
+    options = {
+      # todo: write
     };
   };
 

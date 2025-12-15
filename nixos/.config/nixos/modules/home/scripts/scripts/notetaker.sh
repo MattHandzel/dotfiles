@@ -1,3 +1,3 @@
 #! /usr/bin/env bash
 
-kitty --hold --title notetaker --name notetaker sh -c "cd ~/notes ; nvim ." 
+kitty --hold --title notetaker --name notetaker sh -c "cd $HOME/notes ; nvim ." 
