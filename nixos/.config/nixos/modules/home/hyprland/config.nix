@@ -4,6 +4,9 @@
   ...
 }: let
   sharedVariables = import ../../../shared_variables.nix;
+  # Keep this as a Nix value (not a Hyprland `$var`) so binds don't depend on
+  # Hyprland variable ordering in the generated config.
+  mainMod = "SUPER";
   # This will make it so that when you press $mainMod + alt + {letter} it will open up the corresponding application
   appKeyboardShortcuts = {
     anki = "A";
@@ -48,7 +51,7 @@ in let
   generateSingletonKeyboardShortcuts = singleton:
     if builtins.hasAttr singleton appKeyboardShortcuts
     then [
-      "$mainMod ALT, ${appKeyboardShortcuts.${singleton}}, exec, focus_app ${singleton}"
+      "${mainMod} ALT, ${appKeyboardShortcuts.${singleton}}, exec, focus_app ${singleton}"
     ]
     else [];
 
@@ -78,11 +81,12 @@ in
       };
       settings = {
         # autostart
-        # --- STABILITY FIXES ---
-        # 1. Prevent log file explosion
-        "debug:disable_logs" = true;
+        # Keep Hyprland logs enabled so we can debug config/runtime issues.
+        # If logs ever grow too large, we should fix the noisy source rather
+        # than turning all logs off.
+        "debug:disable_logs" = false;
         debug = {
-          disable_logs = true;
+          disable_logs = false;
         };
         exec-once = [
           "systemctl --user import-environment &"
@@ -177,11 +181,6 @@ in
         };
 
         general = {
-          "$mainMod" = "SUPER";
-          "$term" = "kitty";
-          "$browser" = "zen";
-          "$copilot" = "code:201";
-
           layout = "dwindle";
           gaps_in = 0;
           gaps_out = 0;
@@ -281,41 +280,47 @@ in
         binds = {
           movefocus_cycles_fullscreen = false;
         };
-        # 2. Fix cursor rendering on NVIDIA/DRM
         cursor = {
           hide_on_key_press = true;
-          no_hardware_cursors = true;
+          # Hardware cursors are the fast path. Disabling them can cause high CPU
+          # usage on cursor movement (especially at high refresh rates).
+          no_hardware_cursors = false;
         };
         bind =
           generatedSingltonKeyboardShortcuts
           ++ [
             # show keybinds list
-            "$mainMod, F1, exec, show-keybinds"
-            "$mainMod, delete, exit"
+            "${mainMod}, F1, exec, show-keybinds"
+            "${mainMod}, delete, exit"
 
             # keybindings
-            "$mainMod, T, exec, kitty sh -c \"exec tmux\""
-            "$mainMod SHIFT, T, exec, kitty --title float_kitty"
+            # Avoid relying on the default tmux socket path/name. If the default
+            # socket is stale/unreachable, tmux can exit immediately and kitty
+            # closes right away (looks like "terminal dies").
+            #
+            # Always create a fresh session (do not attach to an existing one).
+            "${mainMod}, T, exec, kitty -e tmux -L hypr new-session"
+            "${mainMod} SHIFT, T, exec, kitty --title float_kitty"
             # "$mainMod SHIFT, T, exec, kitty --start-as=fullscreen -o 'font_size=16'"
-            "$mainMod, Q, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch killactive' 'kill-window-and-switch'"
-            "$mainMod, F, fullscreen, 0"
-            "$mainMod SHIFT, F, fullscreen, 1"
-            "$mainMod, Space, togglefloating,"
-            "$mainMod, A, exec, fuzzel"
-            "$mainMod, Escape, exec, systemctl suspend"
-            "$mainMod, E, exec, wofi-emoji"
-            "$mainMod SHIFT, Escape, exec, shutdown-script"
-            "$mainMod, P, pseudo,"
-            "$mainMod, S, togglesplit,"
-            "$mainMod SHIFT, B, exec, pkill -SIGUSR1 .waybar-wrapped"
-            "$mainMod, C ,exec, hyprpicker -a"
-            "$mainMod, W,exec, wallpaper-picker"
-            "$mainMod SHIFT, W, exec, vm-start"
-            "$mainMod, B, exec, zen"
-            "$mainMod, Y, exec, swaync-client --close-latest"
-            "SUPER SHIFT, $copilot, exec, focus_app gemini.google.com"
+            "${mainMod}, Q, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch killactive' 'kill-window-and-switch'"
+            "${mainMod}, F, fullscreen, 0"
+            "${mainMod} SHIFT, F, fullscreen, 1"
+            "${mainMod}, Space, togglefloating,"
+            "${mainMod}, A, exec, fuzzel"
+            "${mainMod}, Escape, exec, systemctl suspend"
+            "${mainMod}, E, exec, wofi-emoji"
+            "${mainMod} SHIFT, Escape, exec, shutdown-script"
+            "${mainMod}, P, pseudo,"
+            "${mainMod}, S, togglesplit,"
+            "${mainMod} SHIFT, B, exec, pkill -SIGUSR1 .waybar-wrapped"
+            "${mainMod}, C ,exec, hyprpicker -a"
+            "${mainMod}, W,exec, wallpaper-picker"
+            "${mainMod} SHIFT, W, exec, vm-start"
+            "${mainMod}, B, exec, zen"
+            "${mainMod}, Y, exec, swaync-client --close-latest"
+            "${mainMod} SHIFT, code:201, exec, focus_app gemini.google.com"
 
-            "$mainMod SHIFT, R, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\" && rebuild && notify-if-command-is-successful rebuild"
+            "${mainMod} SHIFT, R, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\" && rebuild && notify-if-command-is-successful rebuild"
 
             ",XF86AudioLowerVolume, exec, pamixer --decrease 5"
             ",XF86AudioRaiseVolume, exec, pamixer --increase 5"
@@ -326,89 +331,89 @@ in
             "ALT, Print, exec, ocr-screenshot && wl-paste -t text/plain > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').txt"
             ",Print, exec, grimblast --notify --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
 
-            "$mainMod, N, exec, ~/Projects/KnowledgeManagementSystem/result/bin/kms-capture"
-            "$mainMod ALT, F, exec, kitty --hold --title yazi --name sh -c \"yazi\""
+            "${mainMod}, N, exec, ~/Projects/KnowledgeManagementSystem/result/bin/kms-capture"
+            "${mainMod} ALT, F, exec, kitty --hold --title yazi --name sh -c \"yazi\""
 
             # Move focus with mainMod + arrow keys
             # "$mainMod, h, changegroupactive, back"
             # "$mainMod, l, changegroupactive, forward"
-            "$mainMod, h, movefocus, l"
-            "$mainMod, l, movefocus, r"
-            "$mainMod, k, movefocus, u"
-            "$mainMod, j, movefocus, d"
+            "${mainMod}, h, movefocus, l"
+            "${mainMod}, l, movefocus, r"
+            "${mainMod}, k, movefocus, u"
+            "${mainMod}, j, movefocus, d"
             # "$mainMod, Q, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch killactive' 'kill-window-and-switch'"
 
-            "$mainMod SHIFT , h, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow l' 'switch-workspace-to-other-monitor'"
-            "$mainMod SHIFT , l, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow r' 'switch-workspace-to-other-monitor'"
-            "$mainMod SHIFT , k, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow u' 'switch-workspace-to-other-monitor'"
-            "$mainMod SHIFT , j, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow d' 'switch-workspace-to-other-monitor'"
+            "${mainMod} SHIFT, h, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow l' 'switch-workspace-to-other-monitor'"
+            "${mainMod} SHIFT, l, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow r' 'switch-workspace-to-other-monitor'"
+            "${mainMod} SHIFT, k, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow u' 'switch-workspace-to-other-monitor'"
+            "${mainMod} SHIFT, j, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow d' 'switch-workspace-to-other-monitor'"
 
-            "$mainMod SHIFT , right, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow l' 'switch-workspace-to-other-monitor'"
-            "$mainMod SHIFT , left, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow r' 'switch-workspace-to-other-monitor'"
-            "$mainMod SHIFT , up, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow u' 'switch-workspace-to-other-monitor'"
-            "$mainMod SHIFT , down, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow d' 'switch-workspace-to-other-monitor'"
+            "${mainMod} SHIFT, right, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow l' 'switch-workspace-to-other-monitor'"
+            "${mainMod} SHIFT, left, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow r' 'switch-workspace-to-other-monitor'"
+            "${mainMod} SHIFT, up, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow u' 'switch-workspace-to-other-monitor'"
+            "${mainMod} SHIFT, down, exec, run-command-based-on-type-of-workspace 'hyprctl dispatch movewindow d' 'switch-workspace-to-other-monitor'"
 
             # switch workspace
-            "$mainMod, 1, workspace, 1"
-            "$mainMod, 2, workspace, 2"
-            "$mainMod, 3, workspace, 3"
-            "$mainMod, 4, workspace, 4"
-            "$mainMod, 5, workspace, 5"
-            "$mainMod, 6, workspace, 6"
-            "$mainMod, 7, workspace, 7"
-            "$mainMod, 8, workspace, 8"
-            "$mainMod, 9, workspace, 9"
-            "$mainMod, 0, workspace, 10"
+            "${mainMod}, 1, workspace, 1"
+            "${mainMod}, 2, workspace, 2"
+            "${mainMod}, 3, workspace, 3"
+            "${mainMod}, 4, workspace, 4"
+            "${mainMod}, 5, workspace, 5"
+            "${mainMod}, 6, workspace, 6"
+            "${mainMod}, 7, workspace, 7"
+            "${mainMod}, 8, workspace, 8"
+            "${mainMod}, 9, workspace, 9"
+            "${mainMod}, 0, workspace, 10"
 
             # Resize windows
-            "$mainMod SHIFT, right, resizeactive, 30 0"
-            "$mainMod SHIFT, left, resizeactive, -30 0"
-            "$mainMod SHIFT, up, resizeactive, 0 -30"
-            "$mainMod SHIFT, down, resizeactive, 0 30"
+            "${mainMod} SHIFT, right, resizeactive, 30 0"
+            "${mainMod} SHIFT, left, resizeactive, -30 0"
+            "${mainMod} SHIFT, up, resizeactive, 0 -30"
+            "${mainMod} SHIFT, down, resizeactive, 0 30"
 
             # Switch workspaces with mainMod + [0-9]
-            "$mainMod, 1, workspace, 1"
-            "$mainMod, 2, workspace, 2"
-            "$mainMod, 3, workspace, 3"
-            "$mainMod, 4, workspace, 4"
-            "$mainMod, 5, workspace, 5"
-            "$mainMod, 6, workspace, 6"
-            "$mainMod, 7, workspace, 7"
-            "$mainMod, 8, workspace, 8"
-            "$mainMod, 9, workspace, 9"
-            "$mainMod, 0, workspace, 10"
-            "$mainMod ALT, 1, workspace, 11"
-            "$mainMod ALT, 2, workspace, 12"
-            "$mainMod ALT, 3, workspace, 13"
-            "$mainMod ALT, 4, workspace, 14"
-            "$mainMod ALT, 5, workspace, 15"
-            "$mainMod ALT, 6, workspace, 16"
-            "$mainMod ALT, 7, workspace, 17"
-            "$mainMod ALT, 8, workspace, 18"
-            "$mainMod ALT, 9, workspace, 19"
-            "$mainMod ALT, 0, workspace, 20"
+            "${mainMod}, 1, workspace, 1"
+            "${mainMod}, 2, workspace, 2"
+            "${mainMod}, 3, workspace, 3"
+            "${mainMod}, 4, workspace, 4"
+            "${mainMod}, 5, workspace, 5"
+            "${mainMod}, 6, workspace, 6"
+            "${mainMod}, 7, workspace, 7"
+            "${mainMod}, 8, workspace, 8"
+            "${mainMod}, 9, workspace, 9"
+            "${mainMod}, 0, workspace, 10"
+            "${mainMod} ALT, 1, workspace, 11"
+            "${mainMod} ALT, 2, workspace, 12"
+            "${mainMod} ALT, 3, workspace, 13"
+            "${mainMod} ALT, 4, workspace, 14"
+            "${mainMod} ALT, 5, workspace, 15"
+            "${mainMod} ALT, 6, workspace, 16"
+            "${mainMod} ALT, 7, workspace, 17"
+            "${mainMod} ALT, 8, workspace, 18"
+            "${mainMod} ALT, 9, workspace, 19"
+            "${mainMod} ALT, 0, workspace, 20"
 
             # Move active window to a workspace with mainMod + SHIFT + [0-9]
-            "$mainMod SHIFT, 1, movetoworkspacesilent, 1"
-            "$mainMod SHIFT, 2, movetoworkspacesilent, 2"
-            "$mainMod SHIFT, 3, movetoworkspacesilent, 3"
-            "$mainMod SHIFT, 4, movetoworkspacesilent, 4"
-            "$mainMod SHIFT, 5, movetoworkspacesilent, 5"
-            "$mainMod SHIFT, 6, movetoworkspacesilent, 6"
-            "$mainMod SHIFT, 7, movetoworkspacesilent, 7"
-            "$mainMod SHIFT, 8, movetoworkspacesilent, 8"
-            "$mainMod SHIFT, 9, movetoworkspacesilent, 9"
-            "$mainMod SHIFT, 0, movetoworkspacesilent, 10"
-            "$mainMod SHIFT ALT, 1, movetoworkspacesilent, 11"
-            "$mainMod SHIFT ALT, 2, movetoworkspacesilent, 12"
-            "$mainMod SHIFT ALT, 3, movetoworkspacesilent, 13"
-            "$mainMod SHIFT ALT, 4, movetoworkspacesilent, 14"
-            "$mainMod SHIFT ALT, 5, movetoworkspacesilent, 15"
-            "$mainMod SHIFT ALT, 6, movetoworkspacesilent, 16"
-            "$mainMod SHIFT ALT, 7, movetoworkspacesilent, 17"
-            "$mainMod SHIFT ALT, 8, movetoworkspacesilent, 18"
-            "$mainMod SHIFT ALT, 9, movetoworkspacesilent, 19"
-            "$mainMod SHIFT ALT, 0, movetoworkspacesilent, 20"
+            "${mainMod} SHIFT, 1, movetoworkspacesilent, 1"
+            "${mainMod} SHIFT, 2, movetoworkspacesilent, 2"
+            "${mainMod} SHIFT, 3, movetoworkspacesilent, 3"
+            "${mainMod} SHIFT, 4, movetoworkspacesilent, 4"
+            "${mainMod} SHIFT, 5, movetoworkspacesilent, 5"
+            "${mainMod} SHIFT, 6, movetoworkspacesilent, 6"
+            "${mainMod} SHIFT, 7, movetoworkspacesilent, 7"
+            "${mainMod} SHIFT, 8, movetoworkspacesilent, 8"
+            "${mainMod} SHIFT, 9, movetoworkspacesilent, 9"
+            "${mainMod} SHIFT, 0, movetoworkspacesilent, 10"
+            "${mainMod} SHIFT ALT, 1, movetoworkspacesilent, 11"
+            "${mainMod} SHIFT ALT, 2, movetoworkspacesilent, 12"
+            "${mainMod} SHIFT ALT, 3, movetoworkspacesilent, 13"
+            "${mainMod} SHIFT ALT, 4, movetoworkspacesilent, 14"
+            "${mainMod} SHIFT ALT, 5, movetoworkspacesilent, 15"
+            "${mainMod} SHIFT ALT, 6, movetoworkspacesilent, 16"
+            "${mainMod} SHIFT ALT, 7, movetoworkspacesilent, 17"
+            "${mainMod} SHIFT ALT, 8, movetoworkspacesilent, 18"
+            "${mainMod} SHIFT ALT, 9, movetoworkspacesilent, 19"
+            "${mainMod} SHIFT ALT, 0, movetoworkspacesilent, 20"
 
             # media and volume controls
             ",XF86AudioRaiseVolume,exec, pamixer -i 2"
@@ -418,9 +423,9 @@ in
             ",XF86AudioNext,exec, playerctl next"
             ",XF86AudioPrev,exec, playerctl previous"
             ",XF86AudioStop, exec, playerctl stop"
-            "$mainMod, mouse_down, workspace, e-1"
-            "$mainMod, mouse_up, workspace, e+1"
-            "$mainMod SHIFT CONTROL, q, exec, reboot"
+            "${mainMod}, mouse_down, workspace, e-1"
+            "${mainMod}, mouse_up, workspace, e+1"
+            "${mainMod} SHIFT CONTROL, q, exec, reboot"
 
             ", KP_1, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --copy"
             ", KP_End, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --copy"
@@ -433,7 +438,7 @@ in
             ", KP_7, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://gemini.google.com/gem/6dbcf84e326c'"
             ", KP_Home, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://gemini.google.com/gem/6dbcf84e326c'"
 
-            "$mainMod, Tab, focuscurrentorlast"
+            "${mainMod}, Tab, focuscurrentorlast"
             # laptop brigthness
             ",XF86MonBrightnessUp, exec, brightness -i 1"
             ",XF86MonBrightnessDown, exec, brightness -d 1"
@@ -443,22 +448,22 @@ in
             "CONTROL,XF86MonBrightnessDown, exec, hyprctl dispatch dpms off"
             "SHIFT CONTROL ALT,XF86MonBrightnessUp, exec, secondary-monitor-update"
             "SHIFT CONTROL ALT,XF86MonBrightnessDown, exec, secondary-monitor-update"
-            "$mainMod, XF86MonBrightnessUp, exec, brightness -s 100"
-            "$mainMod, XF86MonBrightnessDown, exec, brightness -s 0"
+            "${mainMod}, XF86MonBrightnessUp, exec, brightness -s 100"
+            "${mainMod}, XF86MonBrightnessDown, exec, brightness -s 0"
             # # make it so control alt v pastes the second item in clipboard history without changing the clipboard history
             "CONTROL ALT, V, exec, wtype -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
             "SHIFT CONTROL ALT, V, exec, wtype -m shift -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M shift -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
 
             # clipboard manager
-            "$mainMod, V, exec, cliphist list -max-iterms 1000 -preview-width 1000 | fuzzel --dmenu | cliphist decode | wl-copy"
+            "${mainMod}, V, exec, cliphist list -max-iterms 1000 -preview-width 1000 | fuzzel --dmenu | cliphist decode | wl-copy"
 
-            "$mainMod SHIFT, F23, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\""
+            "${mainMod} SHIFT, F23, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\""
           ];
 
         # mouse binding
         bindm = [
-          "$mainMod, mouse:272, movewindow"
-          "$mainMod, mouse:273, resizewindow"
+          "${mainMod}, mouse:272, movewindow"
+          "${mainMod}, mouse:273, resizewindow"
         ];
 
         # windowrule - keeping minimal legacy rules
@@ -661,4 +666,3 @@ plugin:touch_gestures {
     ";
     };
   }
-  deployrs

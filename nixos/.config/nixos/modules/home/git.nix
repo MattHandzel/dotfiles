@@ -1,16 +1,16 @@
-{ pkgs, ... }: 
-{
+{pkgs, ...}: {
   programs.git = {
     enable = true;
-    
-    userName = "MattHandzel";
-    userEmail = "handzelmatthew@gmail.com";
-    
-    extraConfig = { 
-      init.defaultBranch = "main";
+
+    settings = {
       credential.helper = "store";
+      init.defaultBranch = "main";
+      user = {
+        email = "handzelmatthew@gmail.com";
+        name = "MattHandzel";
+      };
     };
   };
 
-  home.packages = [ pkgs.gh pkgs.git-lfs ];
+  home.packages = with pkgs; [gh git-lfs];
 }

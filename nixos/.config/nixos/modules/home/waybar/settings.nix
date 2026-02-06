@@ -1,5 +1,27 @@
 {...}: let
   sharedVariables = import ../../../shared_variables.nix;
+  singletonIcons = {
+    "calendar.google.com" = "📅";
+    reclaim = "⏱";
+    cura = "🖨";
+    obsidian = "🪨";
+    slack = "💬";
+    btop = "📈";
+    notetaker = "📝";
+    nautilus = "📁";
+    "whatsapp-for-linux" = "🟢";
+    "io.github.alainm23.planify" = "✅";
+    anki = "🧠";
+    planify = "✅";
+    PrusaSlicer = "🧩";
+    discord = "󰙯";
+    thunderbird = "✉";
+    gimp = "🎨";
+    yazi = "🗂";
+    "vit-todo" = "☑";
+    "gemini.google.com" = "🧠";
+    beeper = "🔔";
+  };
 in {
   programs.waybar.settings.mainBar = {
     position = "bottom";
@@ -48,6 +70,7 @@ in {
       disable-scroll = true;
       format = "{icon}";
       on-click = "activate";
+      sort-by-number = true;
       format-icons =
         {
           "1" = "󰈹";
@@ -63,13 +86,8 @@ in {
           "spotify" = "";
           urgent = "";
           # default = "";
-          sort-by-number = true;
         }
-        // (builtins.listToAttrs (map (x: {
-            name = x;
-            value = "";
-          })
-          sharedVariables.singletonApplications));
+        // singletonIcons;
       persistent-workspaces = {
         # "1"= [];
         # "2"= [];
@@ -81,7 +99,7 @@ in {
     };
     "custom/lifelog" = {
       "exec" = "cat /tmp/lifelog_status.json";
-      "interval" = 1;
+      "interval" = 5;
       "return-type" = "json";
       "format" = "{}";
       "on-click" = "kitty -e nix-shell /home/matth/Projects/LifeLogging/shell.nix --run 'python3 /home/matth/Projects/LifeLogging/run.py tui'";

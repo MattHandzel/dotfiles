@@ -1,11 +1,31 @@
 {
   pkgs,
   config,
+  lib,
   ...
 }: let
   sharedVariables = import ../../shared_variables.nix;
 in {
-  nix.settings.auto-optimise-store = true;
+  # Rebuilds on this laptop have previously driven the system into swap
+  # exhaustion and OOM thrash (appearing as a hard freeze). zram gives us a
+  # fast, compressed swap tier and reduces IO pressure.
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+    memoryPercent = 50;
+    priority = 100;
+  };
+
+  nix.settings = {
+    auto-optimise-store = true;
+    # Keep rebuilds from saturating a thermally-constrained laptop.
+    # You can temporarily override on the CLI with `--option max-jobs ...`.
+    #
+    # With zram enabled, we can afford moderate parallelism without falling
+    # into the swap/OOM spiral that previously looked like "freezes".
+    max-jobs = lib.mkDefault 2;
+    cores = lib.mkDefault 6;
+  };
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
     # "electron-28.3.3"

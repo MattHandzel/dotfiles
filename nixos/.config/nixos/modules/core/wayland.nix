@@ -17,7 +17,11 @@
   };
 
   environment.systemPackages = with pkgs; [
-    mesa
+    intel-gpu-tools
     libglvnd
+    libva-utils
+    mesa
+    mesa-demos
+    vulkan-tools
   ];
 }

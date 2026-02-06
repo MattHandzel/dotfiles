@@ -33,6 +33,9 @@ in {
   environment.systemPackages = with pkgs; [
     wget
     git
+    lm_sensors
+    nvme-cli
+    wsdd
   ];
 
   time.timeZone = "America/Los_Angeles";

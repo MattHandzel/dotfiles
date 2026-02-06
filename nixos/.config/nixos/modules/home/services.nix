@@ -59,6 +59,26 @@
       done
     done
   '';
+  personalWebsiteSyncScript = pkgs.writeShellScript "personal-website-sync" ''
+    set -euo pipefail
+
+    project_dir="${config.home.homeDirectory}/Projects/website"
+    data_dir="$project_dir/data-processing"
+
+    cd "$data_dir"
+
+    if [ -f .env ]; then
+      set -a
+      . ./.env
+      set +a
+    fi
+
+    export NIXPKGS_ALLOW_UNFREE=1
+
+    echo "Starting Website Sync at $(date)"
+    ${pkgs.nix}/bin/nix-shell "$project_dir/shell.nix" --run "python3 main.py --log"
+    echo "Sync completed at $(date)"
+  '';
 in {
   systemd.user.services.tw-gcal-sync = {
     Unit = {
@@ -144,17 +164,26 @@ in {
     Unit = {
       Description = "Sync Obsidian Vault to Personal Website MongoDB";
       After = ["network.target"];
+      # Home Manager activation runs `systemctl --user start/stop` on managed
+      # units during `reloadSystemd`. This is a long-running oneshot (can build
+      # large deps like MongoDB), so starting it during activation makes
+      # `nixos-rebuild switch` appear to "freeze" and often times out.
+      #
+      # The timer can still start it (dependency activation), but manual starts
+      # during HM activation are refused.
+      RefuseManualStart = true;
+      RefuseManualStop = true;
     };
     Service = {
       Type = "oneshot";
-      ExecStart = "${config.home.homeDirectory}/Projects/website/sync_website.sh";
+      ExecStart = "${pkgs.bash}/bin/bash ${personalWebsiteSyncScript}";
       WorkingDirectory = "${config.home.homeDirectory}/Projects/website/data-processing";
       StandardOutput = "append:${config.home.homeDirectory}/Projects/website/sync.log";
       StandardError = "append:${config.home.homeDirectory}/Projects/website/sync.error.log";
     };
-    Install = {
-      WantedBy = ["default.target"];
-    };
+    # This is a timer-driven oneshot. Enabling it on `default.target` makes
+    # Home Manager activation block while the sync runs (can take minutes),
+    # causing `nixos-rebuild switch` to time out.
   };
 
   systemd.user.timers.personal-website-sync = {
@@ -170,4 +199,11 @@ in {
       WantedBy = ["timers.target"];
     };
   };
+
+  # If this unit was previously enabled on default.target, the symlink can stick
+  # around and Home Manager activation will try to stop/start it during rebuilds.
+  # Make sure it is timer-only.
+  home.activation.personalWebsiteSyncCleanup = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    rm -f "$HOME/.config/systemd/user/default.target.wants/personal-website-sync.service"
+  '';
 }

@@ -41,6 +41,9 @@
   catppuccin = {
     flavor = "mocha";
     enable = true;
+    # Catppuccin's VSCode module pulls/builds a theme extension; keep it off so
+    # rebuilds don't depend on npm registry availability.
+    vscode.profiles.default.enable = false;
     # nvim.enable = false;
   };
   catppuccin.delta.enable = false;
