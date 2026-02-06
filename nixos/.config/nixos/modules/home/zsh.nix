@@ -98,7 +98,7 @@ in {
       }
       # eval $(pay-respects --alias) # gets fuck command running
 
-      # export TODOIST_API_KEY="$(pass Todoist/API)"
+      export TODOIST_API_KEY="$(cat /run/secrets/todoist_api_key)"
 
       # __conda_setup="$('/home/matth/.conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
       # if [ $? -eq 0 ]; then
@@ -164,12 +164,12 @@ in {
       # notetaker = "kitty sh -c \"cd ~/notes ; neovim .\" --title notetaker --name notetaker --start-as=fullscreen";
 
       # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
-      rebuild = "pushd ${sharedVariables.rootDirectory} && git add --all . && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host} && popd";
-      rebuildu = "pushd ${sharedVariables.rootDirectory} && cp ${sharedVariables.rootDirectory}flake.lock ${sharedVariables.rootDirectory}flake.$(date +%Y-%m-%d).lock && git add --all . && sudo nix flake update --flake ${sharedVariables.rootDirectory}/flake.nix ; sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}.#${host} && popd";
-      # testing = "echo \"sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host}\"";
-      # rebuild = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}#${host}";
-      # rebuildu = "git add ${sharedVariables.rootDirectory} && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}#${host}";
-      nix-flake-update = "sudo nix flake update ${sharedVariables.rootDirectory}#";
+      rebuild = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && sudo nixos-rebuild switch --flake .#${host} && popd";
+      rebuildu = "pushd ~/dotfiles/nixos/.config/nixos && cp flake.lock flake.$(date +%Y-%m-%d).lock && git add --all . && sudo nix flake update --flake ./flake.nix ; sudo nixos-rebuild switch --upgrade --flake .#${host} && popd";
+      # testing = "echo \"sudo nixos-rebuild switch --flake .#${host}\"";
+      # rebuild = "git add . && sudo nixos-rebuild switch --flake .#${host}";
+      # rebuildu = "git add . && sudo nixos-rebuild switch --upgrade --flake .#${host}";
+      nix-flake-update = "sudo nix flake update ~/dotfiles/nixos/.config/nixos#";
       nix-clean = "sudo nix-collect-garbage && sudo nix-collect-garbage -d && sudo rm /nix/var/nix/gcroots/auto/* && nix-collect-garbage && nix-collect-garbage -d";
 
       # Git

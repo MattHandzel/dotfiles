@@ -98,7 +98,7 @@ in {
     #   serviceConfig = {
     #     Type = "oneshot";
     #     Environment = "PATH=/run/current-system/sw/bin:/bin:/usr/bin:/sbin:/usr/sbin";
-    #     ExecStart = "${sharedVariables.rootDirectory}/modules/home/scripts/scripts/suspend-script-runner.sh pre";
+    #     ExecStart = "${self}/modules/home/scripts/scripts/suspend-script-runner.sh pre";
     #   };
     # };
     #
@@ -108,7 +108,7 @@ in {
     #   serviceConfig = {
     #     Type = "oneshot";
     #     Environment = "PATH=/run/current-system/sw/bin:/bin:/usr/bin:/sbin:/usr/sbin";
-    #     ExecStart = "${sharedVariables.rootDirectory}/modules/home/scripts/scripts/suspend-script-runner.sh pre";
+    #     ExecStart = "${self}/modules/home/scripts/scripts/suspend-script-runner.sh pre";
     #   };
     # };
 
@@ -118,7 +118,7 @@ in {
     #   serviceConfig = {
     #     Type = "oneshot";
     #     Environment = "PATH=/run/current-system/sw/bin:/bin:/usr/bin:/sbin:/usr/sbin:/etc/profiles/per-user/matth/bin/";
-    #     ExecStart = "${sharedVariables.rootDirectory}/modules/home/scripts/scripts/suspend-script-runner.sh post";
+    #     ExecStart = "${self}/modules/home/scripts/scripts/suspend-script-runner.sh post";
     #   };
     # };
   };
@@ -130,22 +130,19 @@ in {
 
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="pci", DRIVER=="pcieport", ATTR{power/wakeup}="disabled"
+    # Allow i2c group to access i2c devices (for ddccontrol etc)
+    KERNEL=="i2c-[0-9]*", GROUP="i2c", MODE="0660"
   '';
 
   services.tlp = {
     enable = true;
     settings = {
-      # CPU_SCALING_GOVERNOR_ON_AC = "performance";
-      # CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
-      #
-      # CPU_ENERGY_PERF_POLICY_ON_BAT = "power";
-      # CPU_ENERGY_PERF_POLICY_ON_AC = "performance";
-      #
-      # CPU_MIN_PERF_ON_AC = 0;
-      # CPU_MAX_PERF_ON_AC = 100;
-      # CPU_MIN_PERF_ON_BAT = 0;
-      # CPU_MAX_PERF_ON_BAT = 20;
-      #
+      # auto-cpufreq is enabled, so we disable TLP's CPU management to avoid conflicts
+      CPU_SCALING_GOVERNOR_ON_AC = lib.mkForce "";
+      CPU_SCALING_GOVERNOR_ON_BAT = lib.mkForce "";
+      CPU_ENERGY_PERF_POLICY_ON_AC = lib.mkForce "";
+      CPU_ENERGY_PERF_POLICY_ON_BAT = lib.mkForce "";
+
       #Optional helps save long term battery health
       START_CHARGE_THRESH_BAT0 = 60; # 60 and bellow it starts to charge
       STOP_CHARGE_THRESH_BAT0 = 80; # 80 and above it stops charging

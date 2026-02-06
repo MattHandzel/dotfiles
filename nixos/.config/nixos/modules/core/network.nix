@@ -1,11 +1,11 @@
 {pkgs, ...}: {
   networking = {
-    firewall.checkReversePath = false;
+    firewall.checkReversePath = true;
     networkmanager.enable = true;
     nameservers = ["1.1.1.1"];
     firewall = {
       enable = true;
-      allowedTCPPorts = [22 80 443 59010 59011 8123 443 11434];
+      allowedTCPPorts = [22 80 443 59010 59011 8123 11434];
       allowedUDPPorts = [22 8000 59010 59011 443];
       # allowedUDPPortRanges = [
       # { from = 4000; to = 4007; }

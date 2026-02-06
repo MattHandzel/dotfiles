@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  config,
+  ...
+}: {
   programs.neovim = {
     enable = true;
     withNodeJs = true;
@@ -58,9 +62,8 @@
 
       pkgs.sc-im
     ];
-    # TODO: Fix this so it doesn't care about the user
     extraConfig = ''
-      luafile /home/matth/dotfiles/nvim/.config/nvim/nvim.lua
+      luafile ${config.home.homeDirectory}/dotfiles/nvim/.config/nvim/nvim.lua
     '';
   };
 }

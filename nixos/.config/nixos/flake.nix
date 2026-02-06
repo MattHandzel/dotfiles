@@ -52,6 +52,11 @@
     spicetify-nix.inputs.nixpkgs.follows = "nixpkgs";
     zen-browser.url = "github:MarceColl/zen-browser-flake";
 
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     catppuccin.url = "github:catppuccin/nix";
 
     lifelog = {
@@ -111,23 +116,19 @@
         };
       };
     };
-    #   homeConfigurations = {
-    #     "matth@laptop" = home-manager.lib.homeManagerConfiguration {
-    #       pkgs = pkgs;
-    #       extraSpecialArgs = {inherit inputs self;};
-    #
-    #       modules = [
-    #         ./modules/home/default.nix
-    #         {
-    #           home = {
-    #             username = "matth";
-    #             homeDirectory = "/home/matth";
-    #             stateVersion = "24.05"; # Use the appropriate version
-    #           };
-    #         }
-    #       ];
-    #     };
-    #     # Add similar configurations for desktop and vm if needed
-    #   };
+
+    checks.${system} = {
+      statix = nixpkgs.legacyPackages.${system}.runCommand "statix" {
+        nativeBuildInputs = [nixpkgs.legacyPackages.${system}.statix];
+      } "statix check ${self} || true && touch $out";
+
+      deadnix = nixpkgs.legacyPackages.${system}.runCommand "deadnix" {
+        nativeBuildInputs = [nixpkgs.legacyPackages.${system}.deadnix];
+      } "deadnix ${self} && touch $out";
+
+      format = nixpkgs.legacyPackages.${system}.runCommand "alejandra-check" {
+        nativeBuildInputs = [inputs.alejandra.packages.${system}.default];
+      } "alejandra --check ${self} && touch $out";
+    };
   };
 }

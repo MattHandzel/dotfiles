@@ -1,4 +1,4 @@
-{...}: let
+{self, ...}: let
   sharedVariables = import ../../../shared_variables.nix;
 in {
   home.sessionVariables = {
@@ -34,7 +34,7 @@ in {
     SDL_VIDEODRIVER = "wayland";
     CLUTTER_BACKEND = "wayland";
     GTK_THEME = "catppuccin";
-    NIXOS_ROOT_DIR = sharedVariables.rootDirectory;
+    NIXOS_ROOT_DIR = "${self}";
     SERVER_IP_ADDRESS = sharedVariables.serverIpAddress;
     BROWSER = "zen";
   };

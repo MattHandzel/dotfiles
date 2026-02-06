@@ -1,0 +1,24 @@
+# Nix
+result
+result-*
+.cache/
+
+# Backups
+*.back/
+*.bak/
+
+# Logs
+*.log
+nohup.out
+server exited unexpectedly
+no current target
+command list-panes*
+
+# Flake snapshots
+flake.202*.lock
+flake.new.lock
+
+# Direnv
+.direnv/
+
+*secret*

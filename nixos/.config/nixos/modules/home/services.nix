@@ -4,36 +4,18 @@
   pkgs,
   ...
 }: let
+  syncall = pkgs.callPackage ../../pkgs/syncall/default.nix {};
   twGcalSyncDir = "${config.home.homeDirectory}/.local/share/tw-gcal-sync";
   twGcalSyncScript = pkgs.writeShellScript "tw_gcal_sync_script" ''
-      set -euo pipefail
-      tw_gcal_sync_dir=${lib.escapeShellArg twGcalSyncDir}
-      # if the directory doesn't exist
-      if [ ! -d "$tw_gcal_sync_dir" ]; then
-        echo "tw-gcal-sync directory not found at $tw_gcal_sync_dir"
+    set -euo pipefail
+    tw_gcal_sync_dir=${lib.escapeShellArg twGcalSyncDir}
+    # if the directory doesn't exist
+    if [ ! -d "$tw_gcal_sync_dir" ]; then
+      echo "tw-gcal-sync directory not found at $tw_gcal_sync_dir"
+      mkdir -p "$tw_gcal_sync_dir"
+    fi
 
-        mkdir -p "$tw_gcal_sync_dir"
-        if [ ! -f "${lib.escapeShellArg config.home.homeDirectory}/secrets/gcal_client_secret.json" ]; then
-          echo "Google client secret not found at ${lib.escapeShellArg config.home.homeDirectory}/secrets/gcal_client_secret.json"
-          exit 1
-        fi
-        cp "${lib.escapeShellArg config.home.homeDirectory}/secrets/gcal_client_secret.json" "$tw_gcal_sync_dir/gcal_client_secret.json"
-      fi
-
-      cd $tw_gcal_sync_dir;
-      if [ ! -d ".venv" ]; then
-        ${pkgs.python3}/bin/python3 -m venv .venv
-      fi
-
-      source .venv/bin/activate
-      # Activate the virtual environment
-      if ! pip show syncall; then
-        python -m pip install --upgrade pip
-        .venv/bin/pip install "syncall[google,tw]" taskwarrior-syncall
-      fi
-
-
-    .venv/bin/tw_gcal_sync -c "Taskwarrior" -f due.any: -f status:pending --only-modified-last-X-days 1 --prefer-scheduled-date --default-event-duration-mins 60 --google-secret ./gcal_client_secret.json
+    ${syncall}/bin/tw_gcal_sync -c "Taskwarrior" -f due.any: -f status:pending --only-modified-last-X-days 1 --prefer-scheduled-date --default-event-duration-mins 60 --google-secret /run/secrets/gcal_client_secret
   '';
   notesDir = "${config.home.homeDirectory}/notes";
   automationScript = "${config.home.homeDirectory}/Projects/KnowledgeManagementSystem/organize/scripts/systemd/para-automation.sh";
@@ -188,11 +170,11 @@ in {
 
   systemd.user.timers.personal-website-sync = {
     Unit = {
-      Description = "Run Website Sync every 5 minutes";
+      Description = "Run Website Sync every hour";
     };
     Timer = {
       OnBootSec = "5min";
-      OnUnitActiveSec = "5min";
+      OnUnitActiveSec = "1h";
       Unit = "personal-website-sync.service";
     };
     Install = {

@@ -1,12 +1,11 @@
-{ pkgs, ... }: 
-{
+{pkgs, ...}: {
   home.packages = with pkgs; [
     # discord
-    (discord.override { 
-     withVencord = true; 
+    (discord.override {
+      withVencord = true;
     })
   ];
-  xdg.configFile."Vencord/themes/custom.css".text = '' 
+  xdg.configFile."Vencord/themes/custom.css".text = ''
     /**
     * @name Catppuccin Mocha
     * @author winston#0001

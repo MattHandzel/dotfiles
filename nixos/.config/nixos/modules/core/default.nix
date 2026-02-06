@@ -6,7 +6,7 @@
   host,
   ...
 }: let
-  desktop-imports = [(import ./home-assistant.nix) (import ./default.desktop.nix)];
+  desktop-imports = [(import ./home-assistant.nix)];
 in {
   imports =
     [
@@ -23,6 +23,7 @@ in {
       (import ./wayland.nix)
       (import ./virtualization.nix)
       (import ./bluetooth.nix)
+      (import ./sops.nix)
     ]
     ++ (
       if host == "desktop"

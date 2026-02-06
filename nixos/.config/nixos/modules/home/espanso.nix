@@ -1,5 +1,8 @@
-{ pkgs, lib, ... }:
-let
+{
+  pkgs,
+  lib,
+  ...
+}: let
   espansoPkg = pkgs.espanso-wayland;
 in {
   # Run espanso as a user service pointing at the packaged binary.

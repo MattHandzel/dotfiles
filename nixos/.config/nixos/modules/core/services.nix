@@ -17,16 +17,14 @@
 
   services.printing.drivers = with pkgs; [gutenprint hplip brlaser];
 
-  services.logind = {
-    settings.Login.HandleLidSwitch = "suspend";
-    # TODO: How to do this with the module?
-    # extraConfig = ''
-    #   IdleAction=suspend
-    #   IdleActionSec=15min
-    #   HandlePowerKey=suspend
-    #   # HibernateDelaySec=30m
-    #   SuspendState=mem
-    # '';
+  services.logind.settings = {
+    Login = {
+      HandlePowerKey = "suspend";
+      SuspendState = "mem";
+      HandleLidSwitch = "suspend";
+      IdleAction = "suspend";
+      IdleActionSec = "15min";
+    };
   };
 
   virtualisation.docker.enable = true;

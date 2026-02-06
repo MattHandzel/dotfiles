@@ -21,7 +21,7 @@ in {
 
   services.ollama = {
     enable = true;
-    acceleration = "cuda";
+    package = pkgs.ollama-cuda;
     openFirewall = true;
     host = "0.0.0.0";
   };
@@ -41,9 +41,8 @@ in {
     cudaPackages.cuda_nvcc
     cudaPackages.cudatoolkit
     cudaPackages.cudnn
-    cudaPackages.cudnn
-    cudaPackages.cutensor
-    gcc12
+    cudaPackages.libcutensor
+    gcc
   ];
 
   services = {
@@ -78,7 +77,7 @@ in {
     #   serviceConfig = {
     #     Type = "oneshot";
     #     Environment = "PATH=/run/current-system/sw/bin:/bin:/usr/bin:/sbin:/usr/sbin";
-    #     ExecStart = "${sharedVariables.rootDirectory}/modules/home/scripts/scripts/suspend-script-runner.sh pre";
+    #     ExecStart = "${self}/modules/home/scripts/scripts/suspend-script-runner.sh pre";
     #   };
     # };
     #
@@ -88,7 +87,7 @@ in {
     #   serviceConfig = {
     #     Type = "oneshot";
     #     Environment = "PATH=/run/current-system/sw/bin:/bin:/usr/bin:/sbin:/usr/sbin";
-    #     ExecStart = "${sharedVariables.rootDirectory}/modules/home/scripts/scripts/suspend-script-runner.sh pre";
+    #     ExecStart = "${self}/modules/home/scripts/scripts/suspend-script-runner.sh pre";
     #   };
     # };
 
@@ -98,7 +97,7 @@ in {
     #   serviceConfig = {
     #     Type = "oneshot";
     #     Environment = "PATH=/run/current-system/sw/bin:/bin:/usr/bin:/sbin:/usr/sbin:/etc/profiles/per-user/matth/bin/";
-    #     ExecStart = "${sharedVariables.rootDirectory}/modules/home/scripts/scripts/suspend-script-runner.sh post";
+    #     ExecStart = "${self}/modules/home/scripts/scripts/suspend-script-runner.sh post";
     #   };
     # };
     "website-update" = {
@@ -148,6 +147,8 @@ in {
 
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="pci", DRIVER=="pcieport", ATTR{power/wakeup}="disabled"
+    # Allow i2c group to access i2c devices (for ddccontrol etc)
+    KERNEL=="i2c-[0-9]*", GROUP="i2c", MODE="0660"
   '';
 
   powerManagement.enable = true;
@@ -173,5 +174,5 @@ in {
 
   # docker has access to gpu
   hardware.nvidia-container-toolkit.enable = true;
-  hardware.opengl.driSupport32Bit = true;
+  hardware.graphics.enable32Bit = true;
 }

@@ -1,9 +1,5 @@
-{pkgs, ...}:
-{
-
-
-programs.zathura = {
-  enable = true;
-};
-
-  }
+{pkgs, ...}: {
+  programs.zathura = {
+    enable = true;
+  };
+}

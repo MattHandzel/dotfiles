@@ -88,14 +88,29 @@ in {
           # default = "";
         }
         // singletonIcons;
-      persistent-workspaces = {
-        # "1"= [];
-        # "2"= [];
-        # "3"= [];
-        # "4"= [];
-        # "5"= [];
-        "10.5" = [];
-      };
+      persistent-workspaces =
+        {
+          # "1"= [];
+          # "2"= [];
+          # "3"= [];
+          # "4"= [];
+          # "5"= [];
+          "10.5" = [];
+        }
+        // (builtins.listToAttrs (map (name: {
+            name =
+              if name == "thunderbird"
+              then "8"
+              else if name == "discord"
+              then "10"
+              else if name == "calendar.google.com"
+              then "🗓️"
+              else if name == "whatsapp-for-linux"
+              then "whatsapp"
+              else name;
+            value = [];
+          })
+          sharedVariables.singletonApplications));
     };
     "custom/lifelog" = {
       "exec" = "cat /tmp/lifelog_status.json";

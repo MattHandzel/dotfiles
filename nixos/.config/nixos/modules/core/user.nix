@@ -3,13 +3,14 @@
   inputs,
   username,
   host,
+  self,
   ...
 }: {
   imports = [inputs.home-manager.nixosModules.home-manager];
   home-manager = {
     useUserPackages = true;
     useGlobalPkgs = true;
-    extraSpecialArgs = {inherit inputs username host;};
+    extraSpecialArgs = {inherit inputs username host self;};
     users.${username} = {
       imports =
         if (host == "desktop")
@@ -37,22 +38,11 @@
   users.users.${username} = {
     isNormalUser = true;
     description = "${username}";
-    extraGroups = ["networkmanager" "wheel" "adbusers" "docker" "dialout" "video" "render" "input" "uinput"];
+    extraGroups = ["networkmanager" "wheel" "adbusers" "docker" "dialout" "video" "render" "input" "uinput" "i2c"];
     shell = pkgs.zsh;
   };
   nix.settings.allowed-users = ["${username}"];
 
   # Run nixos rebuild without sudo
-  security.sudo.wheelNeedsPassword = false; # This allows users in the 'wheel' group to run any command with sudo without a password.
-  security.sudo.extraRules = [
-    {
-      users = ["${username}"];
-      commands = [
-        {
-          command = "/run/current-system/sw/bin/nixos-rebuild";
-          options = ["NOPASSWD"];
-        }
-      ];
-    }
-  ];
+  security.sudo.wheelNeedsPassword = true;
 }

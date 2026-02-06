@@ -1,0 +1,101 @@
+  🛡️ Category 1: Security & Secret Management
+
+
+  1. Implement Declarative Secret Management (sops-nix)
+   * Analysis: You currently store secrets (like Google Calendar API keys) as plaintext JSON files in ~/secrets/. These are not version-controlled, cannot be backed up safely,
+     and are readable by any process.
+   * Reasoning: sops-nix allows you to commit encrypted secrets to your Git repo. They are only decrypted at runtime into a secure RAM-backed location (/run/secrets), ensuring
+     both security and portability.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/repos/dbeley-nixos-config/REPO_PROFILE.md
+
+
+  3. Firewall Hardening
+   * Analysis: networking.firewall.checkReversePath is set to false, and multiple high-number ports (e.g., 59010, 11434) are open without clear isolation.
+   * Reasoning: Disabling reverse path filtering makes the system vulnerable to IP spoofing. Open ports should be audited and strictly scoped to local interfaces where possible.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/MY_REPO_PROFILE.md (See Section D - Security Inventory).
+
+  ---
+
+  🏗️ Category 2: Architecture & Portability
+
+
+  4. Eliminate Absolute Path Hardcoding
+   * Analysis: Your shared_variables.nix uses hardcoded strings like rootDirectory = "/home/matth/dotfiles/nixos/.config/nixos/";.
+   * Reasoning: This prevents the repo from working for any other user or if you move the directory. By using the Flake self input, paths become relative to the repo root and
+     remain portable.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/diff/RECOMMENDATIONS.md (Detailed Plan #2).
+
+
+  5. Adopt Profile-Based mkHost Composition
+   * Analysis: Your flake.nix manually defines each host. As you add more machines (Desktop, VM, Laptop), this becomes a "wall of code."
+   * Reasoning: Using a string-based profile system (e.g., profiles = [ "laptop" "hyprland" "work" ]) makes adding new hosts as simple as defining a list of features.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/repos/dbeley-nixos-config/REPO_PROFILE.md (Section: Uniqueness).
+
+
+  6. Use nixos-unified or a System Registry
+   * Analysis: Your flake is a "plain" flake with no helper library, which is fine for one host but difficult to scale for multiple users or architectures.
+   * Reasoning: Abstracting the boilerplate allows you to focus on the configuration logic rather than flake plumbing.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/repos/srid-nixos-config/REPO_PROFILE.md (Reference to nixos-unified).
+
+  ---
+
+
+  ⚙️ Category 3: Operational Integrity (Removing Impurities)
+
+
+  7. Package Python Services properly
+   * Analysis: Your Home Manager service for tw-gcal-sync runs a runtime pip install.
+   * Reasoning: This is "Nix heresy." It introduces a non-deterministic network dependency at boot. If PyPI is down or your internet is off, the service fails. You should define
+     the Python environment declaratively using Nix.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/diff/RED_FLAGS.md (Section 1).
+
+
+  8. Replace sudo chmod with Udev Rules
+   * Analysis: You use Hyprland exec-once to run sudo chmod 666 /dev/i2c-*.
+   * Reasoning: This requires the session to have passwordless sudo (a risk) and is impermanent. A NixOS Udev rule can set device permissions globally and securely based on
+     group membership (e.g., the i2c group).
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/MY_REPO_PROFILE.md (Section H, Item 8).
+
+
+  9. Resolve Power Management Conflict
+   * Analysis: You have TLP, auto-cpufreq, and thermald all enabled on the same laptop.
+   * Reasoning: These tools often fight over the same kernel sysfs entries (like scaling governors). This can lead to worse battery life and unexpected thermal throttling.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/baseline/BASELINE_SUMMARY.md (Section: Major Gaps & Risks).
+
+  ---
+
+  🛠️ Category 5: Operator UX & Theming
+
+
+  12. Use Stylix for System-Wide Theming
+   * Analysis: You likely manage themes (Catppuccin, etc.) manually across different apps (Hyprland, Waybar, GTK).
+   * Reasoning: Stylix allows you to define one color palette and one font, and it automatically applies them to almost every application in your system.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/repos/dbeley-nixos-config/REPO_PROFILE.md (Section: Patterns Worth Copying).
+
+
+  13. Implement a Justfile for CLI Workflow
+   * Analysis: Nix commands like nixos-rebuild switch --flake .#laptop are verbose and hard to remember.
+   * Reasoning: A Justfile provides a clean, discoverable interface (e.g., just build, just update) for all your common tasks.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/repos/dbeley-nixos-config/REPO_PROFILE.md (Section: Operational Story).
+
+
+  14. Switch to nh (Nix Helper)
+   * Analysis: Standard Nix output can be messy and hard to parse.
+   * Reasoning: nh provides a much better UI for rebuilds, including automatic diffs of what packages are changing and built-in garbage collection logic.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/repos/wimpysworld-nix-config/REPO_PROFILE.md.
+
+  ---
+
+  🧹 Category 6: Maintenance & Hygiene
+
+
+  15. Clean Up Repo Detritus
+   * Analysis: Your repo currently contains .cache/, .git.back/, and various log files.
+   * Reasoning: This bloats the repo and makes it harder to audit. You should implement a strict .gitignore and move backups out of the active config tree.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/MY_REPO_PROFILE.md (Section H, Item 9).
+
+
+  16. Add Flake Checks (Statix/Deadnix)
+   * Analysis: There is no automated way to know if you have syntax errors or unused variables before you try to rebuild.
+   * Reasoning: Adding these to nix flake check ensures your code remains clean and idiomatic every time you run a test.
+   * Example Path: /home/matth/cloned_repos/other-nixos-configs/repos/wagdav-homelab/REPO_PROFILE.md.
