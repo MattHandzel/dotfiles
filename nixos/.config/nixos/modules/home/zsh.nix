@@ -122,6 +122,7 @@ in {
       }
 
       export PATH="$HOME/.npm-packages/bin:$PATH"
+      video-to-trasncript() { ffmpeg -i $1 -vn $(echo $1 | sed 's/\.mp4$/\.mp3/') } # useful function to convert video to audio
     '';
 
     shellAliases = {

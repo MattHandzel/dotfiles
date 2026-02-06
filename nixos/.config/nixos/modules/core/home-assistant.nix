@@ -3,7 +3,7 @@
     backend = "podman";
     containers.has = {
       volumes = ["has:/config"];
-      environment.TZ = "America/Chicago";
+      environment.TZ = "America/Los_Angeles";
       image = "ghcr.io/home-assistant/home-assistant:stable"; # Warning: if the tag does not change, the image will not be updated
       extraOptions = [
         "--network=host"

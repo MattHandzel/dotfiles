@@ -219,7 +219,7 @@ in {
     electron
     portaudio
     wtype # type virtual things on the computer
-    taskwarrior
+    taskwarrior2
     vit
 
     python313Packages.debugpy
@@ -236,5 +236,6 @@ in {
     tig # git repository browser
 
     beeper
+    gping
   ];
 }

@@ -16,6 +16,10 @@ stdenv.mkDerivation rec {
 
   buildInputs = [ ];
 
+  postPatch = ''
+    sed -i 's/void signal_callback_handler()/void signal_callback_handler(int signum)/' src/main.c
+  '';
+
   buildPhase = ''
     make release
   '';

@@ -19,7 +19,7 @@ in {
     gc = {
       automatic = true;
       dates = "weekly"; # Or "daily", "monthly", etc.
-      options = "--delete-older-than 14d +3"; # Keeps 31 days of generations
+      options = "--delete-older-than 14d +3"; # Keeps 14 days of generations
     };
   };
   nixpkgs = {
@@ -35,7 +35,7 @@ in {
     git
   ];
 
-  time.timeZone = "America/Chicago";
+  time.timeZone = "America/Los_Angeles";
   i18n.defaultLocale = "en_US.UTF-8";
 
   i18n.extraLocaleSettings = {

@@ -14,6 +14,8 @@ import subprocess
 import sys
 import tempfile
 import time
+import threading
+import queue
 from typing import Deque, List, Tuple, Optional
 
 import webrtcvad
@@ -69,19 +71,48 @@ def upload_file_curl(
 ) -> Optional[bytes]:
     """
     Use curl to upload audio and return raw bytes.
-    Swallows curl's stderr to avoid polluting stdout; returns None on failure.
+    Logs errors to stderr; returns None on failure.
     """
     url = f"{server_url.rstrip('/')}/v1/audio/transcriptions"
-    cmd = ["curl", "-sS", url, "-F", f"file=@{wav_path}"]
+    # -sS: silent but show errors.
+    # -w "\n%{http_code}": append http code to output on a new line
+    cmd = ["curl", "--connect-timeout", "5", "--max-time", "30", "-sS", "-w", "\n%{http_code}", url, "-F", f"file=@{wav_path}"]
     if language:
         cmd += ["-F", f"language={language}"]
     for k, v in extra_fields:
         cmd += ["-F", f"{k}={v}"]
+    
     try:
-        return subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
-    except subprocess.CalledProcessError:
-        # Silent fail (log minimal message to stderr); don't impact stdout piping.
-        sys.stderr.write("[stt] server upload failed (ignored)\n")
+        ts = time.strftime('%H:%M:%S')
+        # Debug: log exact command being run (optional, but helpful for now)
+        # sys.stderr.write(f"[stt] {ts} Running: {' '.join(cmd)}\n")
+        
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        
+        ts_done = time.strftime('%H:%M:%S')
+        out = res.stdout.decode("utf-8", errors="replace").splitlines()
+        if not out:
+            sys.stderr.write(f"[stt] {ts_done} curl returned no output\n")
+            return None
+        
+        status_code = out[-1].strip()
+        body_text = "\n".join(out[:-1])
+        body = body_text.encode("utf-8")
+        
+        if status_code != "200":
+            sys.stderr.write(f"[stt] {ts_done} server returned HTTP {status_code}\n")
+            if body_text:
+                sys.stderr.write(f"[stt] response body: {body_text[:200]}\n")
+            sys.stderr.flush()
+            if not status_code.startswith("2"):
+                return None
+        
+        return body
+    except subprocess.CalledProcessError as e:
+        err_msg = e.stderr.decode("utf-8", errors="replace").strip()
+        sys.stderr.write(f"[stt] {time.strftime('%H:%M:%S')} curl error: {e}\n")
+        if err_msg:
+            sys.stderr.write(f"[stt] curl stderr: {err_msg}\n")
         sys.stderr.flush()
         return None
 
@@ -142,6 +173,8 @@ class VADSegmenter:
                 self.pre_frames.append(fr)
                 if is_speech:
                     self.triggered = True
+                    sys.stderr.write(f"[stt] {time.strftime('%H:%M:%S')} Speech detected, recording...\n")
+                    sys.stderr.flush()
                     self.cur_frames = list(self.pre_frames)
                     self.silence_run = 0
                     self.frames_in_utt = len(self.cur_frames)
@@ -156,6 +189,9 @@ class VADSegmenter:
                     self.silence_run >= self.silence_frames_needed
                     or self.frames_in_utt >= self.max_frames
                 ):
+                    reason = "silence" if self.silence_run >= self.silence_frames_needed else "timeout"
+                    sys.stderr.write(f"[stt] {time.strftime('%H:%M:%S')} Utterance complete ({reason})\n")
+                    sys.stderr.flush()
                     completed.append(self.cur_frames)
                     self.reset()
         return completed
@@ -265,10 +301,15 @@ def main():
     signal.signal(signal.SIGINT, on_sigint)
 
     try:
+        ts = time.strftime('%H:%M:%S')
+        sys.stderr.write(f"[stt] {ts} Starting session (server={args.server}, device={args.device})\n")
+        sys.stderr.flush()
+
         if args.stream:
             # mic -> ffmpeg -> raw s16le -> VAD -> segments -> upload
+            # Use 'info' or 'warning' instead of 'quiet' for better observability in logs
             cmd = (
-                ["ffmpeg", "-loglevel", "quiet"]
+                ["ffmpeg", "-loglevel", "warning"]
                 + ffmpeg_input_cmd(args.backend, args.device)
                 + [
                     "-ac",
@@ -282,8 +323,24 @@ def main():
                     "pipe:1",
                 ]
             )
+            # We don't redirect stderr here so it goes to the parent's stderr (LOGFILE)
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, preexec_fn=os.setsid)
             assert proc.stdout is not None
+
+            # Register cleanup for this process
+            def cleanup_proc():
+                if proc.poll() is None:
+                    with contextlib.suppress(Exception):
+                        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            
+            # Ensure we kill ffmpeg on SIGINT
+            original_sigint = signal.getsignal(signal.SIGINT)
+            def on_sigint_stream(signum, frame):
+                nonlocal terminate_flag
+                terminate_flag = True
+                sys.stderr.write("[stt] SIGINT received, shutting down.\n")
+                cleanup_proc()
+            signal.signal(signal.SIGINT, on_sigint_stream)
 
             seg = VADSegmenter(
                 sample_rate=args.rate,
@@ -293,95 +350,140 @@ def main():
                 pre_roll_ms=args.pre_roll_ms,
                 max_utterance_ms=args.max_utterance_ms,
             )
-            last_text = ""  # accumulate context across chunks
-            printed_so_far = ""  # for dedup/overlap trimming in output
+            
+            # Threaded upload worker setup
+            upload_q = queue.Queue()
+            
+            # Shared state for the worker
+            state = {
+                "last_text": "",
+                "printed_so_far": ""
+            }
 
-            def upload_segment(frames: List[bytes]) -> Optional[str]:
-                nonlocal last_text, printed_so_far
-
-                duration = len(frames) * (seg.frame_ms / 1000.0)
-                if duration < args.min_seconds:
-                    # Skip trivial/near-silent chunks to avoid hallucinations
-                    sys.stderr.write(
-                        f"[stt] Skipping short utterance ({duration:.2f}s)\n"
-                    )
-                    sys.stderr.flush()
-                    return None
-
-                wav_bytes = write_wav(frames, args.rate)
-                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
-                    tf.write(wav_bytes)
-                    tf.flush()
-
-                    fields = list(extra_fields)
-                    # Always feed context for coherence
-                    fields.append(
-                        (
-                            "initial_prompt",
-                            args.prompt
-                            + ". "
-                            + last_text[-args.context_chars + 2 + len(args.prompt) :],
+            def upload_worker():
+                while True:
+                    item = upload_q.get()
+                    if item is None:
+                        upload_q.task_done()
+                        break
+                    
+                    frames, is_final = item
+                    
+                    duration = len(frames) * (seg.frame_ms / 1000.0)
+                    ts = time.strftime('%H:%M:%S')
+                    if not is_final and duration < args.min_seconds:
+                        # Skip trivial/near-silent chunks to avoid hallucinations
+                        sys.stderr.write(
+                            f"[stt] {ts} Skipping short utterance ({duration:.2f}s < {args.min_seconds}s)\n"
                         )
-                    )
+                        sys.stderr.flush()
+                        upload_q.task_done()
+                        continue
 
-                    raw = upload_file_curl(args.server, tf.name, args.language, fields)
+                    sys.stderr.write(f"[stt] {ts} Uploading segment ({duration:.2f}s)...\n")
+                    sys.stderr.flush()
 
-                with contextlib.suppress(Exception):
-                    os.unlink(tf.name)
+                    wav_bytes = write_wav(frames, args.rate)
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
+                        tf.write(wav_bytes)
+                        tf.flush()
 
-                if raw is None:
-                    return None  # error already logged to stderr
+                        fields = list(extra_fields)
+                        # Always feed context for coherence
+                        context = args.prompt + ". " + state["last_text"][-args.context_chars + 2 + len(args.prompt) :]
+                        fields.append(("initial_prompt", context))
 
-                text = extract_text_from_json(raw).strip()
+                        raw = upload_file_curl(args.server, tf.name, args.language, fields)
 
-                # Guard against common tiny hallucinations
-                if not text or text.lower() in {
-                    "thank you.",
-                    "thank you",
-                    ".",
-                    "ok.",
-                    "okay.",
-                    "internal server error",
-                }:
-                    return None
+                    with contextlib.suppress(Exception):
+                        os.unlink(tf.name)
 
-                # Deduplicate: only emit the delta relative to what we've printed so far
-                overlap = longest_overlap_suffix_prefix(printed_so_far, text)
-                delta = text[overlap:].lstrip()
-                if not delta:
-                    return None
+                    if raw is None:
+                        sys.stderr.write(f"[stt] {ts} Upload failed (see curl error above)\n")
+                        sys.stderr.flush()
+                        upload_q.task_done()
+                        continue
 
-                # Output as flowing paragraph (default chunk separator is a space)
-                # You can switch to "\n" if you want line-per-chunk.
-                sys.stdout.write((args.chunk_sep if printed_so_far else "") + delta)
-                sys.stdout.flush()
+                    text = extract_text_from_json(raw).strip()
 
-                printed_so_far += delta
-                last_text += (
-                    " " if last_text and not last_text.endswith(" ") else ""
-                ) + delta
-                return text
+                    # Guard against common tiny hallucinations
+                    hallucinations = {
+                        "thank you.",
+                        "thank you",
+                        ".",
+                        "...",
+                        "ok.",
+                        "okay.",
+                        "internal server error",
+                    }
+                    if not text:
+                        sys.stderr.write(f"[stt] {ts} Received empty transcript\n")
+                        sys.stderr.flush()
+                        upload_q.task_done()
+                        continue
+                    
+                    if text.lower() in hallucinations:
+                        sys.stderr.write(f"[stt] {ts} Filtered out hallucination: \"{text}\"\n")
+                        sys.stderr.flush()
+                        upload_q.task_done()
+                        continue
+
+                    # Deduplicate: only emit the delta relative to what we've printed so far
+                    overlap = longest_overlap_suffix_prefix(state["printed_so_far"], text)
+                    delta = text[overlap:].lstrip()
+                    if not delta:
+                        sys.stderr.write(f"[stt] {ts} Segment contained no new text (overlap: {overlap})\n")
+                        sys.stderr.flush()
+                        upload_q.task_done()
+                        continue
+
+                    sys.stderr.write(f"[stt] {ts} Received: \"{text}\" (delta: \"{delta}\")\n")
+                    sys.stderr.flush()
+
+                    # Output as flowing paragraph (default chunk separator is a space)
+                    # You can switch to "\n" if you want line-per-chunk.
+                    sys.stdout.write((args.chunk_sep if state["printed_so_far"] else "") + delta)
+                    sys.stdout.flush()
+
+                    state["printed_so_far"] += delta
+                    state["last_text"] += (
+                        " " if state["last_text"] and not state["last_text"].endswith(" ") else ""
+                    ) + delta
+                    
+                    upload_q.task_done()
+
+            # Start the worker thread
+            t = threading.Thread(target=upload_worker, daemon=True)
+            t.start()
 
             chunk_bytes = seg.frame_bytes * 20  # ~20 frames per read
-            while not terminate_flag:
-                chunk = proc.stdout.read(chunk_bytes)
-                if not chunk:
-                    # Avoid busy loop; also prevents accidental uploads on pure silence
-                    time.sleep(0.05)
-                    continue
-                for utt in seg.push(chunk):
-                    upload_segment(utt)
+            
+            try:
+                while not terminate_flag:
+                    chunk = proc.stdout.read(chunk_bytes)
+                    if not chunk:
+                        # ffmpeg exited or stream closed
+                        break
+                    for utt in seg.push(chunk):
+                        upload_q.put((utt, False))
 
-            # Flush any tail
-            rem = seg.flush()
-            if rem:
-                upload_segment(rem)
+                # Flush any tail
+                rem = seg.flush()
+                if rem:
+                    upload_q.put((rem, True))
+            finally:
+                cleanup_proc()
+                # Signal worker to stop and wait for it
+                sys.stderr.write(f"[stt] Waiting for uploads to complete...\n")
+                upload_q.put(None)
+                t.join()
+
 
         else:
             # Batch record then upload once
             wav_path = os.path.join(tempfile.gettempdir(), "stt_record.wav")
             cmd = (
-                ["ffmpeg", "-loglevel", "quiet"]
+                ["ffmpeg", "-loglevel", "warning"]
                 + ffmpeg_input_cmd(args.backend, args.device)
                 + [
                     "-ac",

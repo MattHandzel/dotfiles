@@ -47,6 +47,8 @@
     ./scripts/gemini.google.com.sh
     ./scripts/vit-todo.sh
     ./scripts/open-website-as-standalone-app.sh
+    ./scripts/toggle-stt.sh
+    ./scripts/prompt-picker.sh
   ];
 
   # Create shell script bins
@@ -80,5 +82,6 @@ in {
     ]
     ++ [
       (import ./scripts/ocr-screenshot/default.nix {inherit pkgs;})
+      (import ./scripts/stt_record_pkg.nix {inherit pkgs;})
     ];
 }

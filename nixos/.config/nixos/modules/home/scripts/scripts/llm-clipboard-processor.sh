@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # === CONFIG ===
-OLLAMA_HOST="http://76.191.29.237:11434"   # remote Ollama server
+OLLAMA_HOST="http://97.223.175.122:11434"   # remote Ollama server
 MODEL="mistral:7b"
 
 VERBOSE=0

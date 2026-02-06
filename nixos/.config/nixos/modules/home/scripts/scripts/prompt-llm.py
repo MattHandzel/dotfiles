@@ -22,7 +22,7 @@ import datetime
 # The purpose of this script is so that it's easy for me to pass in information through an LLM. But there's a way to improve this script. So specifically for the... VoiceMemoCleanup prompt. It appears that the voice memo cleanup prompt tends to fail, or something that it does not do is correctly infer things such as the words that I speak. It doesn't clean up my text. I think that it could do better if it understood the context. So I want you to add a pre-processing step before giving it to the voicemail cleanup prompt. I want you to first prompt the LLM with the original text and ask it to identify what is the general topic and intent, and then... pass it through the voice memo cleanup.
 
 # === CONFIG ===
-OLLAMA_HOST = "http://76.191.29.237:11434"
+OLLAMA_HOST = "http://97.223.175.122:11434"
 MODEL = "gemma3:4b-it-qat"
 
 

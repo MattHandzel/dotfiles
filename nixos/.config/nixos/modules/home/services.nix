@@ -48,12 +48,12 @@
     lock_file="$lock_dir/watcher.lock"
 
     while true; do
-      ${pkgs.inotifyTools}/bin/inotifywait -r -q \
+      ${pkgs.inotify-tools}/bin/inotifywait -r -q \
         -e close_write -e create -e moved_to -e moved_from -e delete "$notes_dir" || continue
 
       ${pkgs.util-linux}/bin/flock "$lock_file" -c ${lib.escapeShellArg "${pkgs.bash}/bin/bash ${automationScript}"} || true
 
-      while ${pkgs.inotifyTools}/bin/inotifywait -r -q -t 1 \
+      while ${pkgs.inotify-tools}/bin/inotifywait -r -q -t 1 \
         -e close_write -e create -e moved_to -e moved_from -e delete "$notes_dir"; do
         :
       done
@@ -134,6 +134,37 @@ in {
       OnUnitActiveSec = "1h";
       Persistent = true;
       Unit = "focus-reflection-reminder.service";
+    };
+    Install = {
+      WantedBy = ["timers.target"];
+    };
+  };
+
+  systemd.user.services.personal-website-sync = {
+    Unit = {
+      Description = "Sync Obsidian Vault to Personal Website MongoDB";
+      After = ["network.target"];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${config.home.homeDirectory}/Projects/website/sync_website.sh";
+      WorkingDirectory = "${config.home.homeDirectory}/Projects/website/data-processing";
+      StandardOutput = "append:${config.home.homeDirectory}/Projects/website/sync.log";
+      StandardError = "append:${config.home.homeDirectory}/Projects/website/sync.error.log";
+    };
+    Install = {
+      WantedBy = ["default.target"];
+    };
+  };
+
+  systemd.user.timers.personal-website-sync = {
+    Unit = {
+      Description = "Run Website Sync every 5 minutes";
+    };
+    Timer = {
+      OnBootSec = "5min";
+      OnUnitActiveSec = "5min";
+      Unit = "personal-website-sync.service";
     };
     Install = {
       WantedBy = ["timers.target"];

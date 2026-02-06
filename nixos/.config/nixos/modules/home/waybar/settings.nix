@@ -17,6 +17,7 @@ in {
       "clock"
     ];
     modules-right = [
+      "custom/lifelog"
       "tray"
       "cpu"
       "memory"
@@ -78,6 +79,14 @@ in {
         "10.5" = [];
       };
     };
+    "custom/lifelog" = {
+      "exec" = "cat /tmp/lifelog_status.json";
+      "interval" = 1;
+      "return-type" = "json";
+      "format" = "{}";
+      "on-click" = "kitty -e nix-shell /home/matth/Projects/LifeLogging/shell.nix --run 'python3 /home/matth/Projects/LifeLogging/run.py tui'";
+    };
+
     memory = {
       format = "󰟜 {}%";
       format-alt = "󰟜 {used} GiB"; # 

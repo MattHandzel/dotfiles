@@ -99,5 +99,15 @@ in {
         padding-left: 10px;
         padding-right: 15px;
     }
+
+    #custom-lifelog.running {
+       color: #a6e3a1; /* Green */
+    }
+    #custom-lifelog.stopped {
+       color: #f38ba8; /* Red */
+    }
+    #custom-lifelog.warning {
+       color: #f9e2af; /* Yellow/Orange - for partial failures */
+    }
   '';
 }
