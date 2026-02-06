@@ -87,38 +87,51 @@ in {
     initExtra = ''
 
 
-      function note(){
-        take-note "$*"
-        }
-      function notec(){
-        take-note -c "$*"
-        }
-      # eval $(pay-respects --alias) # gets fuck command running
+            function note(){
+              take-note "$*"
+              }
+            function notec(){
+              take-note -c "$*"
+              }
+            # eval $(pay-respects --alias) # gets fuck command running
 
-      # export TODOIST_API_KEY="$(pass Todoist/API)"
+            # export TODOIST_API_KEY="$(pass Todoist/API)"
 
-      # __conda_setup="$('/home/matth/.conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-      # if [ $? -eq 0 ]; then
-      #     eval "$__conda_setup"
-      # else
-      #     if [ -f "/home/matth/.conda/etc/profile.d/conda.sh" ]; then
-      #         . "/home/matth/.conda/etc/profile.d/conda.sh"
-      #     else
-      #         export PATH="/home/matth/.conda/bin:$PATH"
-      #     fi
+            # __conda_setup="$('/home/matth/.conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+            # if [ $? -eq 0 ]; then
+            #     eval "$__conda_setup"
+            # else
+            #     if [ -f "/home/matth/.conda/etc/profile.d/conda.sh" ]; then
+            #         . "/home/matth/.conda/etc/profile.d/conda.sh"
+            #     else
+            #         export PATH="/home/matth/.conda/bin:$PATH"
+            #     fi
+            # fi
+            # unset __conda_setup
+
+
+            function y() {
+              local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+              yazi "$@" --cwd-file="$tmp"
+              if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+                builtin cd -- "$cwd"
+              fi
+              rm -f -- "$tmp"
+            }
+            export PATH=~/.npm-global/bin:$PATH
+
+      # # Auto-start/attach to Tmux on SSH
+      # if [[ -n "$SSH_CONNECTION" ]] && [[ -z "$TMUX" ]]; then
+      #     # Name the session "main" or "dev"
+      #     SESSION_NAME="main"
+      #
+      #     # Try to attach to the session, or create it if it fails
+      #     tmux attach-session -t $SESSION_NAME 2>/dev/null || tmux new-session -s $SESSION_NAME
+      #
+      #     # Exit the SSH session when Tmux closes (optional, keeps it clean)
+      #     exit
       # fi
-      # unset __conda_setup
-
-
-      function y() {
-        local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-        yazi "$@" --cwd-file="$tmp"
-        if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-          builtin cd -- "$cwd"
-        fi
-        rm -f -- "$tmp"
-      }
-
+      #
     '';
 
     shellAliases = {

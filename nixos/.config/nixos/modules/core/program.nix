@@ -1,5 +1,8 @@
-{ pkgs, lib, ... }: 
 {
+  pkgs,
+  lib,
+  ...
+}: {
   programs.dconf.enable = true;
   programs.zsh.enable = true;
   programs.gnupg.agent = {
@@ -9,7 +12,7 @@
   };
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [
-      stdenv.cc.cc.lib
-      zlib 
-];
+    stdenv.cc.cc.lib
+    zlib
+  ];
 }

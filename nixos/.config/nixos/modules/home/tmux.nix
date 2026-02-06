@@ -14,12 +14,12 @@ in {
     mouse = true;
     terminal = "tmux-256color";
     shell = "/run/current-system/sw/bin/zsh";
-    prefix = "C-Space";
+    prefix = "C-b";
     extraConfig = ''
       set-option -sa terminal-overrides ",xterm*:Tc"
 
-      unbind C-b
-      bind-key C-Space send-prefix
+      # unbind C-b
+      # bind-key C-Space send-prefix
 
       unbind %
       bind | split-window -h -c "#{pane_current_path}"

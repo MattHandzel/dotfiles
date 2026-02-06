@@ -14,6 +14,8 @@
       imports =
         if (host == "desktop")
         then [./../home/default.desktop.nix]
+        else if (host == "server")
+        then [./../home/server.nix]
         else [./../home];
       home.username = "${username}";
       home.homeDirectory = "/home/${username}";

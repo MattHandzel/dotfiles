@@ -8,6 +8,17 @@
   domain = "rss.matthandzel.com"; # <-- set your domain
   stateDir = "/var/lib/freshrss"; # data dir (owned/managed by the module)
   secretFile = "/run/secrets/freshrss-admin"; # create via systemd-tmpfiles or sops-nix
+
+  articleSummaryExtension = pkgs.fetchFromGitHub {
+    owner = "LiangWei88";
+    repo = "xExtension-ArticleSummary";
+    rev = "a112344249ff0249b3ef5c90eaa186571c980e3d";
+    sha256 = "sha256-R31o6Bui3ooYKUiHqAML2iUuCQme2bwqDIJlqi5/QL4="; # Update this after the first failed build
+  };
+
+  freshrssWebroot = "${config.services.freshrss.package}/share/FreshRSS/${
+    if lib.versionOlder pkgs.freshrss.version "1.16.0" then "p" else "pub"
+  }";
 in {
   # --- FreshRSS core ---
   services.freshrss = {
@@ -56,14 +67,17 @@ in {
     "d /run/secrets 0750 root root -"
     # Replace 'SuperSecret' with your actual admin password before first switch.
     "w ${secretFile} 0640 root root - - SuperSecret"
+    "d ${stateDir}/extensions 0755 freshrss freshrss -"
+    "L+ ${stateDir}/extensions/xExtension-ArticleSummary - - - - ${articleSummaryExtension}"
   ];
 
   # --- Harden PHP-FPM via module defaults (FreshRSS module already sets up pools) ---
   # If you need custom php.ini flags, you can extend phpOptions here:
-  # services.phpfpm.pools.freshrss.phpOptions = ''
-  #   upload_max_filesize = 32M
-  #   post_max_size = 32M
-  # '';
+  services.phpfpm.pools.freshrss.phpOptions = lib.mkForce ''
+    open_basedir = "${config.services.freshrss.dataDir}:${config.services.freshrss.package}/lib/FreshRSS:${config.services.freshrss.package}/share/FreshRSS:${freshrssWebroot}:/nix/store";
+    # upload_max_filesize = 32M
+    # post_max_size = 32M
+  '';
 
   # --- OPTIONAL: PostgreSQL configuration (uncomment to use pgsql) ---
   # services.freshrss.database = {

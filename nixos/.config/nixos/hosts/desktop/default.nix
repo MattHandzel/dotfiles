@@ -25,6 +25,14 @@ in {
     openFirewall = true;
     host = "0.0.0.0";
   };
+  services.sunshine = {
+    enable = true;
+    autoStart = true;
+    capSysAdmin = true; # only needed for Wayland
+    openFirewall = true;
+  };
+
+  services.atuin.enable = true;
   networking.hostName = "matts-server"; # Define your hostname.
 
   # Bootloader.
@@ -44,6 +52,21 @@ in {
     cudaPackages.cudnn
     cudaPackages.cutensor
     gcc12
+
+    # Server Dev Tools
+    tailscale
+    mosh
+    tmux
+    git
+    ripgrep
+    fd
+    fzf
+    bat
+    zoxide
+    btop
+    direnv
+    just
+    restic
   ];
 
   services = {
@@ -53,7 +76,10 @@ in {
     syncthing = {
       enable = true;
       user = "matth";
-      dataDir = "/home/matth/.config/syncthing/";
+      dataDir = "/home/matth";
+      configDir = "/home/matth/.config/syncthing";
+      guiAddress = "127.0.0.1:8384";
+      openDefaultPorts = false;
     };
     # docker = {
     #   enable = true;
@@ -148,6 +174,9 @@ in {
 
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="pci", DRIVER=="pcieport", ATTR{power/wakeup}="disabled"
+
+    # This is for remote desktop
+    KERNEL=="uinput", MODE="0660", GROUP="input", SYMLINK+="uinput"
   '';
 
   powerManagement.enable = true;
@@ -170,8 +199,15 @@ in {
 
   services.fprintd.enable = true;
   services.openssh.enable = true;
+  services.tailscale.enable = true;
+
+  networking.firewall.interfaces.tailscale0.allowedUDPPortRanges = [
+    { from = 60000; to = 61000; }
+  ];
 
   # docker has access to gpu
   hardware.nvidia-container-toolkit.enable = true;
   hardware.opengl.driSupport32Bit = true;
+
+  # Required udev rules for mouse/keyboard control
 }

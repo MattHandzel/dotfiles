@@ -87,6 +87,14 @@
           inherit self inputs username sharedVariables;
         };
       };
+      server = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [(import ./hosts/server)];
+        specialArgs = {
+          host = "server";
+          inherit self inputs username sharedVariables;
+        };
+      };
       laptop = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
