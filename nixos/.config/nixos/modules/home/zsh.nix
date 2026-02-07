@@ -98,7 +98,7 @@ in {
       }
       # eval $(pay-respects --alias) # gets fuck command running
 
-      export TODOIST_API_KEY="$(cat /run/secrets/todoist_api_key)"
+      # export TODOIST_API_KEY="$(cat /run/secrets/todoist_api_key)"
 
       # __conda_setup="$('/home/matth/.conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
       # if [ $? -eq 0 ]; then

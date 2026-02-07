@@ -44,5 +44,5 @@
   nix.settings.allowed-users = ["${username}"];
 
   # Run nixos rebuild without sudo
-  security.sudo.wheelNeedsPassword = true;
+  security.sudo.wheelNeedsPassword = false;
 }

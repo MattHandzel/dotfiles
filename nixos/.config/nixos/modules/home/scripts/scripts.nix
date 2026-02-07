@@ -49,6 +49,8 @@
     ./scripts/open-website-as-standalone-app.sh
     ./scripts/toggle-stt.sh
     ./scripts/prompt-picker.sh
+    ./scripts/yazi-gui.sh
+    ./scripts/btop-gui.sh
   ];
 
   # Create shell script bins

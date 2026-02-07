@@ -14,6 +14,10 @@
     nativeBuildInputs = with python3Packages; [
       poetry-core
     ];
+    postPatch = ''
+      sed -i 's/PyYAML = .*/PyYAML = "*"/' pyproject.toml
+      sed -i 's/loguru = .*/loguru = "*"/' pyproject.toml
+    '';
     propagatedBuildInputs = with python3Packages; [
       loguru
       tqdm
@@ -35,8 +39,13 @@
     nativeBuildInputs = with python3Packages; [
       poetry-core
     ];
+    postPatch = ''
+      sed -i 's/bidict = .*/bidict = "*"/' pyproject.toml
+      sed -i 's/bubop = .*/bubop = "*"/' pyproject.toml
+    '';
     propagatedBuildInputs = with python3Packages; [
       bubop
+      bidict
     ];
     doCheck = false;
   };
@@ -73,7 +82,15 @@ in
 
     nativeBuildInputs = with python3Packages; [
       poetry-core
+      poetry-dynamic-versioning
     ];
+
+    postPatch = ''
+      sed -i 's/PyYAML = .*/PyYAML = "*"/' pyproject.toml
+      sed -i 's/loguru = .*/loguru = "*"/' pyproject.toml
+      sed -i 's/bidict = .*/bidict = "*"/' pyproject.toml
+      sed -i '/typing = .*/d' pyproject.toml
+    '';
 
     propagatedBuildInputs = with python3Packages; [
       pyyaml

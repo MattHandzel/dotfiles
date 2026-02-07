@@ -16,7 +16,13 @@
     thunderbird = "M";
     slack = "K";
     "calendar.google.com" = "C";
-    # Yazi is defined later b/c it requires citty
+    yazi = "F";
+    reclaim = "R";
+    btop = "B";
+    nautilus = "E";
+    PrusaSlicer = "P";
+    cura = "U";
+    "gemini.google.com" = "Y";
     whatsapp-for-linux = "W";
     "vit-todo" = "T";
     "notetaker" = "N";
@@ -36,17 +42,7 @@ in let
 
   # Mapping of application names to specific workspace numbers or names
   workspaceMapping = {
-    thunderbird = "8";
-    discord = "10";
     "calendar.google.com" = "🗓️";
-    notetaker = "notetaker";
-    "gemini.google.com" = "gemini";
-    "vit-todo" = "vit-todo";
-    beeper = "beeper";
-    slack = "slack";
-    whatsapp-for-linux = "whatsapp";
-    obsidian = "obsidian";
-    reclaim = "reclaim";
   };
 
   generateFloatingRules = floating_window: [
@@ -61,17 +57,22 @@ in let
     not_case_sensitive = makeStringToIncaseSensitiveRegex singleton;
     targetWorkspace =
       if builtins.hasAttr singleton workspaceMapping
-      then workspaceMapping.${singleton}
+      then "name:${workspaceMapping.${singleton}}"
       else "name:${singleton}";
   in [
-    "workspace ${targetWorkspace}, class:(${not_case_sensitive})"
-    "workspace ${targetWorkspace}, title:(${not_case_sensitive})"
+    "workspace ${targetWorkspace}, class:(.*${not_case_sensitive}.*)"
+    "workspace ${targetWorkspace}, title:(.*${not_case_sensitive}.*)"
   ];
 
-  generateSingletonKeyboardShortcuts = singleton:
+  generateSingletonKeyboardShortcuts = singleton: let
+    targetWorkspace =
+      if builtins.hasAttr singleton workspaceMapping
+      then "name:${workspaceMapping.${singleton}}"
+      else "name:${singleton}";
+  in
     if builtins.hasAttr singleton appKeyboardShortcuts
     then [
-      "${mainMod} ALT, ${appKeyboardShortcuts.${singleton}}, exec, focus_app ${singleton}"
+      "${mainMod} ALT, ${appKeyboardShortcuts.${singleton}}, exec, focus_app ${singleton} \"${targetWorkspace}\""
     ]
     else [];
 
@@ -334,7 +335,6 @@ in {
           "${mainMod} SHIFT, W, exec, vm-start"
           "${mainMod}, B, exec, zen"
           "${mainMod}, Y, exec, swaync-client --close-latest"
-          "${mainMod} SHIFT, code:201, exec, focus_app gemini.google.com"
 
           "${mainMod} SHIFT, R, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\" && rebuild && notify-if-command-is-successful rebuild"
 
@@ -348,7 +348,6 @@ in {
           ",Print, exec, grimblast --notify --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
 
           "${mainMod}, N, exec, ~/Projects/KnowledgeManagementSystem/result/bin/kms-capture"
-          "${mainMod} ALT, F, exec, kitty --hold --title yazi --name sh -c \"yazi\""
 
           # Move focus with mainMod + arrow keys
           # "$mainMod, h, changegroupactive, back"

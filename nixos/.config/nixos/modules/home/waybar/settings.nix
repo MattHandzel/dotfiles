@@ -21,6 +21,7 @@
     "vit-todo" = "☑";
     "gemini.google.com" = "🧠";
     beeper = "🔔";
+    spotify = "";
   };
 in {
   programs.waybar.settings.mainBar = {
@@ -82,20 +83,9 @@ in {
           # "5"= "";
           # "6"= "";
           "10.5" = "|";
-          "discord" = "󰙯";
           "spotify" = "";
           urgent = "";
           # default = "";
-        }
-        // singletonIcons;
-      persistent-workspaces =
-        {
-          # "1"= [];
-          # "2"= [];
-          # "3"= [];
-          # "4"= [];
-          # "5"= [];
-          "10.5" = [];
         }
         // (builtins.listToAttrs (map (name: {
             name =
@@ -108,9 +98,17 @@ in {
               else if name == "whatsapp-for-linux"
               then "whatsapp"
               else name;
-            value = [];
+            value = singletonIcons.${name};
           })
           sharedVariables.singletonApplications));
+      persistent-workspaces = {
+        # "1"= [];
+        # "2"= [];
+        # "3"= [];
+        # "4"= [];
+        # "5"= [];
+        "10.5" = [];
+      };
     };
     "custom/lifelog" = {
       "exec" = "cat /tmp/lifelog_status.json";

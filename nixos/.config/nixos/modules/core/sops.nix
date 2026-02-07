@@ -18,8 +18,8 @@
       owner = username;
     };
 
-    secrets.todoist_api_key = {
-      owner = username;
-    };
+    # secrets.todoist_api_key = {
+    #   owner = username;
+    # };
   };
 }
