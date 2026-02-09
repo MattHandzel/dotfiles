@@ -206,6 +206,7 @@ in {
         border_size = 2;
         "col.active_border" = "rgb(cba6f7) rgb(94e2d5) 45deg";
         "col.inactive_border" = "0x00000000";
+        "$copilot" = "code:201";
       };
 
       misc = {
