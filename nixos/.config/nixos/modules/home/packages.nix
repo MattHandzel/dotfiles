@@ -180,7 +180,6 @@ in {
     # platformio
 
     docker
-    vdhcoapp # for browser extensio
 
     go
     gopls
