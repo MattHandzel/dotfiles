@@ -7,6 +7,7 @@
   # Keep this as a Nix value (not a Hyprland `$var`) so binds don't depend on
   # Hyprland variable ordering in the generated config.
   mainMod = "SUPER";
+  copilotKey = "code:201";
   # This will make it so that when you press $mainMod + alt + {letter} it will open up the corresponding application
   appKeyboardShortcuts = {
     anki = "A";
@@ -206,7 +207,6 @@ in {
         border_size = 2;
         "col.active_border" = "rgb(cba6f7) rgb(94e2d5) 45deg";
         "col.inactive_border" = "0x00000000";
-        "$copilot" = "code:201";
       };
 
       misc = {
@@ -470,7 +470,8 @@ in {
           "CONTROL ALT, V, exec, wtype -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
           "SHIFT CONTROL ALT, V, exec, wtype -m shift -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M shift -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
 
-          "SUPER SHIFT, $copilot, exec, focus_app gemini.google.com"
+          "SUPER SHIFT, ${copilotKey}, exec, focus_app gemini.google.com"
+          # "SUPER SHIFT, ${copilotKey}, exec, focus_app gemini.google.com"
 
           # clipboard manager
           "${mainMod}, V, exec, cliphist list -max-iterms 1000 -preview-width 1000 | fuzzel --dmenu | cliphist decode | wl-copy"

@@ -237,5 +237,6 @@ in {
 
     beeper
     gping
+    code-cursor
   ];
 }
