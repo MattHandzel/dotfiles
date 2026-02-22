@@ -22,6 +22,7 @@ map("n", "[d", vim.diagnostic.goto_prev, { desc = "Lsp prev diagnostic" })
 map("n", "]d", vim.diagnostic.goto_next, { desc = "Lsp next diagnostic" })
 map("n", "<leader>dl", vim.diagnostic.setloclist, { desc = "Lsp diagnostic loclist" })
 map("n", "<leader>uD", "<cmd>DiagnosticsToggle<CR>", { desc = "Toggle diagnostics" })
+map("n", "<leader>bc", "<cmd>Hbac close_unpinned<CR>", { desc = "Close Unpinned Buffers" })
 
 -- tabufline
 -- map("n", "<leader>b", "<cmd>enew<CR>", { desc = "Buffer New" })
@@ -29,46 +30,28 @@ map("n", "<leader>uD", "<cmd>DiagnosticsToggle<CR>", { desc = "Toggle diagnostic
 --   require("nvchad.tabufline").close_buffer()
 -- end, { desc = "Buffer Close" })
 
-local function sanitize_tabufline_buffers()
-	if type(vim.t.bufs) ~= "table" then
+local function open_explorer()
+	local lazy_ok, lazy = pcall(require, "lazy")
+	if lazy_ok then
+		pcall(lazy.load, { plugins = { "oil.nvim" } })
+	end
+
+	local oil_ok, oil = pcall(require, "oil")
+	if oil_ok then
+		oil.open()
 		return
 	end
 
-	local filtered = {}
-	for _, buf in ipairs(vim.t.bufs) do
-		if type(buf) == "number" and vim.api.nvim_buf_is_valid(buf) then
-			table.insert(filtered, buf)
-		end
-	end
-
-	if #filtered == 0 then
-		local current = vim.api.nvim_get_current_buf()
-		if vim.api.nvim_buf_is_valid(current) then
-			filtered = { current }
-		end
-	end
-
-	vim.t.bufs = filtered
-end
-
-map("n", "<leader>e", function()
-	sanitize_tabufline_buffers()
-
-	if vim.fn.exists(":Oil") == 2 then
-		local oil_ok = pcall(vim.cmd, "Oil")
-		if oil_ok then
-			return
-		end
-	end
-
-	local ok, snacks = pcall(require, "snacks")
-	if ok and snacks.explorer then
+	local snacks_ok, snacks = pcall(require, "snacks")
+	if snacks_ok and snacks.explorer then
 		snacks.explorer()
 		return
 	end
 
 	vim.notify("No file explorer backend is available", vim.log.levels.ERROR)
-end, { desc = "Toggle Explorer" })
+end
+
+map("n", "<leader>e", open_explorer, { desc = "Toggle Explorer" })
 
 map("n", "<leader>E", function()
 	local ok, snacks = pcall(require, "snacks")

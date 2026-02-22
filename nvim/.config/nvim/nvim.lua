@@ -46,10 +46,16 @@ vim.schedule(function()
 	end
 end)
 
-local setups_ok, setups_err = pcall(require, "configs.setups")
-if not setups_ok then
-	vim.notify("Failed to load optional setups: " .. setups_err, vim.log.levels.WARN)
-end
+vim.api.nvim_create_autocmd("User", {
+	pattern = "VeryLazy",
+	once = true,
+	callback = function()
+		local setups_ok, setups_err = pcall(require, "configs.setups")
+		if not setups_ok then
+			vim.notify("Failed to load optional setups: " .. setups_err, vim.log.levels.WARN)
+		end
+	end,
+})
 local function customize_colorscheme()
 	-- Use Vim script syntax with vim.cmd
 	vim.cmd([[

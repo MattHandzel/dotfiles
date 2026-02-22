@@ -1,37 +1,53 @@
 local dap = require("dap")
-dap.adapters.go = {
-	type = "executable",
-	command = "${pkgs.delve}/bin/dlv",
-	args = { "dap" },
-}
-dap.configurations.go = {
-	{
-		type = "go",
-		name = "Debug",
-		request = "launch",
-		program = "${file}",
-	},
-}
+local function executable_or_nil(...)
+	for _, cmd in ipairs({ ... }) do
+		local found = vim.fn.exepath(cmd)
+		if found and found ~= "" then
+			return found
+		end
+	end
+	return nil
+end
 
-dap.adapters.lldb = {
-	type = "executable",
-	command = "/usr/bin/lldb-vscode", -- Adjust this path if lldb-vscode is located elsewhere
-	name = "lldb",
-}
+local dlv = executable_or_nil("dlv")
+if dlv then
+	dap.adapters.go = {
+		type = "executable",
+		command = dlv,
+		args = { "dap" },
+	}
+	dap.configurations.go = {
+		{
+			type = "go",
+			name = "Debug",
+			request = "launch",
+			program = "${file}",
+		},
+	}
+end
 
-dap.configurations.rust = {
-	{
-		name = "Launch",
-		type = "lldb",
-		request = "launch",
-		program = function()
-			return vim.fn.input("Path to executable: ", vim.fn.getcwd() .. "/target/debug/", "file")
-		end,
-		cwd = "${workspaceFolder}",
-		stopOnEntry = false,
-		args = {},
-	},
-}
+local lldb = executable_or_nil("lldb-vscode", "lldb-dap")
+if lldb then
+	dap.adapters.lldb = {
+		type = "executable",
+		command = lldb,
+		name = "lldb",
+	}
+
+	dap.configurations.rust = {
+		{
+			name = "Launch",
+			type = "lldb",
+			request = "launch",
+			program = function()
+				return vim.fn.input("Path to executable: ", vim.fn.getcwd() .. "/target/debug/", "file")
+			end,
+			cwd = "${workspaceFolder}",
+			stopOnEntry = false,
+			args = {},
+		},
+	}
+end
 
 dap.adapters.java = {
 	type = "server",

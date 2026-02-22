@@ -64,6 +64,14 @@ vim.api.nvim_create_user_command("DiagnosticsToggle", function()
 	vim.diagnostic.enable(not enabled, { bufnr = 0 })
 end, { desc = "Toggle diagnostics for current buffer" })
 
+vim.api.nvim_create_user_command("ConfigProfile", function()
+	vim.cmd("Lazy profile")
+end, { desc = "Open lazy.nvim profile view" })
+
+vim.api.nvim_create_user_command("ConfigDoctor", function()
+	vim.cmd("checkhealth")
+end, { desc = "Run Neovim health checks" })
+
 -- Setup autocmd to handle opening files with external programs
 vim.api.nvim_create_autocmd("BufReadPost", {
 	callback = function()

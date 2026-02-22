@@ -22,22 +22,31 @@ This config is based on NvChad and lazy.nvim.
 - `<leader>e`: Oil file explorer (default)
 - `<leader>E`: Snacks explorer direct toggle
 - `:Oil`: Oil file explorer (manual fallback)
+- `<leader>bd`: delete current buffer without breaking splits
+- `<leader>bD`: force-delete current buffer without breaking splits
+- `<leader>bc`: close unpinned/unedited buffers (HBAC)
 - `<leader>qs`: restore session for current project
 - `<leader>qS`: restore last session
 - `<leader>qd`: stop session auto-save for current instance
 - `<leader>uD`: toggle diagnostics in current buffer
 - `:DiagnosticsToggle`: same as above
+- `:ConfigDoctor`: run `:checkhealth`
+- `:ConfigProfile`: open lazy.nvim startup profile
 
 ## AI / Vibe Coding
 
 - NeoCodeium is enabled for inline suggestions.
 - First-time auth: `:NeoCodeium auth`
+- CodeCompanion is enabled for chat/actions/inline edits (Copilot adapter default).
 - Insert mode:
   - `<A-f>` accept suggestion
   - `<A-]>` next suggestion
   - `<A-[>` previous suggestion
 - Normal mode:
   - `<leader>ua` toggle NeoCodeium
+  - `<leader>aa` CodeCompanion actions
+  - `<leader>ac` CodeCompanion chat toggle
+  - `<leader>ap` CodeCompanion inline prompt
 
 ## Guardrails
 
@@ -55,3 +64,4 @@ This config is based on NvChad and lazy.nvim.
 - If startup/plugin state is odd: `:Lazy sync` then restart Neovim.
 - If inline AI is noisy/slow: use `<leader>ua`.
 - If diagnostics are distracting while writing notes: `<leader>uD`.
+- If sessions feel wrong, run `:qa` from the project you want saved, then reopen Neovim without file arguments.
