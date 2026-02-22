@@ -30,15 +30,17 @@ map("n", "<leader>uD", "<cmd>DiagnosticsToggle<CR>", { desc = "Toggle diagnostic
 -- end, { desc = "Buffer Close" })
 
 map("n", "<leader>e", function()
-	if vim.fn.exists(":Oil") == 2 then
-		vim.cmd("Oil")
-		return
-	end
-
 	local ok, snacks = pcall(require, "snacks")
 	if ok and snacks.explorer then
 		snacks.explorer()
 		return
+	end
+
+	if vim.fn.exists(":Oil") == 2 then
+		local oil_ok = pcall(vim.cmd, "Oil")
+		if oil_ok then
+			return
+		end
 	end
 
 	vim.notify("No file explorer backend is available", vim.log.levels.ERROR)

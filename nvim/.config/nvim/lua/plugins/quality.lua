@@ -77,9 +77,6 @@ return {
 				show_hidden = true,
 			},
 		},
-		keys = {
-			{ "<leader>e", "<cmd>Oil<CR>", desc = "File Explorer" },
-		},
 		dependencies = { "nvim-tree/nvim-web-devicons" },
 	},
 
