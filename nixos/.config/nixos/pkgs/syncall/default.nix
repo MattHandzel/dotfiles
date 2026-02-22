@@ -66,6 +66,7 @@
       six
       python-dateutil
       pytz
+      kitchen
     ];
     doCheck = false;
   };
@@ -90,6 +91,12 @@ in
       sed -i 's/loguru = .*/loguru = "*"/' pyproject.toml
       sed -i 's/bidict = .*/bidict = "*"/' pyproject.toml
       sed -i '/typing = .*/d' pyproject.toml
+
+      # Bypass extras check by removing the try-except block that calls inform_about_app_extras
+      sed -i '/try:/d' syncall/scripts/tw_gcal_sync.py
+      sed -i '/except ImportError:/,+1d' syncall/scripts/tw_gcal_sync.py
+      sed -i 's/    from syncall.google.gcal_side/from syncall.google.gcal_side/' syncall/scripts/tw_gcal_sync.py
+      sed -i 's/    from syncall.taskwarrior.taskwarrior_side/from syncall.taskwarrior.taskwarrior_side/' syncall/scripts/tw_gcal_sync.py
     '';
 
     propagatedBuildInputs = with python3Packages; [
@@ -105,7 +112,17 @@ in
       bubop
       taskw-ng
       xdg
+      # Ensure taskwarrior2 is available for the sync tool
+      pkgs.taskwarrior2
+      # Provide pkg_resources
+      python3Packages.setuptools
     ];
+
+    postInstall = ''
+      for dir in caldav filesystem notion scripts taskwarrior; do
+        touch $out/lib/python${python3Packages.python.pythonVersion}/site-packages/syncall/$dir/__init__.py
+      done
+    '';
 
     doCheck = false;
 

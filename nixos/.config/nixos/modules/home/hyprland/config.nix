@@ -105,9 +105,9 @@ in {
       # Keep Hyprland logs enabled so we can debug config/runtime issues.
       # If logs ever grow too large, we should fix the noisy source rather
       # than turning all logs off.
-      "debug:disable_logs" = false;
+      "debug:disable_logs" = true;
       debug = {
-        disable_logs = false;
+        disable_logs = true;
       };
       exec-once = [
         "systemctl --user import-environment &"
@@ -517,6 +517,9 @@ in {
 
           "float, title:^(knowledge-management-system-capture)$"
           "size 875 875, title:^(knowledge-management-system-capture)$"
+
+          # Thunderbird: Example of making it larger (50% larger than a standard window size)
+          "size 1800 1000, class:^(thunderbird)$"
         ]
         ++ [
           "float, title:^(Picture-in-Picture)$"
@@ -565,7 +568,7 @@ in {
 #       monitor=DP-1,preferred,0x1080,1.0
 
       monitor=eDP-1,preferred,0x0,1
-      monitor=DP-1,preferred,2880x0,1.0
+      monitor=DP-1,preferred,2880x0,1
       monitor=HDMI-A-1,preferred,-1920x0,1.0
 
       # this

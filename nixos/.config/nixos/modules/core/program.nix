@@ -36,42 +36,29 @@
     libxkbcommon
     # libxshmfence
     pango
-    xorg.libX11
-    xorg.libxcb
-    xorg.libXcomposite
-    xorg.libXcursor
-    xorg.libXdamage
-    xorg.libXext
-    xorg.libXfixes
-    xorg.libXi
-    xorg.libXrandr
-    xorg.libXrender
-    xorg.libXScrnSaver
-    xorg.libXtst
-    xorg.libxshmfence
-    xorg.libxkbfile
-    xorg.libXxf86vm
-    xorg.libXinerama
-    xorg.libXv
-    xorg.libXxf86vm
-    xorg.xcbutil
-    xorg.xcbutilwm
-    xorg.xcbutilimage
-    xorg.xcbutilkeysyms
-    xorg.xcbutilrenderutil
-    xorg.xcbutilcursor
-    xorg.xcbutil
-    xorg.libXrandr
-    xorg.libXScrnSaver
-    xorg.libXcursor
-    xorg.libXdamage
-    xorg.libXcomposite
-    xorg.libXext
-    xorg.libXfixes
-    xorg.libXi
-    xorg.libXrender
-    xorg.libX11
-    xorg.libxcb
+    libx11
+    libxcb
+    libxcomposite
+    libxcursor
+    libxdamage
+    libxext
+    libxfixes
+    libxi
+    libxrandr
+    libxrender
+    libxscrnsaver
+    libxtst
+    libxshmfence
+    libxkbfile
+    libxxf86vm
+    libxinerama
+    libxv
+    libxcb-util
+    libxcb-wm
+    libxcb-image
+    libxcb-keysyms
+    libxcb-render-util
+    libxcb-cursor
     libdrm
     mesa
     alsa-lib

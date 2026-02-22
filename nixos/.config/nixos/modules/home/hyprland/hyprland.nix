@@ -6,7 +6,7 @@
   home.packages = with pkgs; [
     swww
     swaybg
-    inputs.hypr-contrib.packages.${pkgs.system}.grimblast
+    inputs.hypr-contrib.packages.${pkgs.stdenv.hostPlatform.system}.grimblast
     hyprpicker
     grim
     slurp

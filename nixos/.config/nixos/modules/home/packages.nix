@@ -40,7 +40,7 @@ in {
     yt-dlp-light
     zenity
     winetricks
-    wineWowPackages.wayland
+    wineWow64Packages.wayland
 
     # C / C++
     gcc
@@ -73,7 +73,7 @@ in {
     wget
     xdg-utils
     xxd
-    inputs.alejandra.defaultPackage.${system}
+    inputs.alejandra.defaultPackage.${pkgs.stdenv.hostPlatform.system}
 
     brave #
     slack
@@ -97,6 +97,8 @@ in {
     yazi
     # hyprshade
     # grimblast
+    grim
+    slurp
     ### data collection stuff
     aw-watcher-afk
     aw-watcher-window
@@ -149,7 +151,7 @@ in {
     fastfetch
     # whatsapp-for-linux
 
-    inputs.zen-browser.packages."${system}".default # This is for zen-browser
+    inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default # This is for zen-browser
     tigervnc
     espanso-wayland
 

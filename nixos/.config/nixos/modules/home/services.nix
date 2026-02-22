@@ -153,8 +153,6 @@ in {
       #
       # The timer can still start it (dependency activation), but manual starts
       # during HM activation are refused.
-      RefuseManualStart = true;
-      RefuseManualStop = true;
     };
     Service = {
       Type = "oneshot";
