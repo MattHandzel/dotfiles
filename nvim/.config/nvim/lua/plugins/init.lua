@@ -9,11 +9,7 @@ return {
 
 	{
 		"ActivityWatch/aw-watcher-vim",
-		event = "VeryLazy",
-		config = function()
-			vim.cmd("AWStart")
-			-- require("aw-watcher-vim").start()
-		end,
+		cmd = { "AWStart", "AWStop", "AWStatus", "AWHeartbeat" },
 	},
 	-- {
 	-- 	"vhyrro/luarocks.nvim",
