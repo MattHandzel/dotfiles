@@ -29,18 +29,42 @@ map("n", "<leader>uD", "<cmd>DiagnosticsToggle<CR>", { desc = "Toggle diagnostic
 --   require("nvchad.tabufline").close_buffer()
 -- end, { desc = "Buffer Close" })
 
-map("n", "<leader>e", function()
-	local ok, snacks = pcall(require, "snacks")
-	if ok and snacks.explorer then
-		snacks.explorer()
+local function sanitize_tabufline_buffers()
+	if type(vim.t.bufs) ~= "table" then
 		return
 	end
+
+	local filtered = {}
+	for _, buf in ipairs(vim.t.bufs) do
+		if type(buf) == "number" and vim.api.nvim_buf_is_valid(buf) then
+			table.insert(filtered, buf)
+		end
+	end
+
+	if #filtered == 0 then
+		local current = vim.api.nvim_get_current_buf()
+		if vim.api.nvim_buf_is_valid(current) then
+			filtered = { current }
+		end
+	end
+
+	vim.t.bufs = filtered
+end
+
+map("n", "<leader>e", function()
+	sanitize_tabufline_buffers()
 
 	if vim.fn.exists(":Oil") == 2 then
 		local oil_ok = pcall(vim.cmd, "Oil")
 		if oil_ok then
 			return
 		end
+	end
+
+	local ok, snacks = pcall(require, "snacks")
+	if ok and snacks.explorer then
+		snacks.explorer()
+		return
 	end
 
 	vim.notify("No file explorer backend is available", vim.log.levels.ERROR)

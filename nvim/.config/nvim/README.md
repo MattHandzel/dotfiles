@@ -19,7 +19,7 @@ This config is based on NvChad and lazy.nvim.
 
 ## Key Workflows
 
-- `<leader>e`: Snacks explorer (default)
+- `<leader>e`: Oil file explorer (default)
 - `<leader>E`: Snacks explorer direct toggle
 - `:Oil`: Oil file explorer (manual fallback)
 - `<leader>qs`: restore session for current project
