@@ -2,6 +2,19 @@
 local lspconfig = require("lspconfig")
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities.offsetEncoding = { "utf-16" }
+
+vim.diagnostic.config({
+	virtual_text = true,
+	signs = true,
+	underline = true,
+	update_in_insert = false,
+	severity_sort = true,
+	float = {
+		border = "rounded",
+		source = "if_many",
+	},
+})
+
 lspconfig.rust_analyzer.setup({
 	-- Server-specific settings. See `:help lspconfig-setup`
 	settings = {
@@ -11,15 +24,7 @@ lspconfig.rust_analyzer.setup({
 
 lspconfig.pyright.setup({})
 lspconfig.ts_ls.setup({
-	on_attach = function(client, bufnr)
-		vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(vim.lsp.diagnostic.on_publish_diagnostics, {
-			virtual_text = true,
-			signs = true,
-			underline = true,
-		})
-	end,
-	-- on_attach = ,
-	-- capabilities = capabilities,
+	capabilities = capabilities,
 	settings = {
 		typescript = {
 			tsserver = {
@@ -54,13 +59,6 @@ lspconfig.denols.setup({})
 -- go setup
 lspconfig.gopls.setup({
 	cmd = { "gopls", "serve" },
-	on_attach = function(client, bufnr)
-		vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(vim.lsp.diagnostic.on_publish_diagnostics, {
-			virtual_text = true,
-			signs = true,
-			underline = true,
-		})
-	end,
 	capabilities = capabilities,
 	settings = {
 		gopls = {

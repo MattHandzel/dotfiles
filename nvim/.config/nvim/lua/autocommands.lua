@@ -20,6 +20,50 @@ local function open_with_external_program(filetypes, programs, filepath, filetyp
 	end
 end
 
+local perf_group = vim.api.nvim_create_augroup("ConfigPerformance", { clear = true })
+local large_file_size = 1024 * 1024
+local large_file_lines = 20000
+
+vim.api.nvim_create_autocmd({ "BufReadPre", "FileReadPre" }, {
+	group = perf_group,
+	callback = function(args)
+		local name = vim.api.nvim_buf_get_name(args.buf)
+		if name == "" then
+			return
+		end
+
+		local stat = vim.uv.fs_stat(name)
+		if stat and stat.size > large_file_size then
+			vim.b[args.buf].large_file_mode = true
+			vim.bo[args.buf].swapfile = false
+			vim.bo[args.buf].undofile = false
+		end
+	end,
+})
+
+vim.api.nvim_create_autocmd("BufReadPost", {
+	group = perf_group,
+	callback = function(args)
+		if vim.api.nvim_buf_line_count(args.buf) > large_file_lines then
+			vim.b[args.buf].large_file_mode = true
+		end
+
+		if not vim.b[args.buf].large_file_mode then
+			return
+		end
+
+		vim.bo[args.buf].syntax = "off"
+		vim.api.nvim_set_option_value("foldmethod", "manual", { win = 0 })
+		pcall(vim.treesitter.stop, args.buf)
+		vim.diagnostic.enable(false, { bufnr = args.buf })
+	end,
+})
+
+vim.api.nvim_create_user_command("DiagnosticsToggle", function()
+	local enabled = vim.diagnostic.is_enabled({ bufnr = 0 })
+	vim.diagnostic.enable(not enabled, { bufnr = 0 })
+end, { desc = "Toggle diagnostics for current buffer" })
+
 -- Setup autocmd to handle opening files with external programs
 vim.api.nvim_create_autocmd("BufReadPost", {
 	callback = function()
@@ -58,6 +102,16 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 vim.api.nvim_create_autocmd("BufWritePre", {
 	pattern = "*",
 	callback = function(args)
-		 require("conform").format({ bufnr = args.buf })
+		if vim.b[args.buf].large_file_mode then
+			return
+		end
+		if vim.bo[args.buf].buftype ~= "" then
+			return
+		end
+
+		local ok, conform = pcall(require, "conform")
+		if ok then
+			pcall(conform.format, { bufnr = args.buf, lsp_fallback = true, quiet = true })
+		end
 	end,
 })

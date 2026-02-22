@@ -1,65 +1,44 @@
 -- require("neo-tree").setup()
-require("betterTerm").setup({
+local function safe_require(module)
+	local ok, lib = pcall(require, module)
+	if not ok then
+		return nil
+	end
+	return lib
+end
+
+local better_term = safe_require("betterTerm")
+if better_term then
+	better_term.setup({
 	prefix = "term-",
 	startInserted = true,
 	position = "bot",
 	size = 12,
-})
+	})
+end
 
-require("code_runner").setup({
+local code_runner = safe_require("code_runner")
+if code_runner then
+	code_runner.setup({
 	filetype_path = vim.fn.expand("~/.config/nvim/code_runner_filetypes.json"),
 	project_path = vim.fn.expand("~/.config/nvim/code_runner_projects.json"),
-})
-require("copilot").setup({
-	panel = {
-		enabled = true,
-		auto_refresh = false,
-		keymap = {
-			jump_prev = "[[",
-			jump_next = "]]",
-			accept = "Tab",
-			refresh = "gr",
-			open = "<M-CR>",
-		},
-		layout = {
-			position = "bottom", -- | top | left | right
-			ratio = 0.4,
-		},
-	},
-	suggestion = {
-		enabled = true,
-		auto_trigger = true,
-		debounce = 75,
-		keymap = {
-			accept = "<M-l>",
-			accept_word = false,
-			accept_line = false,
-			next = "<M-]>",
-			prev = "<M-[>",
-			dismiss = "<C-]>",
-		},
-	},
-	filetypes = {
-		yaml = false,
-		markdown = false,
-		help = false,
-		gitcommit = false,
-		gitrebase = false,
-		hgcommit = false,
-		svn = false,
-		cvs = false,
-		["."] = false,
-	},
-	copilot_node_command = "node", -- Node.js version must be > 18.x
-	server_opts_overrides = {},
-})
-require("nvim-autopairs").disable()
-require("auto-session").setup({
-	log_level = "error",
-	auto_session_suppress_dirs = { "~/", "~/Downloads", "/" },
-})
-require("yanky").setup()
-require("dressing").setup({
+	})
+end
+
+-- Copilot and session management are configured in lazy plugin specs.
+local autopairs = safe_require("nvim-autopairs")
+if autopairs and autopairs.disable then
+	autopairs.disable()
+end
+
+local yanky = safe_require("yanky")
+if yanky then
+	yanky.setup()
+end
+
+local dressing = safe_require("dressing")
+if dressing then
+	dressing.setup({
 	input = {
 		-- Set to false to disable the vim.ui.input implementation
 		enabled = true,
@@ -224,6 +203,7 @@ require("dressing").setup({
 		get_config = nil,
 	},
 })
+end
 
 -- require("vimtex").setup({})
 

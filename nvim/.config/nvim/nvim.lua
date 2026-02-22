@@ -40,10 +40,16 @@ require("nvchad.autocmds")
 require("autocommands")
 
 vim.schedule(function()
-	require("mappings")
+	local ok, err = pcall(require, "mappings")
+	if not ok then
+		vim.notify("Failed to load mappings: " .. err, vim.log.levels.ERROR)
+	end
 end)
 
-require("configs.setups")
+local setups_ok, setups_err = pcall(require, "configs.setups")
+if not setups_ok then
+	vim.notify("Failed to load optional setups: " .. setups_err, vim.log.levels.WARN)
+end
 local function customize_colorscheme()
 	-- Use Vim script syntax with vim.cmd
 	vim.cmd([[
@@ -173,9 +179,11 @@ local options = {
 if cmp_style ~= "atom" and cmp_style ~= "atom_colored" then
 	options.window.completion.border = border("CmpBorder")
 end
-require("copilot_cmp")
+pcall(require, "copilot_cmp")
 
-require("sc-im").setup({
+local sc_im_ok, sc_im = pcall(require, "sc-im")
+if sc_im_ok then
+	sc_im.setup({
 	-- ft = "scim",
 	-- include_sc_file = true,
 	-- update_sc_from_md = true,
@@ -190,6 +198,7 @@ require("sc-im").setup({
 	-- 	blend = 0,
 	-- },
 })
+end
 
 cmp.setup(options)
 

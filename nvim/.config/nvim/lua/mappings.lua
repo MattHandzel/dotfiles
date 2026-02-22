@@ -21,6 +21,7 @@ map("n", "<leader>lf", vim.diagnostic.open_float, { desc = "Lsp floating diagnos
 map("n", "[d", vim.diagnostic.goto_prev, { desc = "Lsp prev diagnostic" })
 map("n", "]d", vim.diagnostic.goto_next, { desc = "Lsp next diagnostic" })
 map("n", "<leader>dl", vim.diagnostic.setloclist, { desc = "Lsp diagnostic loclist" })
+map("n", "<leader>uD", "<cmd>DiagnosticsToggle<CR>", { desc = "Toggle diagnostics" })
 
 -- tabufline
 -- map("n", "<leader>b", "<cmd>enew<CR>", { desc = "Buffer New" })
@@ -28,11 +29,27 @@ map("n", "<leader>dl", vim.diagnostic.setloclist, { desc = "Lsp diagnostic locli
 --   require("nvchad.tabufline").close_buffer()
 -- end, { desc = "Buffer Close" })
 
--- nvimtree
-local snacks = require("snacks")
 map("n", "<leader>e", function()
-	snacks.explorer()
+	if vim.fn.exists(":Oil") == 2 then
+		vim.cmd("Oil")
+		return
+	end
+
+	local ok, snacks = pcall(require, "snacks")
+	if ok and snacks.explorer then
+		snacks.explorer()
+		return
+	end
+
+	vim.notify("No file explorer backend is available", vim.log.levels.ERROR)
 end, { desc = "Toggle Explorer" })
+
+map("n", "<leader>E", function()
+	local ok, snacks = pcall(require, "snacks")
+	if ok and snacks.explorer then
+		snacks.explorer()
+	end
+end, { desc = "Toggle Tree Explorer" })
 
 -- telescope
 -- local telescope_builtin = require("telescope.builtin")
@@ -299,19 +316,40 @@ vim.keymap.set("n", "<leader>re", function()
 	)
 end, { desc = "Excute File" })
 
-local betterTerm = require("betterTerm")
-vim.keymap.set({ "n", "t" }, "<C-;>", betterTerm.open, { desc = "Open terminal" })
+local function with_module(name, fn)
+	local ok, mod = pcall(require, name)
+	if not ok then
+		vim.notify("Missing plugin module: " .. name, vim.log.levels.WARN)
+		return
+	end
+	fn(mod)
+end
 
--- toggle firts term
--- Select term focus
-vim.keymap.set({ "n" }, "<leader>tt", betterTerm.select, { desc = "Select terminal" })
--- Create new term
+vim.keymap.set({ "n", "t" }, "<C-;>", function()
+	with_module("betterTerm", function(better_term)
+		better_term.open()
+	end)
+end, { desc = "Open terminal" })
+
+vim.keymap.set({ "n" }, "<leader>tt", function()
+	with_module("betterTerm", function(better_term)
+		better_term.select()
+	end)
+end, { desc = "Select terminal" })
+
 local current = 0
 vim.keymap.set({ "n" }, "<leader>tn", function()
-	betterTerm.open(current)
-	current = current + 1
+	with_module("betterTerm", function(better_term)
+		better_term.open(current)
+		current = current + 1
+	end)
 end, { desc = "New terminal" })
-betterTerm.setup()
+
+vim.schedule(function()
+	pcall(function()
+		require("betterTerm").setup()
+	end)
+end)
 
 vim.keymap.set({ "i", "n", "t" }, "<C-k>", "<cmd>TmuxNavigateUp<CR>", { noremap = true, silent = true })
 vim.keymap.set({ "i", "n", "t" }, "<C-j>", "<cmd>TmuxNavigateDown<CR>", { noremap = true, silent = true })
@@ -344,7 +382,11 @@ vim.keymap.set({ "n", "x" }, "gP", "<Plug>(YankyGPutBefore)")
 
 vim.keymap.set("n", "<leader>p", ":YankyRingHistory<CR>")
 
-vim.keymap.set("n", "<leader>c?", require("CopilotChat").toggle)
+vim.keymap.set("n", "<leader>c?", function()
+	with_module("CopilotChat", function(copilot_chat)
+		copilot_chat.toggle()
+	end)
+end, { desc = "Copilot Chat Toggle" })
 
 -- vim.keymap.set("n", "<c-p>", "<Plug>(YankyPreviousEntry)")
 -- vim.keymap.set("n", "<c-n>", "<Plug>(YankyNextEntry)")
@@ -500,4 +542,8 @@ vim.keymap.set("n", "ga?", "<cmd>TextCaseOpenTelescope<CR>", { noremap = true })
 
 vim.keymap.set("n", "<leader>nl", "<cmd>SemanticSearch<CR>", { noremap = true })
 
-vim.api.nvim_set_keymap("n", "<leader>sc", ":lua require'sc-im'.open_in_scim()<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>sc", function()
+	with_module("sc-im", function(sc_im)
+		sc_im.open_in_scim()
+	end)
+end, { noremap = true, silent = true, desc = "Open in sc-im" })
