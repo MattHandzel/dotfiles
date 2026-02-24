@@ -6,7 +6,7 @@
   host,
   ...
 }: let
-  desktop-imports = [(import ./home-assistant.nix) (import ./default.desktop.nix) (import ./faster-whisper-server.nix)];
+  desktop-imports = [(import ./default.desktop.nix) (import ./faster-whisper-server.nix)];
 in {
   imports =
     [

@@ -19,7 +19,7 @@
           UVICORN_HOST = "0.0.0.0";
           UVICORN_PORT = "8000";
           # Optionally set a default model:
-          FWS_DEFAULT_MODEL = "Systran/faster-distil-whisper-large-v3";
+          # FWS_DEFAULT_MODEL = "Systran/faster-distil-whisper-large-v3";
         };
       };
     };
