@@ -21,7 +21,7 @@ in {
 
   services.ollama = {
     enable = true;
-    acceleration = "cuda";
+    package = pkgs.ollama-cuda;
     openFirewall = true;
     host = "0.0.0.0";
   };
@@ -33,6 +33,8 @@ in {
   };
 
   services.atuin.enable = true;
+  services.second-brain-search.enable = true;
+  networking.firewall.allowedTCPPorts = [ 47772 ];
   networking.hostName = "matts-server"; # Define your hostname.
 
   # Bootloader.
@@ -50,8 +52,8 @@ in {
     cudaPackages.cudatoolkit
     cudaPackages.cudnn
     cudaPackages.cudnn
-    cudaPackages.cutensor
-    gcc12
+    # cudaPackages.libcutensor
+    gcc13
 
     # Server Dev Tools
     tailscale
@@ -202,7 +204,17 @@ in {
   services.tailscale.enable = true;
 
   networking.firewall.interfaces.tailscale0.allowedUDPPortRanges = [
-    { from = 60000; to = 61000; }
+    {
+      from = 60000;
+      to = 61000;
+    }
+  ];
+
+  networking.firewall.interfaces.tailscale0.allowedTCPPortRanges = [
+    {
+      from = 7180;
+      to = 7190;
+    }
   ];
 
   # docker has access to gpu

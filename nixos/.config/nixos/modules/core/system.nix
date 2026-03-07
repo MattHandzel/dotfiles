@@ -21,7 +21,7 @@
   };
   nixpkgs = {
     overlays = [
-      inputs.nur.overlay
+      inputs.nur.overlays.default
       (import ./overlays/command-not-found.nix)
       # (import ./overlays/hyprsession.nix)
     ];

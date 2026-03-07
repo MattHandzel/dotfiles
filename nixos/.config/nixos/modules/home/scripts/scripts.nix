@@ -41,6 +41,7 @@
     ./scripts/notetaker.sh
     ./scripts/track_window_history.sh
     ./scripts/track_workspace_history.sh
+    ./scripts/transcribe_captures.sh
   ];
 
   # Create shell script bins

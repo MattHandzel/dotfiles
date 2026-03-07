@@ -16,9 +16,7 @@
     sha256 = "sha256-R31o6Bui3ooYKUiHqAML2iUuCQme2bwqDIJlqi5/QL4="; # Update this after the first failed build
   };
 
-  freshrssWebroot = "${config.services.freshrss.package}/share/FreshRSS/${
-    if lib.versionOlder pkgs.freshrss.version "1.16.0" then "p" else "pub"
-  }";
+  freshrssWebroot = "${config.services.freshrss.package}/p";
 in {
   # --- FreshRSS core ---
   services.freshrss = {
@@ -56,9 +54,31 @@ in {
   # --- Web server (nginx) with ACME ---
   services.nginx = {
     virtualHosts.${domain} = {
-      enableACME = true;
-      forceSSL = true;
-      # No need to define PHP locations: the FreshRSS module wires php-fpm for you
+      enableACME = false;
+      forceSSL = false;
+    };
+
+    virtualHosts."freshrss-tailscale" = {
+      serverName = "100.118.206.104";
+      serverAliases = ["matts-server.tail01a272.ts.net"];
+      root = freshrssWebroot;
+      locations."= /i" = {
+        return = "301 $scheme://$host/i/";
+      };
+      locations."/" = {
+        index = "index.php index.html index.htm";
+        extraConfig = "try_files $uri $uri/ /index.php;";
+      };
+      locations."~ ^.+?\\.php(/.*)?$" = {
+        extraConfig = ''
+          fastcgi_pass unix:${config.services.phpfpm.pools.freshrss.socket};
+          fastcgi_split_path_info ^(.+\.php)(/.*)$;
+          set $path_info $fastcgi_path_info;
+          fastcgi_param PATH_INFO $path_info;
+          include ${pkgs.nginx}/conf/fastcgi_params;
+          include ${pkgs.nginx}/conf/fastcgi.conf;
+        '';
+      };
     };
   };
 

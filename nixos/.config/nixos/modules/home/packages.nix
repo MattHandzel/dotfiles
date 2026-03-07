@@ -3,10 +3,10 @@
   pkgs,
   ...
 }: let
-  _2048 = pkgs.callPackage ../../pkgs/2048/default.nix {};
+  # _2048 = pkgs.callPackage ../../pkgs/2048/default.nix {};
 in {
   home.packages = with pkgs; [
-    _2048
+    # _2048
 
     audacity
     bitwise # cli tool for bit / hex manipulation
@@ -19,7 +19,7 @@ in {
     fzf # fuzzy finder
     gtt # google translate TUI
     gifsicle # gif utility
-    gimp
+    # gimp
     gtrash # rm replacement, put deleted files in system trash
     hexdump
     jdk17 # java
@@ -146,7 +146,7 @@ in {
 
     sshfs
     fastfetch
-    whatsapp-for-linux
+    wasistlos
 
     inputs.zen-browser.packages."${system}".default # This is for zen-browser
     tigervnc
@@ -179,7 +179,6 @@ in {
     platformio
 
     docker
-    vdhcoapp # for browser extensio
 
     go
     gopls
@@ -188,7 +187,7 @@ in {
     sc-im
 
     logkeys # keylogger
-    inputs.lifelog.packages.x86_64-linux.lifelog-logger
+    # inputs.lifelog.packages.x86_64-linux.lifelog-collector
     # inputs.lifelog.packages.x86_64-linux.lifelog-server
     v4l-utils
     # rustup

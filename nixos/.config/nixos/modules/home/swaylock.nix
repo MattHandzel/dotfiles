@@ -1,51 +1,40 @@
-{ pkgs, lib, config, inputs, ... }: 
-{
+{pkgs, lib, ...}: {
   programs.swaylock = {
     enable = true;
     package = pkgs.swaylock-effects;
     settings = {
-      clock = true;
-      datestr = "";
       screenshots = true;
-      
+      clock = true;
       indicator = true;
       indicator-radius = 100;
       indicator-thickness = 7;
-      
       effect-blur = "7x5";
-      effect-vignette = "0.5:0.5";
-      effect-pixelate = 5;
-      
-      color="1e1e2e";
-      bs-hl-color="f5e0dc";
-      key-hl-color="a6e3a1";
-      caps-lock-bs-hl-color="f5e0dc";
-      caps-lock-key-hl-color="a6e3a1";
-      ring-color="b4befe";
-      ring-clear-color="f5e0dc";
-      ring-caps-lock-color="fab387";
-      ring-ver-color="89b4fa";
-      ring-wrong-color="eba0ac";
-      text-color="cdd6f4";
-      text-clear-color="f5e0dc";
-      text-caps-lock-color="fab387";
-      text-ver-color="89b4fa";
-      text-wrong-color="eba0ac";
-      layout-text-color="cdd6f4";
-
-      inside-color="00000000";
-      inside-clear-color="00000000";
-      inside-caps-lock-color="00000000";
-      inside-ver-color="00000000";
-      inside-wrong-color="00000000";
-      layout-bg-color="00000000";
-      layout-border-color="00000000";
-      line-color="00000000";
-      line-clear-color="00000000";
-      line-caps-lock-color="00000000";
-      line-ver-color="00000000";
-      line-wrong-color="00000000";
-      separator-color="00000000";
+      effect-vignette = "0.5:0.2";
+      ring-color = lib.mkForce "bb9af7";
+      key-hl-color = lib.mkForce "7aa2f7";
+      text-color = lib.mkForce "7aa2f7";
+      line-color = lib.mkForce "00000000";
+      inside-color = lib.mkForce "00000000";
+      separator-color = lib.mkForce "00000000";
+      # Adding mkForce to potential conflicting colors from catppuccin
+      bs-hl-color = lib.mkForce "bb9af7";
+      caps-lock-key-hl-color = lib.mkForce "bb9af7";
+      caps-lock-bs-hl-color = lib.mkForce "bb9af7";
+      inside-clear-color = lib.mkForce "00000000";
+      inside-caps-lock-color = lib.mkForce "00000000";
+      inside-ver-color = lib.mkForce "00000000";
+      inside-wrong-color = lib.mkForce "00000000";
+      layout-bg-color = lib.mkForce "00000000";
+      layout-border-color = lib.mkForce "00000000";
+      layout-text-color = lib.mkForce "7aa2f7";
+      ring-clear-color = lib.mkForce "bb9af7";
+      ring-caps-lock-color = lib.mkForce "bb9af7";
+      ring-ver-color = lib.mkForce "bb9af7";
+      ring-wrong-color = lib.mkForce "bb9af7";
+      text-clear-color = lib.mkForce "7aa2f7";
+      text-caps-lock-color = lib.mkForce "7aa2f7";
+      text-ver-color = lib.mkForce "7aa2f7";
+      text-wrong-color = lib.mkForce "7aa2f7";
     };
   };
 }

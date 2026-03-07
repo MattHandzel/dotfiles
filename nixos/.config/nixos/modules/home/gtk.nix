@@ -1,6 +1,7 @@
 {
   pkgs,
   config,
+  lib,
   ...
 }: {
   fonts.fontconfig.enable = true;
@@ -22,10 +23,10 @@
     };
     iconTheme = {
       name = "Papirus-Dark";
-      package = pkgs.catppuccin-papirus-folders.override {
+      package = lib.mkForce (pkgs.catppuccin-papirus-folders.override {
         flavor = "mocha";
         accent = "lavender";
-      };
+      });
     };
     theme = {
       name = "Dracula";

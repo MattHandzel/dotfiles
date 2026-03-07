@@ -16,13 +16,13 @@
 
   services.logind = {
     lidSwitch = "suspend";
-    extraConfig = ''
-      IdleAction=suspend
-      IdleActionSec=15min
-      HandlePowerKey=hibernate
-      HibernateDelaySec=30m
-      SuspendState=mem
-    '';
+    settings.Login = {
+      IdleAction = "suspend";
+      IdleActionSec = "15min";
+      HandlePowerKey = "hibernate";
+      HibernateDelaySec = "30m";
+      SuspendState = "mem";
+    };
   };
 
   virtualisation.docker.enable = true;

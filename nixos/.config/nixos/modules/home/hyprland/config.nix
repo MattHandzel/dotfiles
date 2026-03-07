@@ -10,7 +10,7 @@
     slack = "K";
     calendar = "C";
     # Yazi is defined later b/c it requires citty
-    whatsapp-for-linux = "W";
+    wasistlos = "W";
     "io.github.alainm23.planify" = "T";
     "notetaker" = "N";
     gimp = "G";
@@ -93,7 +93,7 @@ in {
         "aw-watcher-window > /home/matth/log_for_aw.txt"
         "aw-watcher-afk > /home/matth/log_for_aw1.txt"
         "hyprlock"
-        "lifelog-logger &"
+        # "lifelog-collector &"
       ];
 
       "device" = [

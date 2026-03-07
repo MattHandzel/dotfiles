@@ -23,7 +23,7 @@ in {
     virtualHost = domain;
     settings = {
       APP_ENV = "production";
-      APP_URL = "https://${domain}";
+      APP_URL = "http://${domain}";
       TZ = "America/Chicago";
       DB_CONNECTION = "pgsql";
       DB_HOST = "/run/postgresql";
@@ -38,8 +38,8 @@ in {
   services.nginx = {
     enable = true;
     virtualHosts.${domain} = {
-      enableACME = true; # automatically gets a TLS certificate
-      forceSSL = true; # redirect http → https
+      enableACME = false;
+      forceSSL = false;
     };
   };
 
@@ -102,8 +102,8 @@ in {
 
   # Public HTTPS for importer too
   services.nginx.virtualHosts.${importDomain} = {
-    enableACME = true;
-    forceSSL = true;
+    enableACME = false;
+    forceSSL = false;
   };
 
   # dirs + secrets, owned by nginx (FFDI runs under nginx/php-fpm)

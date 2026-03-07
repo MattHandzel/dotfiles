@@ -14,6 +14,8 @@
     (import ./tmux.nix)
     (import ./zsh.nix)
     (import ./services.nix) # Check if these services are GUI-dependent
+    (import ./scripts/scripts.nix) # personal scripts
+    ./transcribe-captures.nix
     inputs.catppuccin.homeModules.catppuccin
   ];
 

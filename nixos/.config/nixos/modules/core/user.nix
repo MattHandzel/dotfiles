@@ -34,15 +34,4 @@
 
   # Run nixos rebuild without sudo
   security.sudo.wheelNeedsPassword = false; # This allows users in the 'wheel' group to run any command with sudo without a password.
-  security.sudo.extraRules = [
-    {
-      users = ["${username}"];
-      commands = [
-        {
-          command = "/run/current-system/sw/bin/nixos-rebuild";
-          options = ["NOPASSWD"];
-        }
-      ];
-    }
-  ];
 }

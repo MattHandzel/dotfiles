@@ -20,6 +20,7 @@
     ++ [(import ./nvim.nix)] # neovim editor
     ++ [(import ./packages.nix)] # other packages
     ++ [(import ./scripts/scripts.nix)] # personal scripts
+    ++ [ ./transcribe-captures.nix ]
     # ++ [(import ./spicetify.nix)] # spotify client
     ++ [(import ./starship.nix)] # shell prompt
     ++ [(import ./swaylock.nix)] # lock screen
@@ -30,7 +31,7 @@
     ++ [(import ./tmux.nix)] # terminal multiplexer
     ++ [(import ./services.nix)]
     ++ [(import ./todoist.nix)]
-    ++ [inputs.catppuccin.homeManagerModules.catppuccin]
+    ++ [inputs.catppuccin.homeModules.catppuccin]
     # ++ [(import ./notion.nix)]
     # ++ [(import ./ntfy.nix)]
     ;

@@ -82,7 +82,6 @@ in {
       # set -g @thumbs-upcase-command 'tmux set-buffer -- {} && tmux paste-buffer | wl-copy'
 
       # Plugins
-      run '~/.tmux/plugins/tpm/tpm'
     '';
 
     plugins = with tmuxPlugins; [

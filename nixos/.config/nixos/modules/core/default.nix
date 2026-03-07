@@ -29,6 +29,7 @@ in {
       (import ./freshrss.nix)
       (import ./mcp-server.nix)
       (import ./nginx.nix)
+      (import ./second-brain-search.nix)
     ]
     ++ (
       if host == "desktop"

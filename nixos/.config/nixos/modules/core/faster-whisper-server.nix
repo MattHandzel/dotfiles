@@ -9,8 +9,8 @@
         # Persist models/cache to avoid re-downloads
         volumes = [
           "/var/lib/fws/cache:/root/.cache/huggingface"
+          # Expose NVIDIA GPUs via CDI (Docker 25+ recommended)
         ];
-        # Expose NVIDIA GPUs via CDI (Docker 25+ recommended)
         extraOptions = [
           "--device=nvidia.com/gpu=all"
         ];

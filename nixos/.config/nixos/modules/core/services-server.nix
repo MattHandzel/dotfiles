@@ -16,9 +16,9 @@
 
   services.logind = {
     lidSwitch = "ignore";
-    extraConfig = ''
-      IdleAction=ignore
-      HandlePowerKey=poweroff
-    '';
+    settings.Login = {
+      IdleAction = "ignore";
+      HandlePowerKey = "poweroff";
+    };
   };
 }

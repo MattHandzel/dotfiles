@@ -28,16 +28,16 @@
     yt-dlp-light
     xxd
     inputs.alejandra.defaultPackage.${system}
-    
+
     # C / C++
     gcc
     gnumake
     pkg-config
-    
+
     # Python
     python3
     # conda # Might be heavy, but keeping for dev
-    
+
     # Utilities
     cmatrix
     ffmpeg
@@ -49,28 +49,28 @@
     zip
     wget
     xdg-utils
-    
+
     # Node.js
     nodejs_22
-    
+
     # System info
     fastfetch
     nix-index
-    
+
     # Multiplexer & SSH
     tmux
     openssh
     sshfs
-    
+
     # Dev specific
     go
     gopls
     delve
-    
+
     # Life logging (CLI parts)
-    inputs.lifelog.packages.x86_64-linux.lifelog-logger
+    # inputs.lifelog.packages.x86_64-linux.lifelog-collector
     v4l-utils
-    
+
     trash-cli
     waypipe # Useful for X11/Wayland forwarding if needed
   ];
