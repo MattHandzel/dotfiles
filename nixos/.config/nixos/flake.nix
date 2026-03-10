@@ -59,6 +59,11 @@
       url = "path:/home/matth/Projects/SecondBrainSearch";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    second-brain-speech = {
+      url = "path:/home/matth/Projects/SecondBrainSpeech";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
