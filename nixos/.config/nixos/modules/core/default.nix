@@ -30,7 +30,7 @@ in {
       (import ./mcp-server.nix)
       (import ./nginx.nix)
       (import ./second-brain-search.nix)
-      (import ./second-brain-speech.nix)
+      (import ./text-to-speech-service.nix)
     ]
     ++ (
       if host == "desktop"

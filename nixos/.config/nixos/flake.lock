@@ -192,7 +192,7 @@
     },
     "flake-utils_2": {
       "inputs": {
-        "systems": "systems_3"
+        "systems": "systems_4"
       },
       "locked": {
         "lastModified": 1731533236,
@@ -685,8 +685,8 @@
         "nixpkgs": "nixpkgs_6",
         "nur": "nur",
         "second-brain-search": "second-brain-search",
-        "second-brain-speech": "second-brain-speech",
         "spicetify-nix": "spicetify-nix",
+        "text-to-speech-service": "text-to-speech-service",
         "whisper-overlay": "whisper-overlay",
         "zen-browser": "zen-browser"
       }
@@ -726,30 +726,12 @@
         "type": "path"
       }
     },
-    "second-brain-speech": {
-      "inputs": {
-        "flake-utils": "flake-utils_2",
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1773117577,
-        "narHash": "sha256-jUWL9UK4UwYYFuC1BJIpjjywMgnDFtpywCkWZiZzhh4=",
-        "path": "/home/matth/Projects/SecondBrainSpeech",
-        "type": "path"
-      },
-      "original": {
-        "path": "/home/matth/Projects/SecondBrainSpeech",
-        "type": "path"
-      }
-    },
     "spicetify-nix": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
         ],
-        "systems": "systems_4"
+        "systems": "systems_3"
       },
       "locked": {
         "lastModified": 1772494187,
@@ -838,6 +820,24 @@
         "owner": "nix-systems",
         "repo": "default",
         "type": "github"
+      }
+    },
+    "text-to-speech-service": {
+      "inputs": {
+        "flake-utils": "flake-utils_2",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1773121027,
+        "narHash": "sha256-UJDctkfBJ4wJPdQ4ReZkNiTDL8PbgmB3PFSBfj8ztCU=",
+        "path": "/home/matth/Projects/SecondBrainSpeech",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/matth/Projects/SecondBrainSpeech",
+        "type": "path"
       }
     },
     "whisper-overlay": {

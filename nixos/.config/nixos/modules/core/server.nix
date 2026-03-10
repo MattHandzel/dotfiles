@@ -17,7 +17,7 @@
     (import ./services-server.nix)
     (import ./virtualization-server.nix)
     (import ./second-brain-search.nix)
-    (import ./second-brain-speech.nix)
+    (import ./text-to-speech-service.nix)
     # Canary is intentionally not imported here; Faster Whisper is the default STT service.
     (import ./nginx.nix)
     (import ./firefly-iii.nix)

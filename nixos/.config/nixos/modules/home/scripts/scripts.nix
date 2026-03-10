@@ -42,7 +42,7 @@
     ./scripts/track_window_history.sh
     ./scripts/track_workspace_history.sh
     ./scripts/transcribe_captures.sh
-    ./scripts/SpeechToTextService.sh
+    ./scripts/TextToSpeechService.sh
   ];
 
   # Create shell script bins

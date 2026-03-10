@@ -2,9 +2,9 @@
 
 set -euo pipefail
 
-SERVICE_URL="${SPEECH_TO_TEXT_SERVICE_URL:-http://100.118.206.104:47773}"
-VOICE="${SPEECH_TO_TEXT_SERVICE_VOICE:-narrator}"
-SPEED="${SPEECH_TO_TEXT_SERVICE_SPEED:-1.0}"
+SERVICE_URL="${TEXT_TO_SPEECH_SERVICE_URL:-http://100.118.206.104:47773}"
+VOICE="${TEXT_TO_SPEECH_SERVICE_VOICE:-en_US-amy-medium}"
+SPEED="${TEXT_TO_SPEECH_SERVICE_SPEED:-1.0}"
 FORMAT="mp3"
 INPUT_FORMAT="text"
 OUTPUT_PATH=""
@@ -14,8 +14,8 @@ STREAM_AUDIO=0
 usage() {
   cat <<'EOF'
 Usage:
-  SpeechToTextService [options] "text to speak"
-  echo "text to speak" | SpeechToTextService [options]
+  TextToSpeechService [options] "text to speak"
+  echo "text to speak" | TextToSpeechService [options]
 
 Options:
   --voice VOICE           Voice id to request
@@ -100,7 +100,7 @@ if [[ "$STREAM_AUDIO" -eq 1 && "$FORMAT" != "mp3" ]]; then
 fi
 
 if [[ -z "$OUTPUT_PATH" ]]; then
-  OUTPUT_PATH="/tmp/speech-to-text-service-$(date +%Y%m%d-%H%M%S).$FORMAT"
+  OUTPUT_PATH="/tmp/text-to-speech-service-$(date +%Y%m%d-%H%M%S).$FORMAT"
 fi
 
 PAYLOAD="$(jq -n \

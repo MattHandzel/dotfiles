@@ -17,8 +17,8 @@
 
   services.atuin.enable = true;
   services.second-brain-search.enable = true;
-  services.second-brain-speech.enable = true;
-  services.second-brain-speech.defaultVoice = "en_US-amy-medium";
+  services.text-to-speech-service.enable = true;
+  services.text-to-speech-service.defaultVoice = "en_US-amy-medium";
   networking.firewall.allowedTCPPorts = [ 47772 ];
   networking.hostName = "matts-server";
 

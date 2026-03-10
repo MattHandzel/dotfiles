@@ -60,7 +60,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    second-brain-speech = {
+    text-to-speech-service = {
       url = "path:/home/matth/Projects/SecondBrainSpeech";
       inputs.nixpkgs.follows = "nixpkgs";
     };
