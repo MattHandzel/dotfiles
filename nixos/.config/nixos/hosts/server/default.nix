@@ -17,8 +17,9 @@
 
   services.atuin.enable = true;
   services.second-brain-search.enable = true;
+  services.obsidian-mcp.enable = true;
   services.text-to-speech-service.enable = true;
-  services.text-to-speech-service.defaultVoice = "en_US-amy-medium";
+  services.text-to-speech-service.defaultVoice = "en_US-lessac-high";
   networking.firewall.allowedTCPPorts = [ 47772 ];
   networking.hostName = "matts-server";
 
@@ -117,6 +118,13 @@
 
   home-manager.backupFileExtension = "backup_$(date +%Y-%m-%d_%H-%M-%S)";
 
+  services.ntfy-sh = {
+    enable = true;
+    settings = {
+      base-url = "http://server.matthandzel.com:8124";
+      listen-http = ":8124";
+    };
+  };
   services.openssh.enable = true;
   services.tailscale.enable = true;
 
@@ -126,7 +134,7 @@
       to = 61000;
     }
   ];
-  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 80 443 ];
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 80 443 8124 ];
   networking.firewall.interfaces.tailscale0.allowedTCPPortRanges = [
     {
       from = 7180;

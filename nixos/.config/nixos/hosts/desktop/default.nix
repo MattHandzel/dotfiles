@@ -35,7 +35,7 @@ in {
   services.atuin.enable = true;
   services.second-brain-search.enable = true;
   networking.firewall.allowedTCPPorts = [ 47772 ];
-  networking.hostName = "matts-server"; # Define your hostname.
+  networking.hostName = "matts-desktop"; # Define your hostname.
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;

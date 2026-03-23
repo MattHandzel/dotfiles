@@ -16,9 +16,19 @@
 
   services.logind = {
     lidSwitch = "ignore";
+    lidSwitchExternalPower = "ignore";
+    lidSwitchDocked = "ignore";
     settings.Login = {
       IdleAction = "ignore";
+      IdleActionSec = 0;
       HandlePowerKey = "poweroff";
+      RuntimeDirectorySize = "10G";
     };
   };
+
+  # Disable sleep/suspend targets entirely
+  systemd.targets.sleep.enable = false;
+  systemd.targets.suspend.enable = false;
+  systemd.targets.hibernate.enable = false;
+  systemd.targets.hybrid-sleep.enable = false;
 }

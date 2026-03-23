@@ -1,4 +1,6 @@
-{pkgs, ...}: {
+{pkgs, ...}: let
+  patchDir = "/home/matth/dotfiles/nixos/.config/nixos/modules/core/faster-whisper-server-patches";
+in {
   virtualisation = {
     oci-containers = {
       containers.faster-whisper-server = {
@@ -9,6 +11,8 @@
         # Persist models/cache to avoid re-downloads
         volumes = [
           "/var/lib/fws/cache:/root/.cache/huggingface"
+          "${patchDir}/stt.py:/root/faster-whisper-server/faster_whisper_server/routers/stt.py:ro"
+          "${patchDir}/asr.py:/root/faster-whisper-server/faster_whisper_server/asr.py:ro"
           # Expose NVIDIA GPUs via CDI (Docker 25+ recommended)
         ];
         extraOptions = [
@@ -18,8 +22,8 @@
         environment = {
           UVICORN_HOST = "0.0.0.0";
           UVICORN_PORT = "8000";
-          # Optionally set a default model:
-          # FWS_DEFAULT_MODEL = "Systran/faster-distil-whisper-large-v3";
+          DEFAULT_LANGUAGE = "en";
+          WHISPER__MODEL = "Systran/faster-distil-whisper-large-v3";
         };
       };
     };

@@ -3,10 +3,14 @@
 {
   systemd.user.paths."transcribe-captures" = {
     Unit = {
-      Description = "Monitor audio recordings folder for new files";
+      Description = "Monitor audio recordings for new files";
     };
     Path = {
-      DirectoryNotEmpty = "/home/matth/notes/capture/raw_capture/audio_recordings";
+      PathChanged = [
+        "/home/matth/notes/capture/raw_capture/audio_recordings"
+        "/home/matth/Obsidian/Main/capture/raw_capture/media"
+        "/home/matth/Obsidian/Main/archive/capture/raw_capture"
+      ];
       Unit = "transcribe-captures.service";
     };
     Install = {
@@ -25,6 +29,7 @@
     };
     Service = {
       Type = "oneshot";
+      Environment = "PATH=${with pkgs; lib.makeBinPath [ bash coreutils unzip nix git ]}";
       ExecStartPre = "${pkgs.coreutils}/bin/sleep 2";
       ExecStart = "/home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/transcribe_captures.sh";
       # Ensure it doesn't run multiple instances simultaneously

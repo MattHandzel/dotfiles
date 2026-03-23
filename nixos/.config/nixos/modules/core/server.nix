@@ -22,6 +22,10 @@
     (import ./nginx.nix)
     (import ./firefly-iii.nix)
     (import ./freshrss.nix)
+    (import ./silverbullet.nix)
+    (import ./obsidian-mcp.nix)
+    (import ./ntfy-scheduler.nix)
+    (import ./ntfy-capture-listener.nix)
   ];
 
   virtualisation.docker.enable = true;

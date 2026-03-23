@@ -58,6 +58,13 @@
     ];
   };
 
+  # Create /bin/bash for FHS compatibility — third-party tools (e.g. Claude
+  # Code plugins) hardcode #!/bin/bash shebangs and break without it.
+  system.activationScripts.bash-compat = {
+    text = ''ln -sf "${pkgs.bash}/bin/bash" /bin/bash'';
+    deps = [ "etc" ];
+  };
+
   nixpkgs.config.allowUnfree = true;
   system.stateVersion = "25.05";
 }

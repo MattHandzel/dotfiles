@@ -9,14 +9,10 @@
   hardware.nvidia-container-toolkit.enable = true;
 
   virtualisation = {
-    oci-containers.backend = "podman";
+    oci-containers.backend = "docker";
     docker = {
       enable = true;
-      # nvidia-container-toolkit is enabled in hosts/server/default.nix
-    };
-    podman = {
-      enable = true;
-      defaultNetwork.settings.dns_enabled = true;
+      autoPrune.enable = true;
     };
   };
 }
