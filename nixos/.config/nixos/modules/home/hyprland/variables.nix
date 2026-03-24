@@ -36,6 +36,6 @@ in {
     GTK_THEME = "catppuccin";
     NIXOS_ROOT_DIR = "${self}";
     SERVER_IP_ADDRESS = sharedVariables.serverIpAddress;
-    BROWSER = "zen";
+    BROWSER = "zen-beta";
   };
 }

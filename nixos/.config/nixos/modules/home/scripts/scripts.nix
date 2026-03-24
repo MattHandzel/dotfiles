@@ -30,7 +30,6 @@
     ./scripts/run-command-based-on-type-of-workspace.sh
     ./scripts/kill-window-and-switch.sh
     ./scripts/take-note.sh
-    ./scripts/server-status.sh
     ./scripts/calendar.sh
     ./scripts/quick-capture.sh
     ./scripts/copy-to-clipboard.sh
@@ -42,15 +41,9 @@
     ./scripts/notetaker.sh
     ./scripts/track_window_history.sh
     ./scripts/track_workspace_history.sh
-    ./scripts/reclaim.sh
-    ./scripts/calendar.google.com.sh
-    ./scripts/gemini.google.com.sh
-    ./scripts/vit-todo.sh
-    ./scripts/open-website-as-standalone-app.sh
-    ./scripts/toggle-stt.sh
+    ./scripts/transcribe_captures.sh
+    ./scripts/TextToSpeechService.sh
     ./scripts/prompt-picker.sh
-    ./scripts/yazi-gui.sh
-    ./scripts/btop-gui.sh
   ];
 
   # Create shell script bins
@@ -74,16 +67,9 @@ in {
       grim
       wf-recorder
       alsa-utils # for arecord
-      ffmpeg-full
-
-      chromium # for reclaim application script
-
-      websocat # for websockets, whisper
-      python311Packages.webrtcvad
-      python311Packages.setuptools
+      ffmpeg
     ]
     ++ [
       (import ./scripts/ocr-screenshot/default.nix {inherit pkgs;})
-      (import ./scripts/stt_record_pkg.nix {inherit pkgs;})
     ];
 }

@@ -15,11 +15,6 @@
     alejandra.url = "github:kamadorueda/alejandra/3.0.0";
 
     nix-gaming.url = "github:fufexan/nix-gaming";
-    # kms-capture = {
-    #   url = "github:MattHandzel/KnowledgeManagementSystem";
-    #   flake = true;
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
     # notion-repackaged = {
     #   url = "github:MattHandzel/nix-notion-repackaged/master";
     #
@@ -64,6 +59,21 @@
       flake = true;
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    claude-desktop = {
+      url = "github:aaddrick/claude-desktop-debian";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    second-brain-search = {
+      url = "path:/home/matth/Projects/SecondBrainSearch";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    text-to-speech-service = {
+      url = "path:/home/matth/Projects/SecondBrainSpeech";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -94,6 +104,14 @@
         modules = [(import ./hosts/desktop)];
         specialArgs = {
           host = "desktop";
+          inherit self inputs username sharedVariables;
+        };
+      };
+      server = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [(import ./hosts/server)];
+        specialArgs = {
+          host = "server";
           inherit self inputs username sharedVariables;
         };
       };

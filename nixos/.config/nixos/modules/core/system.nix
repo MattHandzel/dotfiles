@@ -30,6 +30,18 @@ in {
     ];
   };
 
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+    memoryPercent = 40; # Use up to 40% of RAM for zRAM
+    priority = 100;
+  };
+  boot.kernel.sysctl = {
+    # Lower swappiness to reduce proactive swapping of app working sets.
+    # We still keep zram available for memory spikes.
+    "vm.swappiness" = 5;
+  };
+
   environment.systemPackages = with pkgs; [
     wget
     git
@@ -62,6 +74,13 @@ in {
       */
       anthy
     ];
+  };
+
+  # Create /bin/bash for FHS compatibility — third-party tools (e.g. Claude
+  # Code plugins) hardcode #!/bin/bash shebangs and break without it.
+  system.activationScripts.bash-compat = {
+    text = ''ln -sf "${pkgs.bash}/bin/bash" /bin/bash'';
+    deps = [ "etc" ];
   };
 
   nixpkgs.config.allowUnfree = true;

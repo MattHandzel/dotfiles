@@ -1,5 +1,5 @@
 {pkgs}: let
-  pythonEnv = pkgs.python3.withPackages (ps: [ps.webrtcvad ps.setuptools]);
+  pythonEnv = pkgs.python3.withPackages (ps: [ps.requests ps.setuptools ps.webrtcvad]);
 in
   pkgs.stdenv.mkDerivation {
     name = "stt-record";

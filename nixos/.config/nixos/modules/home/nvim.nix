@@ -9,7 +9,8 @@
 
     vimAlias = true;
     withPython3 = true;
-    extraPython3Packages = ps: with ps; [pynvim black unidecode isort pylatexenc];
+    extraPython3Packages = ps: with ps; [pynvim black unidecode isort pylatexenc ipykernel ipython];
+
     extraLuaPackages = ps: [ps.magick ps.neorg];
 
     # python3.withPackages = (ps: with ps; [neovim pynvim]);
@@ -61,6 +62,7 @@
       pkgs.python3Packages.debugpy # debug adapter for python
 
       pkgs.sc-im
+      jupyter
     ];
     extraConfig = ''
       luafile ${config.home.homeDirectory}/dotfiles/nvim/.config/nvim/nvim.lua

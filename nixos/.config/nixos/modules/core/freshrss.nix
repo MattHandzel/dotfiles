@@ -1,0 +1,126 @@
+# freshrss.nix
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
+  domain = "rss.matthandzel.com"; # <-- set your domain
+  stateDir = "/var/lib/freshrss"; # data dir (owned/managed by the module)
+  secretFile = "/run/secrets/freshrss-admin"; # create via systemd-tmpfiles or sops-nix
+
+  articleSummaryExtension = pkgs.fetchFromGitHub {
+    owner = "LiangWei88";
+    repo = "xExtension-ArticleSummary";
+    rev = "a112344249ff0249b3ef5c90eaa186571c980e3d";
+    sha256 = "sha256-R31o6Bui3ooYKUiHqAML2iUuCQme2bwqDIJlqi5/QL4="; # Update this after the first failed build
+  };
+
+  freshrssWebroot = "${config.services.freshrss.package}/p";
+in {
+  # --- FreshRSS core ---
+  services.freshrss = {
+    enable = true;
+
+    # Use nixpkgs' packaged FreshRSS
+    # package = pkgs.freshrss;  # (optional override)
+
+    # Web integration
+    webserver = "nginx"; # "nginx" | "caddy"
+    virtualHost = domain; # vhost name for your chosen webserver
+    baseUrl = "https://${domain}";
+    language = "en";
+
+    # First admin user
+    defaultUser = "admin";
+    passwordFile = secretFile;
+
+    # Data & DB
+    dataDir = stateDir;
+
+    # Simple & reliable for single-user/small installs
+    database = {
+      type = "sqlite"; # alternatives: "pgsql" or "mysql"
+      # host = "localhost";  # not used for sqlite
+      # name = "freshrss";   # not used for sqlite
+      # user = "freshrss";   # not used for sqlite
+      # passFile = "/run/secrets/freshrss-db";  # not used for sqlite
+    };
+
+    # Optional: initial auth type if you want to disable the setup wizard
+    # authType = "form";   # or "none" if you want to skip auth (not recommended)
+  };
+
+  # --- Web server (nginx) with ACME ---
+  services.nginx = {
+    virtualHosts.${domain} = {
+      enableACME = false;
+      forceSSL = false;
+    };
+
+    virtualHosts."freshrss-tailscale" = {
+      serverName = "100.118.206.104";
+      serverAliases = ["matts-server.tail01a272.ts.net"];
+      root = freshrssWebroot;
+      locations."= /i" = {
+        return = "301 $scheme://$host/i/";
+      };
+      locations."/" = {
+        index = "index.php index.html index.htm";
+        extraConfig = "try_files $uri $uri/ /index.php;";
+      };
+      locations."~ ^.+?\\.php(/.*)?$" = {
+        extraConfig = ''
+          fastcgi_pass unix:${config.services.phpfpm.pools.freshrss.socket};
+          fastcgi_split_path_info ^(.+\.php)(/.*)$;
+          set $path_info $fastcgi_path_info;
+          fastcgi_param PATH_INFO $path_info;
+          include ${pkgs.nginx}/conf/fastcgi_params;
+          include ${pkgs.nginx}/conf/fastcgi.conf;
+        '';
+      };
+    };
+  };
+
+  # --- Secrets: simple tmpfiles stub (replace with sops-nix if you prefer) ---
+  systemd.tmpfiles.rules = [
+    "d /run/secrets 0750 root root -"
+    # Replace 'SuperSecret' with your actual admin password before first switch.
+    "w ${secretFile} 0640 root root - - SuperSecret"
+    "d ${stateDir}/extensions 0755 freshrss freshrss -"
+    "L+ ${stateDir}/extensions/xExtension-ArticleSummary - - - - ${articleSummaryExtension}"
+  ];
+
+  # --- Harden PHP-FPM via module defaults (FreshRSS module already sets up pools) ---
+  # If you need custom php.ini flags, you can extend phpOptions here:
+  services.phpfpm.pools.freshrss.phpOptions = lib.mkForce ''
+    open_basedir = "${config.services.freshrss.dataDir}:${config.services.freshrss.package}/lib/FreshRSS:${config.services.freshrss.package}/share/FreshRSS:${freshrssWebroot}:/nix/store";
+    # upload_max_filesize = 32M
+    # post_max_size = 32M
+  '';
+
+  # --- OPTIONAL: PostgreSQL configuration (uncomment to use pgsql) ---
+  # services.freshrss.database = {
+  #   type = "pgsql";
+  #   host = "localhost";
+  #   name = "freshrss";
+  #   user = "freshrss";
+  #   passFile = "/run/secrets/freshrss-db";
+  # };
+  #
+  # services.postgresql = {
+  #   enable = true;
+  #   ensureDatabases = [ "freshrss" ];
+  #   ensureUsers = [{
+  #     name = "freshrss";
+  #     ensureDBOwnership = true;
+  #     # Or grant privileges explicitly:
+  #     # ensurePermissions = { "DATABASE freshrss" = "ALL PRIVILEGES"; };
+  #   }];
+  # };
+  #
+  # systemd.tmpfiles.rules = [
+  #   "d /run/secrets 0750 root root -"
+  #   "w /run/secrets/freshrss-db 0640 root root - - ChangeMe_DB_Pass"
+  # ];
+}

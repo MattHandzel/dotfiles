@@ -4,43 +4,7 @@
   pkgs,
   ...
 }: let
-  syncall = pkgs.callPackage ../../pkgs/syncall/default.nix {};
-  twGcalSyncDir = "${config.home.homeDirectory}/.local/share/tw-gcal-sync";
-  twGcalSyncScript = pkgs.writeShellScript "tw_gcal_sync_script" ''
-    set -euo pipefail
-    tw_gcal_sync_dir=${lib.escapeShellArg twGcalSyncDir}
-    # if the directory doesn't exist
-    if [ ! -d "$tw_gcal_sync_dir" ]; then
-      echo "tw-gcal-sync directory not found at $tw_gcal_sync_dir"
-      mkdir -p "$tw_gcal_sync_dir"
-    fi
-
-    ${syncall}/bin/tw_gcal_sync -c "Taskwarrior" -f due.any: -f status:pending --only-modified-last-X-days 1 --prefer-scheduled-date --default-event-duration-mins 60 --google-secret /run/secrets/gcal_client_secret
-  '';
   notesDir = "${config.home.homeDirectory}/notes";
-  automationScript = "${config.home.homeDirectory}/Projects/KnowledgeManagementSystem/organize/scripts/systemd/para-automation.sh";
-  lockDir = "${config.home.homeDirectory}/.local/state/para-automation";
-  watcherScript = pkgs.writeShellScript "para-automation-watcher" ''
-    set -euo pipefail
-
-    notes_dir=${lib.escapeShellArg notesDir}
-    lock_dir=${lib.escapeShellArg lockDir}
-
-    mkdir -p "$lock_dir"
-    lock_file="$lock_dir/watcher.lock"
-
-    while true; do
-      ${pkgs.inotify-tools}/bin/inotifywait -r -q \
-        -e close_write -e create -e moved_to -e moved_from -e delete "$notes_dir" || continue
-
-      ${pkgs.util-linux}/bin/flock "$lock_file" -c ${lib.escapeShellArg "${pkgs.bash}/bin/bash ${automationScript}"} || true
-
-      while ${pkgs.inotify-tools}/bin/inotifywait -r -q -t 1 \
-        -e close_write -e create -e moved_to -e moved_from -e delete "$notes_dir"; do
-        :
-      done
-    done
-  '';
   personalWebsiteSyncScript = pkgs.writeShellScript "personal-website-sync" ''
     set -euo pipefail
 
@@ -62,55 +26,33 @@
     echo "Sync completed at $(date)"
   '';
 in {
-  systemd.user.services.tw-gcal-sync = {
+  # tw-gcal-sync disabled — syncall uses taskw-ng which reads TW2 data files
+  # directly and is incompatible with TW3's SQLite storage.
+  # TODO: find TW3-compatible calendar sync solution
+
+  systemd.user.services.second-brain-automation = {
     Unit = {
-      Description = "Sync taskwarrior with Google Calendar";
+      Description = "Run Beeper sync and PARA automation on a timer";
     };
     Service = {
       Type = "oneshot";
-      ExecStart = "${pkgs.bash}/bin/bash ${twGcalSyncScript}";
+      ExecStart = "/home/matth/Obsidian/Main/scripts/second-brain-automation.py";
+      Environment = ["PATH=/run/current-system/sw/bin"];
     };
   };
 
-  systemd.user.timers.tw-gcal-sync = {
+  systemd.user.timers.second-brain-automation = {
     Unit = {
-      Description = "Timer for tw-gcal-sync service";
+      Description = "Timer for second-brain-automation (every 10 minutes)";
     };
     Timer = {
-      OnBootSec = "10m";
-      OnUnitActiveSec = "15m";
+      OnBootSec = "5m";
+      OnUnitActiveSec = "10m";
       Persistent = true;
-      Unit = "tw-gcal-sync.service";
+      Unit = "second-brain-automation.service";
     };
     Install = {
       WantedBy = ["timers.target"];
-    };
-  };
-
-  systemd.user.services.para-automation = {
-    Unit = {
-      Description = "Run PARA automation after notes updates";
-    };
-    Service = {
-      Type = "oneshot";
-      ExecStart = "${pkgs.bash}/bin/bash ${automationScript}";
-    };
-  };
-
-  systemd.user.services."para-automation-watcher" = {
-    Unit = {
-      Description = "Watch the notes directory for updates";
-      After = ["graphical-session.target"];
-      PartOf = ["graphical-session.target"];
-    };
-    Service = {
-      Environment = ["PATH=/run/current-system/sw/bin"];
-      ExecStart = watcherScript;
-      Restart = "always";
-      RestartSec = 3;
-    };
-    Install = {
-      WantedBy = ["default.target"];
     };
   };
 
@@ -136,6 +78,32 @@ in {
       OnUnitActiveSec = "1h";
       Persistent = true;
       Unit = "focus-reflection-reminder.service";
+    };
+    Install = {
+      WantedBy = ["timers.target"];
+    };
+  };
+
+  systemd.user.services.taskwarrior-export = {
+    Unit = {
+      Description = "Export Taskwarrior tasks to ShareComputer for server notifications";
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.bash}/bin/bash ${notesDir}/scripts/taskwarrior-export-due.sh";
+      Environment = ["PATH=${pkgs.coreutils}/bin:${pkgs.taskwarrior3}/bin:/run/current-system/sw/bin"];
+    };
+  };
+
+  systemd.user.timers.taskwarrior-export = {
+    Unit = {
+      Description = "Export Taskwarrior tasks every 30 minutes";
+    };
+    Timer = {
+      OnBootSec = "2m";
+      OnUnitActiveSec = "30m";
+      Persistent = true;
+      Unit = "taskwarrior-export.service";
     };
     Install = {
       WantedBy = ["timers.target"];

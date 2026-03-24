@@ -4,6 +4,7 @@
   lib,
   ...
 }: {
+  home.packages = [pkgs.inter];
   fonts.fontconfig.enable = true;
   # home.packages = [
   #   pkgs.nerd-fonts
@@ -21,12 +22,12 @@
       name = "JetBrainsMono Nerd Font";
       size = 11;
     };
-    iconTheme = lib.mkForce {
+    iconTheme = {
       name = "Papirus-Dark";
-      package = pkgs.catppuccin-papirus-folders.override {
+      package = lib.mkForce (pkgs.catppuccin-papirus-folders.override {
         flavor = "mocha";
         accent = "lavender";
-      };
+      });
     };
     theme = {
       name = "Dracula";

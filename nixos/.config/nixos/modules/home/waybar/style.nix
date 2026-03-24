@@ -44,7 +44,7 @@ in {
         color: #b4befe;
     }
 
-    #tray, #pulseaudio, #network, #cpu, #memory, #disk, #clock, #battery, #custom-notification {
+    #tray, #pulseaudio, #network, #cpu, #memory, #disk, #clock, #battery, #custom-notification, #custom-stt-mic {
         font-size: ${custom.font_size};
         color: ${custom.text_color};
     }
@@ -77,6 +77,36 @@ in {
         padding-left: 9px;
         padding-right: 9px;
     }
+    #custom-stt-mic {
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+    #custom-stt-mic.off {
+        color: rgba(205, 214, 244, 0.4);
+    }
+    #custom-stt-mic.active {
+        color: ${custom.text_color};
+    }
+    #custom-stt-mic.speaking {
+        color: #a6e3a1;
+    }
+    #custom-focus-mode {
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+    #custom-focus-mode.off {
+        color: rgba(205, 214, 244, 0.4);
+    }
+    #custom-focus-mode.on {
+        color: #fab387; /* Peach/Orange */
+        font-size: 18px;
+        /* Subtle pulse effect for active focus mode */
+        animation-name: blink;
+        animation-duration: 2s;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+        animation-direction: alternate;
+    }
     #network {
         padding-left: 9px;
         padding-right: 30px;
@@ -108,6 +138,12 @@ in {
     }
     #custom-lifelog.warning {
        color: #f9e2af; /* Yellow/Orange - for partial failures */
+    }
+
+    @keyframes blink {
+        to {
+            color: #f38ba8; /* Red */
+        }
     }
   '';
 }

@@ -9,6 +9,7 @@ This flake is anchored by `flake.nix`, which pins inputs and exposes host system
 - `nix build .#nixosConfigurations.desktop.config.system.build.toplevel` — create a closure without switching (swap host as needed).
 - `sudo nixos-rebuild test --flake .#laptop` — build and activate temporarily for the chosen host.
 - `sudo nixos-rebuild switch --flake .#desktop` — deploy the configuration on the target machine.
+- Zsh shortcut (`modules/home/zsh.nix`): `rebuild` runs `pushd ~/dotfiles/nixos/.config/nixos && git add --all . && sudo nixos-rebuild switch --flake .#${host} && popd`.
 
 ## Coding Style & Naming Conventions
 Use 2-space indentation and keep attribute names lowercase with hyphenated file names (`hyprland/default.nix`). Format every Nix expression with Alejandra (`nix run github:kamadorueda/alejandra -- .`). Group related options alphabetically and add comments only for non-obvious behavior or upstream overrides.

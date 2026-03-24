@@ -1,9 +1,11 @@
 {
   config,
   pkgs,
+  host,
   ...
 }: let
   inherit (pkgs) tmuxPlugins;
+  tmuxPrefix = if host == "server" then "C-b" else "C-Space";
 in {
   programs.tmux = {
     enable = true;
@@ -14,16 +16,16 @@ in {
     mouse = true;
     terminal = "tmux-256color";
     shell = "/run/current-system/sw/bin/zsh";
-    prefix = "C-Space";
+    prefix = tmuxPrefix;
     extraConfig = ''
         set-option -sa terminal-overrides ",xterm*:Tc"
 
         unbind -T root C-h
-        unbind C-b
+        ${if host != "server" then "unbind C-b" else ""}
         unbind C-l
         unbind C-j
         unbind C-k
-        bind-key C-Space send-prefix
+        bind-key ${tmuxPrefix} send-prefix
 
 
         unbind %

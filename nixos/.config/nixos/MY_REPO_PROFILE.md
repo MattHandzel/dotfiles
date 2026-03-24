@@ -152,7 +152,7 @@ Current flows observed:
    - Risk: plaintext secret outside Nix; runtime provisioning; error-prone on fresh machines; not auditable via flake evaluation.
 
 2. “Server IP” as shared variable (not secret, but a credential-adjacent endpoint)
-   - Source: `shared_variables.nix: serverIpAddress = "97.223.175.122";`
+   - Source: `shared_variables.nix: serverIpAddress = "server.matthandzel.com";`
    - Propagation:
      - Exported as `SERVER_IP_ADDRESS` system env var in `modules/core/system.nix`
      - Also set as HM session variable in `modules/home/hyprland/variables.nix`

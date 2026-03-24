@@ -15,6 +15,8 @@
       imports =
         if (host == "desktop")
         then [./../home/default.desktop.nix]
+        else if (host == "server")
+        then [./../home/server.nix]
         else [./../home];
       home.username = "${username}";
       home.homeDirectory = "/home/${username}";
@@ -45,4 +47,16 @@
 
   # Run nixos rebuild without sudo
   security.sudo.wheelNeedsPassword = false;
+
+  services.tailscale.enable = true;
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [22];
+  services.openssh = {
+    enable = true;
+    ports = [22];
+    settings = {
+      PasswordAuthentication = true;
+      AllowUsers = null;
+      PermitRootLogin = "yes";
+    };
+  };
 }

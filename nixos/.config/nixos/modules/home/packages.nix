@@ -3,10 +3,10 @@
   pkgs,
   ...
 }: let
-  _2048 = pkgs.callPackage ../../pkgs/2048/default.nix {};
+  # _2048 = pkgs.callPackage ../../pkgs/2048/default.nix {};
 in {
   home.packages = with pkgs; [
-    _2048
+    # _2048
 
     audacity
     bitwise # cli tool for bit / hex manipulation
@@ -53,7 +53,7 @@ in {
     bleachbit # cache cleaner
     cmatrix
     gparted # partition manager
-    ffmpeg-full
+    ffmpeg
     imv # image viewer
     killall
     libnotify
@@ -149,13 +149,13 @@ in {
 
     sshfs
     fastfetch
-    # whatsapp-for-linux
+    wasistlos
 
     inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default # This is for zen-browser
     tigervnc
     espanso-wayland
 
-    # planify
+    planify
     speedcrunch
     ntfy-sh
 
@@ -179,7 +179,8 @@ in {
     # inputs.notion-repackaged.packages.x86_64-linux.notion-repackaged
     kdePackages.kdenlive
     qbittorrent-enhanced
-    # platformio
+    platformio
+    prusa-slicer
 
     docker
 
@@ -203,8 +204,6 @@ in {
     xdg-desktop-portal
     kdePackages.xdg-desktop-portal-kde #    xdg-desktop-portal-kde
 
-    # surrealdb
-
     trash-cli
     mermaid-cli # for mermaid diagrams
     # busybox # common utils
@@ -220,7 +219,7 @@ in {
     electron
     portaudio
     wtype # type virtual things on the computer
-    taskwarrior2
+    taskwarrior3
     vit
 
     python313Packages.debugpy
@@ -239,5 +238,6 @@ in {
     beeper
     gping
     code-cursor
+    claude-code
   ];
 }

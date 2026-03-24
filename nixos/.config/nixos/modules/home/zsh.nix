@@ -82,7 +82,13 @@ in {
       plugins = ["git" "fzf" "colored-man-pages"];
     };
 
-    initContent = lib.mkBefore ''
+    initContent = lib.mkMerge [
+      (lib.mkAfter ''
+      # Vi mode for command-line editing (must load after oh-my-zsh)
+      bindkey -v
+      export KEYTIMEOUT=1
+    '')
+      (lib.mkBefore ''
       DISABLE_MAGIC_FUNCTIONS=true
       export "MICRO_TRUECOLOR=1"
       # Set window title to the current directory
@@ -95,6 +101,25 @@ in {
       }
       function notec() {
         take-note -c "$*"
+      }
+      function ntfy() {
+        local title="" priority="default" message=""
+        while [[ $# -gt 0 ]]; do
+          case "$1" in
+            -t|--title) title="$2"; shift 2 ;;
+            -p|--priority) priority="$2"; shift 2 ;;
+            *) message="$*"; shift $# ;;
+          esac
+        done
+        if [[ -z "$message" ]]; then
+          echo "Usage: ntfy <message>"
+          echo "       ntfy -t <title> <message>"
+          echo "       ntfy -t <title> -p <priority> <message>"
+          return 1
+        fi
+        local cmd=(curl -s -H "Priority: $priority" -d "$message" "http://${sharedVariables.serverIpAddress}:8124/claude")
+        [[ -n "$title" ]] && cmd+=(-H "Title: $title")
+        "''${cmd[@]}" >/dev/null && echo "Sent: $message" || echo "ERROR: failed to send" >&2
       }
       # eval $(pay-respects --alias) # gets fuck command running
 
@@ -123,7 +148,8 @@ in {
 
       export PATH="$HOME/.npm-packages/bin:$PATH"
       video-to-trasncript() { ffmpeg -i $1 -vn $(echo $1 | sed 's/\.mp4$/\.mp3/') } # useful function to convert video to audio
-    '';
+    '')
+    ];
 
     shellAliases = {
       record = "wf-recorder --audio=alsa_output.pci-0000_08_00.6.analog-stereo.monitor -f $HOME/Videos/$(date +'%Y%m%d%H%M%S_1.mp4')";
@@ -143,7 +169,6 @@ in {
       ls = "eza";
       lst = "eza --tree --level=";
 
-      grep = "grep --color=auto";
       ps = "procs";
       glo = "tig";
       df = "duf";
@@ -166,6 +191,7 @@ in {
       # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
       rebuild = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && sudo nixos-rebuild switch --flake .#${host} && popd";
       rebuildu = "pushd ~/dotfiles/nixos/.config/nixos && cp flake.lock flake.$(date +%Y-%m-%d).lock && git add --all . && sudo nix flake update --flake ./flake.nix ; sudo nixos-rebuild switch --upgrade --flake .#${host} && popd";
+      link-agent-md = "ln -sfn AGENTS.md GEMINI.md && ln -sfn AGENTS.md CLAUDE.md";
       # testing = "echo \"sudo nixos-rebuild switch --flake .#${host}\"";
       # rebuild = "git add . && sudo nixos-rebuild switch --flake .#${host}";
       # rebuildu = "git add . && sudo nixos-rebuild switch --upgrade --flake .#${host}";
@@ -199,10 +225,12 @@ in {
       serverfs = "sshfs matth@ssh.matthandzel.com:/home/matth/";
       # make transcribe available as a command
       transcribe = "${transcribe_file_script}";
+      claude = "claude --dangerously-skip-permissions";
 
       # python
       piv = "python -m venv .venv";
       psv = "source .venv/bin/activate";
+      transcribe-meeting = "nix run /home/matth/Projects/KnowledgeOperatingSystem/MeetingTranscribe/ -- --diarize --noise-filter";
     };
   };
 

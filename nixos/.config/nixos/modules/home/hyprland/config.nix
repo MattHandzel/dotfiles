@@ -16,64 +16,62 @@
     obsidian = "O";
     thunderbird = "M";
     slack = "K";
-    "calendar.google.com" = "C";
+    calendar = "C";
     yazi = "F";
-    reclaim = "R";
     btop = "B";
     nautilus = "E";
     PrusaSlicer = "P";
     cura = "U";
     "gemini.google.com" = "Y";
-    whatsapp-for-linux = "W";
-    "vit-todo" = "T";
+    wasistlos = "W";
+    "io.github.alainm23.planify" = "T";
     "notetaker" = "N";
     gimp = "G";
     beeper = "H";
   };
 in let
   makeStringToIncaseSensitiveRegex = str: let
-    # Helper function to transform a single character into a character class for both cases
-    charToClass = char: "[${(lib.strings.toUpper char)}${(lib.strings.toLower char)}]";
-  in
-    # Transform the string into a regex pattern
-    builtins.concatStringsSep "" (map charToClass (lib.strings.stringToCharacters str));
+    escapedStr = lib.replaceStrings ["."] ["\\."] str;
+  in "(?i).*${escapedStr}.*";
 
   singleton_windows = sharedVariables.singletonApplications;
   floating_windows = ["imv" ".blueman-manager-wrapped" "Volume Control" "org.speedcrunch."];
 
   # Mapping of application names to specific workspace numbers or names
   workspaceMapping = {
-    "calendar.google.com" = "🗓️";
+    calendar = "calendar";
+    "gemini.google.com" = "gemini";
   };
 
   generateFloatingRules = floating_window: [
-    "float, title:^(${floating_window})$"
-    "center, title:^(${floating_window})$"
-    "size 1200 725, title:^(${floating_window})$"
-    "float, class:^(${floating_window})$"
-    "center, class:^(${floating_window})$"
-    "size 1200 725, class:^(${floating_window})$"
+    "float 1, match:title ^(${floating_window})$"
+    "center 1, match:title ^(${floating_window})$"
+    "size 1200 725, match:title ^(${floating_window})$"
+    "float 1, match:class ^(${floating_window})$"
+    "center 1, match:class ^(${floating_window})$"
+    "size 1200 725, match:class ^(${floating_window})$"
   ];
   generateSignletonWindowRules = singleton: let
     not_case_sensitive = makeStringToIncaseSensitiveRegex singleton;
     targetWorkspace =
       if builtins.hasAttr singleton workspaceMapping
-      then "name:${workspaceMapping.${singleton}}"
-      else "name:${singleton}";
+      then "${workspaceMapping.${singleton}}"
+      else "${singleton}";
   in [
-    "workspace ${targetWorkspace}, class:(.*${not_case_sensitive}.*)"
-    "workspace ${targetWorkspace}, title:(.*${not_case_sensitive}.*)"
+    "workspace ${targetWorkspace}, match:class ^(${not_case_sensitive})$"
+    "workspace ${targetWorkspace}, match:title ^(${not_case_sensitive})$"
   ];
 
   generateSingletonKeyboardShortcuts = singleton: let
     targetWorkspace =
       if builtins.hasAttr singleton workspaceMapping
-      then "name:${workspaceMapping.${singleton}}"
-      else "name:${singleton}";
+      then "${workspaceMapping.${singleton}}"
+      else "${singleton}";
   in
     if builtins.hasAttr singleton appKeyboardShortcuts
     then [
-      "${mainMod} ALT, ${appKeyboardShortcuts.${singleton}}, exec, focus_app ${singleton} \"${targetWorkspace}\""
+      # Prepend 'name:' to ensure hyprctl treats it as a named workspace
+      "${mainMod} ALT, ${appKeyboardShortcuts.${singleton}}, exec, focus_app ${singleton} \"name:${targetWorkspace}\""
     ]
     else [];
 
@@ -121,8 +119,8 @@ in {
         "waybar &"
         "swaync &"
         "wl-paste --watch cliphist store -max-items 25000000 &"
-        "gammastep -l  50:-95.2062 -t 5400:2500 -b 1:.7 &"
-        # "GDK_BACKEND=x11 io.github.alainm23.planify &"
+        "gammastep -l  50:-145.2062 -t 5400:3500 -b 1:1 &"
+        "io.github.alainm23.planify &"
         # "sudo logkeys --start --device event0 --output $HOME/notes/life-logging/key-logging/keyboard.log &"
 
         "aw-server & "
@@ -334,7 +332,7 @@ in {
           "${mainMod}, C ,exec, hyprpicker -a"
           "${mainMod}, W,exec, wallpaper-picker"
           "${mainMod} SHIFT, W, exec, vm-start"
-          "${mainMod}, B, exec, zen"
+          "${mainMod}, B, exec, zen-beta"
           "${mainMod}, Y, exec, swaync-client --close-latest"
 
           "${mainMod} SHIFT, R, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\" && rebuild && notify-if-command-is-successful rebuild"
@@ -447,6 +445,8 @@ in {
           ", KP_End, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --copy"
           ", KP_2, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --type"
           ", KP_Down, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --type"
+          ", KP_3, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --live"
+          ", KP_Next, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --live"
           ", KP_4, exec, wl-paste | /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/prompt-llm.py | wl-copy ; notify-send -u normal -i dialog-information 'Copied to clipboard' ''"
           ", KP_Left, exec, wl-paste | /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/prompt-llm.py | wl-copy ; notify-send -u normal -i dialog-information 'Copied to clipboard' ''"
           ", KP_Begin, exec, prompt-picker"
@@ -470,11 +470,12 @@ in {
           "CONTROL ALT, V, exec, wtype -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
           "SHIFT CONTROL ALT, V, exec, wtype -m shift -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M shift -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
 
-          "SUPER SHIFT, ${copilotKey}, exec, focus_app gemini.google.com"
+          "SUPER SHIFT, ${copilotKey}, exec, focus_app claude.ai"
           # "SUPER SHIFT, ${copilotKey}, exec, focus_app gemini.google.com"
 
           # clipboard manager
           "${mainMod}, V, exec, cliphist list -max-iterms 1000 -preview-width 1000 | fuzzel --dmenu | cliphist decode | wl-copy"
+          "${mainMod} ALT, V, exec, smart-clipboard-picker.sh"
 
           "${mainMod} SHIFT, F23, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\""
         ];
@@ -485,75 +486,66 @@ in {
         "${mainMod}, mouse:273, resizewindow"
       ];
 
-      # windowrule - keeping minimal legacy rules
-      windowrule = [];
-
-      # windowrulev2
-      windowrulev2 =
+      # windowrule
+      windowrule =
         generated_singleton_windowrule
         ++ generated_floating_windowrule
         ++ [
-          "workspace name:gemini, class:.*(gemini).*"
-          "workspace name:gemini, title:.*(gemini).*"
-          # Legacy windowrule entries moved to windowrulev2
-          "tile, class:^(Aseprite)$"
-          "float, title:^(float_kitty)$"
-          "center, title:^(float_kitty)$"
-          "size 950 600, title:^(float_kitty)$"
+          # Legacy windowrule entries moved to windowrule
+          "tile 1, match:class ^(Aseprite)$"
+          "float 1, match:title ^(float_kitty)$"
+          "center 1, match:title ^(float_kitty)$"
+          "size 950 600, match:title ^(float_kitty)$"
 
-          "float, class:^(audacious)$"
-          "tile, class:^(neovide)$"
-          "idleinhibit focus, class:^(mpv)$"
-          "float, class:^(udiskie)$"
-          "float, title:^(Transmission)$"
-          "float, title:^(Volume Control)$"
-          "float, title:^(Firefox — Sharing Indicator)$"
-          "move 0 0, title:^(Firefox — Sharing Indicator)$"
-          "size 700 450, title:^(Volume Control)$"
-          "workspace name:🗓️, title:(calendar)"
-          "workspace name:🗓️, class:.*(chrome-calendar.google.com).*"
-          "workspace name:notetaker, title:(notetaker)"
-          "move 40 55%, title:^(Volume Control)$"
-
-          "float, title:^(knowledge-management-system-capture)$"
-          "size 875 875, title:^(knowledge-management-system-capture)$"
+          "float 1, match:class ^(audacious)$"
+          "tile 1, match:class ^(neovide)$"
+          # "idleinhibit focus, match:class ^(mpv)$"
+          "float 1, match:class ^(udiskie)$"
+          "float 1, match:title ^(Transmission)$"
+          "float 1, match:title ^(Volume Control)$"
+          "float 1, match:title ^(Firefox — Sharing Indicator)$"
+          "move 0 0, match:title ^(Firefox — Sharing Indicator)$"
+          "size 700 450, match:title ^(Volume Control)$"
+          "workspace name:calendar, match:title (calendar)"
+          "workspace name:notetaker, match:title (notetaker)"
+          "move 40 55%, match:title ^(Volume Control)$"
 
           # Thunderbird: Example of making it larger (50% larger than a standard window size)
-          "size 1800 1000, class:^(thunderbird)$"
+          "size 1800 1000, match:class ^(thunderbird)$"
         ]
         ++ [
-          "float, title:^(Picture-in-Picture)$"
-          "opacity 1.0 override 1.0 override, title:^(Picture-in-Picture)$"
-          "pin, title:^(Picture-in-Picture)$"
-          "opacity 1.0 override 1.0 override, title:^(.*imv.*)$"
-          "opacity 1.0 override 1.0 override, title:^(.*mpv.*)$"
-          "opacity 1.0 override 1.0 override, class:(Aseprite)"
-          "opacity 1.0 override 1.0 override, class:(Unity)"
-          "idleinhibit focus, class:^(mpv)$"
-          "idleinhibit fullscreen, class:^(firefox)$"
-          "float,class:^(zenity)$"
-          "center,class:^(zenity)$"
-          "size 850 500,class:^(zenity)$"
-          "float,class:^(pavucontrol)$"
-          "float,class:^(SoundWireServer)$"
-          "float,class:^(.sameboy-wrapped)$"
-          "float,class:^(file_progress)$"
-          "float,class:^(confirm)$"
-          "float,class:^(dialog)$"
-          "float,class:^(download)$"
-          "float,class:^(notification)$"
-          "float,class:^(error)$"
-          "float,class:^(confirmreset)$"
-          "float,title:^(Open File)$"
-          "float,title:^(branchdialog)$"
-          "float,title:^(Confirm to replace files)$"
-          "float,title:^(File Operation Progress)$"
+          "float 1, match:title ^(Picture-in-Picture)$"
+          "opacity 1.0 override 1.0 override, match:title ^(Picture-in-Picture)$"
+          "pin 1, match:title ^(Picture-in-Picture)$"
+          "opacity 1.0 override 1.0 override, match:title ^(.*imv.*)$"
+          "opacity 1.0 override 1.0 override, match:title ^(.*mpv.*)$"
+          "opacity 1.0 override 1.0 override, match:class (Aseprite)"
+          "opacity 1.0 override 1.0 override, match:class (Unity)"
+          # "idleinhibit focus, match:class ^(mpv)$"
+          # "idleinhibit fullscreen, match:class ^(firefox)$"
+          "float 1, match:class ^(zenity)$"
+          "center 1, match:class ^(zenity)$"
+          "size 850 500, match:class ^(zenity)$"
+          "float 1, match:class ^(pavucontrol)$"
+          "float 1, match:class ^(SoundWireServer)$"
+          "float 1, match:class ^(.sameboy-wrapped)$"
+          "float 1, match:class ^(file_progress)$"
+          "float 1, match:class ^(confirm)$"
+          "float 1, match:class ^(dialog)$"
+          "float 1, match:class ^(download)$"
+          "float 1, match:class ^(notification)$"
+          "float 1, match:class ^(error)$"
+          "float 1, match:class ^(confirmreset)$"
+          "float 1, match:title ^(Open File)$"
+          "float 1, match:title ^(branchdialog)$"
+          "float 1, match:title ^(Confirm to replace files)$"
+          "float 1, match:title ^(File Operation Progress)$"
 
-          "opacity 0.0 override,class:^(xwaylandvideobridge)$"
-          "noanim,class:^(xwaylandvideobridge)$"
-          "noinitialfocus,class:^(xwaylandvideobridge)$"
-          "maxsize 1 1,class:^(xwaylandvideobridge)$"
-          "noblur,class:^(xwaylandvideobridge)$"
+          "opacity 0.0 override, match:class ^(xwaylandvideobridge)$"
+          "no_anim 1, match:class ^(xwaylandvideobridge)$"
+          "no_initial_focus 1, match:class ^(xwaylandvideobridge)$"
+          "max_size 1 1, match:class ^(xwaylandvideobridge)$"
+          "no_blur 1, match:class ^(xwaylandvideobridge)$"
 
           # "workspace, 10, class:^(.*)(discord)(.*)$"
           # "workspace 10, class:^(.*)(discord)(.*)$"

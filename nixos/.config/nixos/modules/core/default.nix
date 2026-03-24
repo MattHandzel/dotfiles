@@ -6,7 +6,7 @@
   host,
   ...
 }: let
-  desktop-imports = [(import ./home-assistant.nix)];
+  desktop-imports = [(import ./default.desktop.nix) (import ./faster-whisper-server.nix)];
 in {
   imports =
     [
@@ -20,30 +20,27 @@ in {
       (import ./services.nix)
       (import ./system.nix)
       (import ./user.nix)
+      (import ./tor.nix)
       (import ./wayland.nix)
       (import ./virtualization.nix)
       (import ./bluetooth.nix)
       (import ./sops.nix)
+
+      (import ./firefly-iii.nix)
+      (import ./freshrss.nix)
+      (import ./mcp-server.nix)
+      (import ./nginx.nix)
+      (import ./second-brain-search.nix)
+      (import ./text-to-speech-service.nix)
     ]
     ++ (
-      if host == "desktop"
+      if host == "desktop" || host == "laptop"
       then desktop-imports
       else []
     );
 
   services.geoclue2 = {
     enable = true;
-    #   providers = {
-    #     modem-gps = {
-    #       enabled = false;
-    #     };
-    #     host-ip = {
-    #       enabled = true;
-    #     };
-    #     wifi = {
-    #       enabled = true;
-    #     };
-    #   };
   };
   location.provider = "geoclue2";
 }

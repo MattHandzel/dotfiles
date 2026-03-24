@@ -2,6 +2,7 @@
   pkgs,
   config,
   lib,
+  inputs,
   ...
 }: let
   sharedVariables = import ../../shared_variables.nix;
@@ -12,8 +13,32 @@ in {
   zramSwap = {
     enable = true;
     algorithm = "zstd";
-    memoryPercent = 50;
+    memoryPercent = 40;
     priority = 100;
+  };
+
+  # Enable systemd-oomd for better memory pressure handling
+  systemd.oomd = {
+    enable = true;
+    enableUserSlices = true;
+    enableSystemSlice = true;
+  };
+
+  # Fix: Restart NetworkManager after suspend to resolve wifi flakiness
+  environment.etc."systemd/system-sleep/99-wifi-recover" = {
+    mode = "0755";
+    text = ''
+      #!/bin/sh
+      # Args: $1 = pre|post, $2 = suspend|hibernate|hybrid-sleep
+      case "$1" in
+        post)
+          # Wait a moment for hardware to wake up
+          sleep 2
+          # Restart NetworkManager to re-initialize connections
+          /run/current-system/sw/bin/systemctl restart NetworkManager.service
+          ;;
+      esac
+    '';
   };
 
   nix.settings = {
@@ -32,6 +57,7 @@ in {
     # "electron-32.3.3"
     # "electron-30.5.1"
   ];
+  nixpkgs.overlays = [inputs.claude-desktop.overlays.default];
   imports = [
     ./hardware-configuration.nix
     ./../../modules/core
@@ -46,6 +72,7 @@ in {
     powertop
     fprintd
     pam
+    claude-desktop-fhs
   ];
 
   services = {

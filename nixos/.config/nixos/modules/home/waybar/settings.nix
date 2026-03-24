@@ -1,15 +1,14 @@
 {...}: let
   sharedVariables = import ../../../shared_variables.nix;
   singletonIcons = {
-    "calendar.google.com" = "📅";
-    reclaim = "⏱";
+    calendar = "📅";
     cura = "🖨";
     obsidian = "🪨";
     slack = "💬";
     btop = "📈";
     notetaker = "📝";
     nautilus = "📁";
-    "whatsapp-for-linux" = "🟢";
+    wasistlos = "🟢";
     "io.github.alainm23.planify" = "✅";
     anki = "🧠";
     planify = "✅";
@@ -18,7 +17,6 @@
     thunderbird = "✉";
     gimp = "🎨";
     yazi = "🗂";
-    "vit-todo" = "☑";
     "gemini.google.com" = "🧠";
     beeper = "🔔";
     spotify = "";
@@ -46,11 +44,20 @@ in {
       "memory"
       # "disk"
       "pulseaudio"
+      "custom/stt-mic"
+      "custom/focus-mode"
       "battery"
       "network"
       "custom/server-status"
       "custom/notification"
     ];
+    "custom/focus-mode" = {
+      interval = 5;
+      return-type = "json";
+      exec = "toggle-focus-mode --status";
+      on-click = "toggle-focus-mode";
+      tooltip = true;
+    };
     clock = {
       calendar = {
         format = {today = "<span color='#b4befe'><b><u>{}</u></b></span>";};
@@ -93,10 +100,10 @@ in {
               then "8"
               else if name == "discord"
               then "10"
-              else if name == "calendar.google.com"
-              then "🗓️"
-              else if name == "whatsapp-for-linux"
-              then "whatsapp"
+              else if name == "calendar"
+              then "calendar"
+              else if name == "wasistlos"
+              then "wasistlos"
               else name;
             value = singletonIcons.${name};
           })
@@ -152,6 +159,14 @@ in {
       };
       scroll-step = 5;
       on-click = "pamixer -t";
+    };
+    "custom/stt-mic" = {
+      interval = 1;
+      return-type = "json";
+      format = "{}";
+      exec = ''bash -lc 'status_file="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/stt-waybar-status.json"; if [[ -s "$status_file" ]]; then cat "$status_file"; else printf "%s\n" "{\"text\":\"\",\"class\":[\"off\"],\"tooltip\":\"STT off (click to toggle live)\"}"; fi' '';
+      on-click = "bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --live";
+      tooltip = true;
     };
     battery = {
       format = "{icon} {capacity}%";

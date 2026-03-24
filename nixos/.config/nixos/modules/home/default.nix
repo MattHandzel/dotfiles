@@ -31,9 +31,9 @@
     ++ [(import ./tmux.nix)] # terminal multiplexer
     ++ [(import ./services.nix)]
     ++ [(import ./todoist.nix)]
+    ++ [./transcribe-captures.nix]
     ++ [inputs.catppuccin.homeModules.catppuccin]
     ++ [(import ./foliate.nix)]
-    ++ [(import ./uri-handlers.nix)]
     # ++ [(import ./notion.nix)]
     # ++ [(import ./ntfy.nix)]
     ;
@@ -54,9 +54,9 @@
       "inode/directory" = "yazi.desktop";
       "text/plain" = "nvim.desktop";
       "text/x-python" = "nvim.desktop";
-      "text/html" = "zen.desktop";
-      "x-scheme-handler/http" = "zen.desktop";
-      "x-scheme-handler/https" = "zen.desktop";
+      "text/html" = "zen-beta.desktop";
+      "x-scheme-handler/http" = "zen-beta.desktop";
+      "x-scheme-handler/https" = "zen-beta.desktop";
       "audio/*" = "mpv.desktop";
       "video/*" = "mpv.desktop";
       "image/*" = "feh.desktop";
@@ -76,6 +76,8 @@
       sync_frequency = "5m";
       sync_address = "https://api.atuin.sh";
       search_mode = "fuzzy";
+      keymap_mode = "vim-normal";
+      enter_accept = true;
     };
   };
 

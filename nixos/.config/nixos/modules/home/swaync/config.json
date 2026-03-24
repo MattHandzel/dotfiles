@@ -13,7 +13,7 @@
   "notification-body-image-width": 200,
   "timeout": 10,
   "timeout-low": 5,
-  "timeout-critical": 20,
+  "timeout-critical": 0,
   "fit-to-screen": true,
   "control-center-width": 400,
   "control-center-height": 650,
@@ -134,4 +134,3 @@
     }
   }
 }
-
