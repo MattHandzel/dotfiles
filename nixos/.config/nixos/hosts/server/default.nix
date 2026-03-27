@@ -6,6 +6,7 @@
   imports = [
     ./hardware-configuration.nix
     ./../../modules/core/server.nix
+    ./../../modules/core/taskwarrior-daily-notify.nix
   ];
 
   services.ollama = {
@@ -13,6 +14,11 @@
     package = pkgs.ollama-cuda;
     openFirewall = true;
     host = "0.0.0.0";
+    environmentVariables = {
+      OLLAMA_FLASH_ATTENTION = "1";
+      OLLAMA_KV_CACHE_TYPE = "q8_0";
+      OLLAMA_KEEP_ALIVE = "1800";
+    };
   };
 
   services.atuin.enable = true;
