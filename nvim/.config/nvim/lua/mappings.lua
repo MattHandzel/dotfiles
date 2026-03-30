@@ -262,6 +262,30 @@ vim.keymap.set("n", "<leader>ao", ":DapStepOut<CR>", { noremap = true, silent = 
 vim.keymap.set("n", "<leader>ax", ":DapTerminate<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>as", ":DapStepOver<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>ar", ":DapContinue<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>am", function()
+	local ok, dap_python = pcall(require, "dap-python")
+	if ok then
+		dap_python.test_method()
+		return
+	end
+	vim.notify("nvim-dap-python is not available", vim.log.levels.WARN)
+end, { desc = "Debug Python Test Method" })
+vim.keymap.set("n", "<leader>aM", function()
+	local ok, dap_python = pcall(require, "dap-python")
+	if ok then
+		dap_python.test_class()
+		return
+	end
+	vim.notify("nvim-dap-python is not available", vim.log.levels.WARN)
+end, { desc = "Debug Python Test Class" })
+vim.keymap.set("v", "<leader>am", function()
+	local ok, dap_python = pcall(require, "dap-python")
+	if ok then
+		dap_python.debug_selection()
+		return
+	end
+	vim.notify("nvim-dap-python is not available", vim.log.levels.WARN)
+end, { desc = "Debug Python Selection" })
 
 -- vim.keymap.set("n", "<leader>m", require("grapple").toggle)
 vim.keymap.set("n", "<leader>ha", require("harpoon.mark").add_file, { noremap = true, silent = true })

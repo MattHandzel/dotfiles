@@ -35,11 +35,18 @@ lspconfig.ts_ls.setup({
 })
 
 lspconfig.ltex.setup({
+	cmd = {
+		"env",
+		"JAVA_TOOL_OPTIONS=-Xms128m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Dorg.bsplines.ltexls.logLevel=WARNING",
+		"ltex-ls",
+	},
+	filetypes = { "markdown", "tex" },
 	flags = { debounce_text_changes = 1000 },
-	settings = { ltex = { checkFrequency = "save" } },
-
-	checkfrequency = "save",
-	use_spellfile = true,
+	settings = {
+		ltex = {
+			checkFrequency = "save",
+		},
+	},
 })
 -- lspconfig.rust_analyzer.setup({
 -- 	-- Server-specific settings. See `:help lspconfig-setup`

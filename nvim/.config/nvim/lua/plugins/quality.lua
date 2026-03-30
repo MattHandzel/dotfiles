@@ -24,11 +24,7 @@ return {
 
 			local startup_cwd = vim.uv.cwd()
 			local group = vim.api.nvim_create_augroup("ConfigPersistence", { clear = true })
-			local function should_restore_last_session()
-				if vim.fn.argc() > 0 then
-					return false
-				end
-
+			local function is_blank_start_buffer()
 				local buf = vim.api.nvim_get_current_buf()
 				if vim.bo[buf].buftype ~= "" then
 					return false
@@ -43,9 +39,36 @@ return {
 					and not vim.bo[buf].modified
 			end
 
+			local function has_current_session()
+				local current = persistence.current()
+				if current and vim.fn.filereadable(current) == 1 then
+					return true
+				end
+
+				local no_branch = persistence.current({ branch = false })
+				return no_branch and vim.fn.filereadable(no_branch) == 1
+			end
+
 			vim.schedule(function()
-				if should_restore_last_session() then
-					pcall(persistence.load, { last = true })
+				local argc = vim.fn.argc()
+				if argc == 1 then
+					local arg0 = vim.fn.argv(0)
+					if arg0 and vim.fn.isdirectory(arg0) == 1 then
+						pcall(persistence.load)
+						return
+					end
+				end
+
+				if not is_blank_start_buffer() then
+					return
+				end
+
+				if argc == 0 then
+					if has_current_session() then
+						pcall(persistence.load)
+					else
+						pcall(persistence.load, { last = true })
+					end
 				end
 			end)
 
@@ -176,6 +199,42 @@ return {
 					neocodeium.clear()
 				end)
 			end
+		end,
+	},
+
+	{
+		"mfussenegger/nvim-dap-python",
+		ft = "python",
+		dependencies = { "mfussenegger/nvim-dap" },
+		config = function()
+			local function resolve_debugpy_adapter()
+				if vim.fn.executable("debugpy-adapter") == 1 then
+					return "debugpy-adapter"
+				end
+
+				local python = vim.g.python3_host_prog or vim.fn.exepath("python3")
+				if python and python ~= "" and vim.fn.executable(python) == 1 then
+					vim.fn.system({ python, "-c", "import debugpy" })
+					if vim.v.shell_error == 0 then
+						return python
+					end
+				end
+
+				return nil
+			end
+
+			local adapter = resolve_debugpy_adapter()
+			if not adapter then
+				vim.notify(
+					"nvim-dap-python: debugpy is missing. On NixOS install python3Packages.debugpy (or ensure debugpy-adapter is on PATH).",
+					vim.log.levels.WARN
+				)
+				return
+			end
+
+			local dap_python = require("dap-python")
+			dap_python.setup(adapter)
+			dap_python.test_runner = "pytest"
 		end,
 	},
 

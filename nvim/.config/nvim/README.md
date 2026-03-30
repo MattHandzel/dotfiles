@@ -13,6 +13,7 @@ This config is based on NvChad and lazy.nvim.
 - `git`
 - `node` (for Copilot/NeoCodeium integrations)
 - `python3`
+- `debugpy-adapter` (or `python3` with `debugpy` installed) for Python DAP
 - `ripgrep`
 - `fd`
 - `wl-paste` (Wayland image paste mapping)
@@ -32,6 +33,15 @@ This config is based on NvChad and lazy.nvim.
 - `:DiagnosticsToggle`: same as above
 - `:ConfigDoctor`: run `:checkhealth`
 - `:ConfigProfile`: open lazy.nvim startup profile
+- `<leader>ab`: toggle breakpoint
+- `<leader>ar`: continue/start debug session
+- `<leader>as`: step over
+- `<leader>ai`: step into
+- `<leader>ao`: step out
+- `<leader>ax`: terminate debug session
+- `<leader>am` (normal): debug nearest Python test method
+- `<leader>aM` (normal): debug nearest Python test class
+- `<leader>am` (visual): debug selected Python code
 
 ## AI / Vibe Coding
 
@@ -65,3 +75,4 @@ This config is based on NvChad and lazy.nvim.
 - If inline AI is noisy/slow: use `<leader>ua`.
 - If diagnostics are distracting while writing notes: `<leader>uD`.
 - If sessions feel wrong, run `:qa` from the project you want saved, then reopen Neovim without file arguments.
+- On NixOS, ensure `debugpy-adapter` or `python3Packages.debugpy` is installed for Python debugging.

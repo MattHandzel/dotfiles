@@ -187,24 +187,7 @@ if cmp_style ~= "atom" and cmp_style ~= "atom_colored" then
 end
 pcall(require, "copilot_cmp")
 
-local sc_im_ok, sc_im = pcall(require, "sc-im")
-if sc_im_ok then
-	sc_im.setup({
-	-- ft = "scim",
-	-- include_sc_file = true,
-	-- update_sc_from_md = true,
-	-- link_fmt = 1,
-	-- split = "floating",
-	-- float_config = {
-	-- 	height = 0.9,
-	-- 	width = 0.9,
-	-- 	style = "minimal",
-	-- 	border = "single",
-	-- 	hl = "Normal",
-	-- 	blend = 0,
-	-- },
-})
-end
+-- sc-im.nvim setup is optional. Avoid requiring it on every startup.
 
 cmp.setup(options)
 

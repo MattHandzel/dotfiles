@@ -58,6 +58,19 @@ return {
 				tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
 				hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" }, -- render image files as images when opened
 			})
+
+			-- Patch for image.nvim issue with tmux creating files named after error messages
+			local ok, tmux = pcall(require, "image.utils.tmux")
+			if ok and tmux.get_pane_tty then
+				local original_get_pane_tty = tmux.get_pane_tty
+				tmux.get_pane_tty = function()
+					local tty = original_get_pane_tty()
+					if tty and not tty:match("^/dev/") then
+						return nil
+					end
+					return tty
+				end
+			end
 		end,
 	},
 	{
@@ -257,7 +270,35 @@ return {
 			},
 		},
 	},
-	{ "dccsillag/magma-nvim", event = "VeryLazy" },
+	{
+		"benlubas/molten-nvim",
+		version = "^1.0.0", -- use version <2.0.0 if you write yours in python
+		build = ":UpdateRemotePlugins",
+		ft = { "python", "quarto", "markdown" },
+		cmd = {
+			"MoltenInit",
+			"MoltenEvaluateLine",
+			"MoltenEvaluateVisual",
+			"MoltenEvaluateOperator",
+			"MoltenDelete",
+			"MoltenHideOutput",
+			"MoltenEnterOutput",
+		},
+		init = function()
+			require("configs.molten").init()
+		end,
+		config = function()
+			require("configs.molten").setup()
+		end,
+	},
+	{
+		"hkupty/iron.nvim",
+		ft = { "python" },
+		config = function()
+			require("configs.iron")
+		end,
+	},
+	{ "dccsillag/magma-nvim", event = "VeryLazy", enabled = false },
 	{
 		"lervag/vimtex",
 		init = function() end,
@@ -336,7 +377,11 @@ return {
 				date_format = "%Y-%m-%d",
 				time_format = "%H:%M",
 				-- A map for custom variables, the key should be the variable and the value a function
-				substitutions = {},
+				substitutions = {
+					weekly_note_link = function()
+						return "[[" .. os.date("%Y-W%V") .. "#Belief Experiment]]"
+					end,
+				},
 			},
 
 			-- Optional, by default when you use `:ObsidianFollowLink` on a link to an external
@@ -1618,7 +1663,8 @@ return {
 		},
 		build = "make tiktoken", -- Only on MacOS or Linux
 		opts = {
-			debug = true, -- Enable debugging
+			debug = false, -- Keep CopilotChat logging minimal to avoid noisy LSP logs
+			model = "copilot:claude-4.6-opus", -- Set model to claude-4.6-opus as requested
 		},
 	},
 	{
@@ -2493,5 +2539,13 @@ return {
 				},
 			})
 		end,
+	},
+
+	{
+		dir = "~/Projects/task.nvim",
+		config = function()
+			require("task").setup()
+		end,
+		cmd = { "Task", "TaskFilter", "TaskRefresh", "TaskUndo", "TaskHelp" },
 	},
 }

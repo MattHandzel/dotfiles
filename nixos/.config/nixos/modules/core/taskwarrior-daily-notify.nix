@@ -16,8 +16,8 @@ import sys
 from datetime import datetime, date
 from pathlib import Path
 
-TASK_FILE = Path("/home/matth/Obsidian/Main/agent/task-data/pending-tasks.json")
-EXPORT_TIME_FILE = Path("/home/matth/Obsidian/Main/agent/task-data/last-export.txt")
+TASK_FILE = Path("/home/matth/Obsidian/Main/taskwarrior/pending-tasks.json")
+EXPORT_TIME_FILE = Path("/home/matth/Obsidian/Main/taskwarrior/last-export.txt")
 NTFY_URL = "http://localhost:8124/claude"
 CURL = "${curl}/bin/curl"
 

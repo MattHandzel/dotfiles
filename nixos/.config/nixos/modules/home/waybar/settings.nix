@@ -9,15 +9,14 @@
     notetaker = "📝";
     nautilus = "📁";
     wasistlos = "🟢";
-    "io.github.alainm23.planify" = "✅";
     anki = "🧠";
-    planify = "✅";
     PrusaSlicer = "🧩";
     discord = "󰙯";
     thunderbird = "✉";
     gimp = "🎨";
     yazi = "🗂";
     "gemini.google.com" = "🧠";
+    "claude.ai" = "🧠";
     beeper = "🔔";
     spotify = "";
   };

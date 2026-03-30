@@ -155,8 +155,6 @@ in {
     tigervnc
     espanso-wayland
 
-    planify
-    speedcrunch
     ntfy-sh
 
     kdePackages.xdg-desktop-portal-kde # xdg-desktop-portal
