@@ -1,13 +1,12 @@
-{...}: let
+{config, ...}: let
+  p = config.theme.palette;
+  font = config.theme.font;
   custom = {
-    font = "JetBrainsMono Nerd Font";
-    font_size = "15px";
+    font = font.mono;
+    font_size = "${toString font.sizes.lg}px";
     font_weight = "bold";
-    text_color = "#cdd6f4";
-    secondary_accent = "89b4fa";
-    tertiary_accent = "f5f5f5";
-    background = "11111B";
-    opacity = "0.98";
+    text_color = "#${p.text}";
+    opacity = toString config.theme.opacity;
   };
 in {
   programs.waybar.style = ''
@@ -28,7 +27,7 @@ in {
     }
 
     #workspaces {
-        font-size: 18px;
+        font-size: ${toString font.sizes.xl}px;
         padding-left: 15px;
 
     }
@@ -38,10 +37,10 @@ in {
         padding-right: 6px;
     }
     #workspaces button.empty {
-        color: #6c7086;
+        color: #${p.overlay0};
     }
     #workspaces button.active {
-        color: #b4befe;
+        color: #${p.lavender};
     }
 
     #tray, #pulseaudio, #network, #cpu, #memory, #disk, #clock, #battery, #custom-notification, #custom-stt-mic {
@@ -88,7 +87,7 @@ in {
         color: ${custom.text_color};
     }
     #custom-stt-mic.speaking {
-        color: #a6e3a1;
+        color: #${p.green};
     }
     #custom-focus-mode {
         padding-left: 9px;
@@ -98,9 +97,8 @@ in {
         color: rgba(205, 214, 244, 0.4);
     }
     #custom-focus-mode.on {
-        color: #fab387; /* Peach/Orange */
-        font-size: 18px;
-        /* Subtle pulse effect for active focus mode */
+        color: #${p.peach};
+        font-size: ${toString font.sizes.xl}px;
         animation-name: blink;
         animation-duration: 2s;
         animation-timing-function: linear;
@@ -123,26 +121,26 @@ in {
     }
 
     #custom-launcher {
-        font-size: 20px;
-        color: #b4befe;
+        font-size: ${toString font.sizes.xl}px;
+        color: #${p.lavender};
         font-weight: ${custom.font_weight};
         padding-left: 10px;
         padding-right: 15px;
     }
 
     #custom-lifelog.running {
-       color: #a6e3a1; /* Green */
+       color: #${p.green};
     }
     #custom-lifelog.stopped {
-       color: #f38ba8; /* Red */
+       color: #${p.red};
     }
     #custom-lifelog.warning {
-       color: #f9e2af; /* Yellow/Orange - for partial failures */
+       color: #${p.yellow};
     }
 
     @keyframes blink {
         to {
-            color: #f38ba8; /* Red */
+            color: #${p.red};
         }
     }
   '';

@@ -1,8 +1,11 @@
 {
   lib,
   inputs,
+  config,
   ...
-}: {
+}: let
+  p = config.theme.palette;
+in {
   programs.starship = {
     enable = true;
 
@@ -14,20 +17,19 @@
       # right_format = "$cmd_duration";
 
       directory = {
-        format = "[ ](bold #89b4fa)[ $path ]($style)";
-        style = "bold #b4befe";
+        format = "[ ](bold #${p.blue})[ $path ]($style)";
+        style = "bold #${p.lavender}";
       };
 
       character = {
-        success_symbol = "[ ](bold #89b4fa)[ ➜](bold green)";
-        error_symbol = "[ ](bold #89b4fa)[ ➜](bold red)";
-        # error_symbol = "[ ](bold #89dceb)[ ✗](bold red)";
+        success_symbol = "[ ](bold #${p.blue})[ ➜](bold green)";
+        error_symbol = "[ ](bold #${p.blue})[ ➜](bold red)";
       };
 
       cmd_duration = {
         format = "[󰔛 $duration]($style)";
         disabled = false;
-        style = "bg:none fg:#f9e2af";
+        style = "bg:none fg:#${p.yellow}";
         show_notifications = false;
         min_time_to_notify = 60000;
       };

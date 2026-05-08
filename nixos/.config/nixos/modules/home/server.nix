@@ -5,6 +5,7 @@
   ...
 }: {
   imports = [
+    (import ./theme.nix)
     (import ./bat.nix)
     (import ./btop.nix)
     (import ./git.nix)

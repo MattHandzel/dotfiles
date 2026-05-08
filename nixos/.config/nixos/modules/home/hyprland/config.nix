@@ -1,9 +1,11 @@
 {
   pkgs,
   lib,
+  config,
   ...
 }: let
   sharedVariables = import ../../../shared_variables.nix;
+  p = config.theme.palette;
   # Keep this as a Nix value (not a Hyprland `$var`) so binds don't depend on
   # Hyprland variable ordering in the generated config.
   mainMod = "SUPER";
@@ -14,7 +16,7 @@
     spotify = "S";
     discord = "D";
     obsidian = "O";
-    thunderbird = "M";
+    betterbird = "M";
     slack = "K";
     calendar = "C";
     yazi = "F";
@@ -24,7 +26,7 @@
     cura = "U";
     "gemini.google.com" = "Y";
     wasistlos = "W";
-    "io.github.alainm23.planify" = "T";
+    "tasker" = "T";
     "notetaker" = "N";
     gimp = "G";
     beeper = "H";
@@ -58,8 +60,8 @@ in let
       then "${workspaceMapping.${singleton}}"
       else "${singleton}";
   in [
-    "workspace ${targetWorkspace}, match:class ^(${not_case_sensitive})$"
-    "workspace ${targetWorkspace}, match:title ^(${not_case_sensitive})$"
+    "workspace name:${targetWorkspace}, match:class ^(${not_case_sensitive})$"
+    "workspace name:${targetWorkspace}, match:title ^(${not_case_sensitive})$"
   ];
 
   generateSingletonKeyboardShortcuts = singleton: let
@@ -120,7 +122,6 @@ in {
         "swaync &"
         "wl-paste --watch cliphist store -max-items 25000000 &"
         "gammastep -l  50:-145.2062 -t 5400:3500 -b 1:1 &"
-        "io.github.alainm23.planify &"
         # "sudo logkeys --start --device event0 --output $HOME/notes/life-logging/key-logging/keyboard.log &"
 
         "aw-server & "
@@ -202,8 +203,8 @@ in {
         layout = "dwindle";
         gaps_in = 0;
         gaps_out = 0;
-        border_size = 2;
-        "col.active_border" = "rgb(cba6f7) rgb(94e2d5) 45deg";
+        border_size = config.theme.border;
+        "col.active_border" = "rgb(${p.mauve}) rgb(${p.teal}) 45deg";
         "col.inactive_border" = "0x00000000";
       };
 
@@ -323,6 +324,7 @@ in {
           "${mainMod} SHIFT, F, fullscreen, 1"
           "${mainMod}, Space, togglefloating,"
           "${mainMod}, A, exec, fuzzel"
+          "${mainMod}, SLASH, exec, $HOME/Projects/quick-reference-hotkey/quick-ref.sh"
           "${mainMod}, Escape, exec, systemctl suspend"
           "${mainMod}, E, exec, wofi-emoji"
           "${mainMod} SHIFT, Escape, exec, shutdown-script"
@@ -332,13 +334,13 @@ in {
           "${mainMod}, C ,exec, hyprpicker -a"
           "${mainMod}, W,exec, wallpaper-picker"
           "${mainMod} SHIFT, W, exec, vm-start"
-          "${mainMod}, B, exec, zen-beta"
+          "${mainMod}, B, exec, systemd-run --user --slice=app-zen.slice --scope -- zen-beta"
           "${mainMod}, Y, exec, swaync-client --close-latest"
 
           "${mainMod} SHIFT, R, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\" && rebuild && notify-if-command-is-successful rebuild"
 
-          ",XF86AudioLowerVolume, exec, pamixer --decrease 5"
-          ",XF86AudioRaiseVolume, exec, pamixer --increase 5"
+          ",XF86AudioLowerVolume, exec, wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%-"
+          ",XF86AudioRaiseVolume, exec, wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+"
 
           ", XF86Calculator, exec, speedcrunch"
 
@@ -429,10 +431,8 @@ in {
           "${mainMod} SHIFT ALT, 9, movetoworkspacesilent, 19"
           "${mainMod} SHIFT ALT, 0, movetoworkspacesilent, 20"
 
-          # media and volume controls
-          ",XF86AudioRaiseVolume,exec, pamixer -i 2"
-          ",XF86AudioLowerVolume,exec, pamixer -d 2"
-          ",XF86AudioMute,exec, pamixer -t"
+          # media controls (volume bound above via wpctl)
+          ",XF86AudioMute,exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
           ",XF86AudioPlay,exec, playerctl play-pause"
           ",XF86AudioNext,exec, playerctl next"
           ",XF86AudioPrev,exec, playerctl previous"
@@ -453,6 +453,8 @@ in {
           ", KP_5, exec, prompt-picker"
           ", KP_7, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://gemini.google.com/gem/6dbcf84e326c'"
           ", KP_Home, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://gemini.google.com/gem/6dbcf84e326c'"
+          ", KP_6, exec, /home/matth/Projects/universal-calendar-capture/calendar-capture.sh"
+          ", KP_Right, exec, /home/matth/Projects/universal-calendar-capture/calendar-capture.sh"
 
           "${mainMod}, Tab, focuscurrentorlast"
           # laptop brigthness
@@ -510,8 +512,8 @@ in {
           "workspace name:notetaker, match:title (notetaker)"
           "move 40 55%, match:title ^(Volume Control)$"
 
-          # Thunderbird: Example of making it larger (50% larger than a standard window size)
-          "size 1800 1000, match:class ^(thunderbird)$"
+          # Betterbird: 50% larger than a standard window size
+          "size 1800 1000, match:class ^(eu\\.betterbird\\.Betterbird)$"
         ]
         ++ [
           "float 1, match:title ^(Picture-in-Picture)$"
@@ -659,7 +661,7 @@ plugin:touch_gestures {
     hyprgrass-bind = , edge:d:u, exec, firefox
 
     # swipe down from left edge
-    hyprgrass-bind = , edge:l:d, exec, pactl set-sink-volume @DEFAULT_SINK@ -4%
+    hyprgrass-bind = , edge:l:d, exec, wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 4%-
 
     # swipe down with 4 fingers
     # NOTE: swipe events only trigger for finger count of >= 3

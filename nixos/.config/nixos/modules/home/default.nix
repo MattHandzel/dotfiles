@@ -7,6 +7,7 @@
   imports =
     [(import ./aseprite/aseprite.nix)] # pixel art editor
     ++ [(import ./audacious/audacious.nix)] # music player
+    ++ [(import ./theme.nix)] # palette/font tokens shared across modules
     ++ [(import ./bat.nix)] # better cat command
     ++ [(import ./btop.nix)] # resouces monitor
     # ++ [(import ./cava.nix)] # audio visualizer
@@ -19,7 +20,6 @@
     ++ [(import ./swaync/swaync.nix)] # notification deamon
     ++ [(import ./nvim.nix)] # neovim editor
     ++ [(import ./packages.nix)] # other packages
-    ++ [(import ./espanso.nix)] # text expander service
     ++ [(import ./scripts/scripts.nix)] # personal scripts
     # ++ [(import ./spicetify.nix)] # spotify client
     ++ [(import ./starship.nix)] # shell prompt
@@ -32,6 +32,11 @@
     ++ [(import ./services.nix)]
     ++ [(import ./todoist.nix)]
     ++ [./transcribe-captures.nix]
+    ++ [./luck-scheduler.nix]
+    ++ [./memwatch.nix]
+    ++ [./electron-app-daily-restart.nix]
+    ++ [./zen-config.nix]
+    ++ [./app-memory-caps.nix]
     ++ [inputs.catppuccin.homeModules.catppuccin]
     ++ [(import ./foliate.nix)]
     # ++ [(import ./notion.nix)]
