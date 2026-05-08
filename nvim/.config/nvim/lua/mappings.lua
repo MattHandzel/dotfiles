@@ -317,7 +317,7 @@ vim.keymap.set({ "i", "n", "t" }, "<C-j>", "<cmd>TmuxNavigateDown<CR>", { norema
 vim.keymap.set({ "i", "n", "t" }, "<C-h>", "<cmd>TmuxNavigateLeft<CR>", { noremap = true, silent = true })
 vim.keymap.set({ "i", "n", "t" }, "<C-l>", "<cmd>TmuxNavigateRight<CR>", { noremap = true, silent = true })
 
-vim.keymap.set("n", "<leader>ls", require("auto-session.session-lens").search_session, {
+vim.keymap.set("n", "<leader>ls", "<cmd>SessionSearch<CR>", {
 	noremap = true,
 })
 -- vim.keymap.set("n", "<leader>qs", ":SessionRestore<CR>", { noremap = true })

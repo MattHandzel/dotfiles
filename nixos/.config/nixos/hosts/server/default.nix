@@ -9,6 +9,19 @@
     ./../../modules/core/taskwarrior-daily-notify.nix
   ];
 
+  nixpkgs.overlays = [
+    (final: prev: {
+      ollama-cuda = (import (builtins.fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/b12141ef619e0a9c1c84dc8c684040326f27cdcc.tar.gz";
+        sha256 = "0vhprxh6zqrc8bc745crfzs75cl1sqls3hdldlairm0spqsb88k5";
+      }) {
+        system = final.system;
+        config.allowUnfree = true;
+        config.cudaSupport = true;
+      }).ollama-cuda;
+    })
+  ];
+
   services.ollama = {
     enable = true;
     package = pkgs.ollama-cuda;
@@ -17,7 +30,7 @@
     environmentVariables = {
       OLLAMA_FLASH_ATTENTION = "1";
       OLLAMA_KV_CACHE_TYPE = "q8_0";
-      OLLAMA_KEEP_ALIVE = "1800";
+      OLLAMA_KEEP_ALIVE = "5m";
     };
   };
 

@@ -36,11 +36,12 @@ in
       User = user;
       WorkingDirectory = pollerDir;
       EnvironmentFile = envFile;
+      RuntimeDirectory = "notify-poller";
       Environment = [
         "PATH=${pkgs.coreutils}/bin:${pkgs.bash}/bin"
         "MONGODB_DB=website_db"
         "NTFY_URL=http://localhost:8124/website-messages"
-        "NOTIFY_PIDFILE=/run/notify-poller.pid"
+        "NOTIFY_PIDFILE=/run/notify-poller/notify-poller.pid"
         "LD_LIBRARY_PATH=${ccLib}"
       ];
       ExecStart = pkgs.writeShellScript "notify-poller-run" ''
@@ -51,7 +52,7 @@ in
       # Filesystem hardening
       ProtectSystem = "strict";
       ProtectHome = "read-only";
-      ReadWritePaths = [ pollerDir "/run" ];
+      ReadWritePaths = [ pollerDir ];
       PrivateTmp = true;
 
       NoNewPrivileges = true;
@@ -101,11 +102,12 @@ in
       User = user;
       WorkingDirectory = pollerDir;
       EnvironmentFile = envFile;
+      RuntimeDirectory = "notify-poller-heartbeat";
       Environment = [
         "PATH=${pkgs.coreutils}/bin:${pkgs.bash}/bin"
         "MONGODB_DB=website_db"
         "NTFY_URL=http://localhost:8124/website-messages"
-        "NOTIFY_PIDFILE=/run/notify-poller-heartbeat.pid"
+        "NOTIFY_PIDFILE=/run/notify-poller-heartbeat/notify-poller-heartbeat.pid"
         "EMAIL_NOTIFY_TO=matt@matthandzel.com"
         "RESEND_FROM=notify-poller@matthandzel.com"
         "LD_LIBRARY_PATH=${ccLib}"
@@ -117,7 +119,7 @@ in
 
       ProtectSystem = "strict";
       ProtectHome = "read-only";
-      ReadWritePaths = [ pollerDir "/run" ];
+      ReadWritePaths = [ pollerDir ];
       PrivateTmp = true;
 
       NoNewPrivileges = true;

@@ -1,5 +1,11 @@
 return {
 	{
+		"catppuccin/nvim",
+		name = "catppuccin",
+		lazy = false,
+		priority = 1000,
+	},
+	{
 		"stevearc/conform.nvim",
 		config = function()
 			require("configs.conform")
