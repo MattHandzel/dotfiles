@@ -19,6 +19,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 SCHEDULE_FILE = Path("/home/matth/Obsidian/Main/agent/ntfy-schedule.json")
 STATE_FILE = Path("/home/matth/.local/state/ntfy-scheduler/state.json")
@@ -102,7 +103,18 @@ def main():
 
     schedule = json.loads(SCHEDULE_FILE.read_text())
     state = load_state()
-    now = datetime.now()
+
+    # Use timezone from schedule file if specified, otherwise system local time
+    tz_name = schedule.get("_timezone")
+    if tz_name:
+        try:
+            tz = ZoneInfo(tz_name)
+            now = datetime.now(tz)
+        except Exception:
+            print(f"Warning: invalid timezone '{tz_name}', using system local time", file=sys.stderr)
+            now = datetime.now()
+    else:
+        now = datetime.now()
 
     for entry in schedule.get("recurring", []):
         if not entry.get("enabled", True):
@@ -116,7 +128,15 @@ def main():
         if entry["id"] in state["sent_oneoffs"]:
             continue
         send_at = datetime.fromisoformat(entry["send_at"])
-        if now >= send_at:
+        # Make send_at timezone-aware if it isn't already
+        if send_at.tzinfo is None and tz_name:
+            try:
+                send_at = send_at.replace(tzinfo=ZoneInfo(tz_name))
+            except Exception:
+                pass
+        # Compare with timezone-naive now if send_at is naive
+        compare_now = now.replace(tzinfo=None) if send_at.tzinfo is None else now
+        if compare_now >= send_at:
             send_notification(entry)
             state["sent_oneoffs"].append(entry["id"])
 

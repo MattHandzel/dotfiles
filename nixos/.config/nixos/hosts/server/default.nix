@@ -26,6 +26,7 @@
   services.obsidian-mcp.enable = true;
   services.text-to-speech-service.enable = true;
   services.text-to-speech-service.defaultVoice = "en_US-lessac-high";
+  services.life-scheduler.enable = true;
   networking.firewall.allowedTCPPorts = [ 47772 ];
   networking.hostName = "matts-server";
 

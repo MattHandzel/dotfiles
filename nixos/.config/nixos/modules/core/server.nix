@@ -18,6 +18,7 @@
     (import ./virtualization-server.nix)
     (import ./second-brain-search.nix)
     (import ./text-to-speech-service.nix)
+    (import ./life-scheduler.nix)
     # Canary is intentionally not imported here; Faster Whisper is the default STT service.
     (import ./nginx.nix)
     (import ./firefly-iii.nix)
@@ -26,6 +27,8 @@
     (import ./obsidian-mcp.nix)
     (import ./ntfy-scheduler.nix)
     (import ./ntfy-capture-listener.nix)
+    (import ./taskchampion-sync-server.nix)
+    (import ./notify-poller.nix)
   ];
 
   virtualisation.docker.enable = true;

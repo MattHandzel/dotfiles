@@ -51,7 +51,6 @@ in {
     cudaPackages.cuda_nvcc
     cudaPackages.cudatoolkit
     cudaPackages.cudnn
-    cudaPackages.cudnn
     # cudaPackages.libcutensor
     gcc13
 

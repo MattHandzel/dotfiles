@@ -57,11 +57,17 @@
 
     second-brain-search = {
       url = "path:/home/matth/Projects/SecondBrainSearch";
-      inputs.nixpkgs.follows = "nixpkgs";
+      # Don't follow system nixpkgs — SecondBrainSearch needs its own
+      # nixpkgs with cudaSupport = true and nixos-25.05 pin
     };
 
     text-to-speech-service = {
       url = "path:/home/matth/Projects/SecondBrainSpeech";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    life-scheduler = {
+      url = "path:/home/matth/Projects/life-scheduler";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
