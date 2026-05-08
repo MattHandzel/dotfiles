@@ -237,9 +237,9 @@ in {
       };
 
       decoration = {
-        rounding = 2;
-        # active_opacity = 0.90;
-        # inactive_opacity = 0.75;
+        rounding = config.theme.radius;
+        active_opacity = 1.0;
+        inactive_opacity = 0.96;
 
         fullscreen_opacity = 1.0;
 
@@ -267,30 +267,37 @@ in {
       };
 
       animations = {
-        enabled = false;
+        enabled = true;
 
+        # Curves: gentle overshoot for opens, snappy decel for closes/moves,
+        # linear for the looping border-angle so it never stutters.
         bezier = [
-          "fluent_decel, 0, 0.2, 0.4, 1"
-          "easeOutCirc, 0, 0.55, 0.45, 1"
-          "easeOutCubic, 0.33, 1, 0.68, 1"
-          "easeinoutsine, 0.37, 0, 0.63, 1"
+          "overshoot, 0.05, 0.9, 0.1, 1.05"
+          "smoothOut, 0.36, 0, 0.66, -0.56"
+          "smoothIn, 0.25, 1, 0.5, 1"
+          "emphasized, 0.2, 0, 0, 1"
+          "linear, 0, 0, 1, 1"
         ];
 
         animation = [
-          # Windows
-          "windowsIn, 1, 3, easeOutCubic, popin 30%" # window open
-          "windowsOut, 1, 3, fluent_decel, popin 70%" # window close.
-          "windowsMove, 1, 2, easeinoutsine, slide" # everything in between, moving, dragging, resizing.
+          # Windows: open with a slight overshoot, close quick, drag smooth.
+          "windowsIn, 1, 5, overshoot, slide"
+          "windowsOut, 1, 4, smoothOut, slide"
+          "windowsMove, 1, 4, emphasized, slide"
 
-          # Fade
-          "fadeIn, 1, 2, easeOutCubic" # fade in (open) -> layers and windows
-          "fadeOut, 1, 2, easeOutCubic" # fade out (close) -> layers and windows
-          "fadeSwitch, 0, 1, easeOutCirc" # fade on changing activewindow and its opacity
-          "fadeShadow, 1, 10, easeOutCirc" # fade on changing activewindow for shadows
-          "fadeDim, 1, 4, fluent_decel" # the easing of the dimming of inactive windows
-          "border, 1, 2.7, easeOutCirc" # for animating the border's color switch speed
-          "borderangle, 1, 30, fluent_decel, once" # for animating the border's gradient angle - styles: once (default), loop
-          "workspaces, 1, 4, easeOutCubic, fade" # styles: slide, slidevert, fade, slidefade, slidefadevert
+          # Fade: short and consistent.
+          "fadeIn, 1, 5, smoothIn"
+          "fadeOut, 1, 4, smoothOut"
+          "fadeSwitch, 1, 4, smoothIn"
+          "fadeShadow, 1, 6, smoothIn"
+          "fadeDim, 1, 6, smoothIn"
+
+          # Borders: subtle color crossfade + slow gradient-angle rotation.
+          "border, 1, 6, emphasized"
+          "borderangle, 1, 60, linear, loop"
+
+          # Workspaces: slidefade reads as polished and shows direction.
+          "workspaces, 1, 5, emphasized, slidefade 15%"
         ];
       };
 
