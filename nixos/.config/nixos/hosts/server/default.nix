@@ -7,6 +7,7 @@
     ./hardware-configuration.nix
     ./../../modules/core/server.nix
     ./../../modules/core/taskwarrior-daily-notify.nix
+    ./../../modules/core/project-watcher.nix
   ];
 
   services.ollama = {
@@ -76,6 +77,12 @@
         "r9mpp-yvvmy" = { # Obsidian
           path = "~/Obsidian";
           devices = [ "matts-computer" "Pixel 9a" ];
+        };
+        "claude" = { # ~/.claude — Claude Code config + memory (see ~/.claude/.stignore;
+                     # transcripts/credentials/caches excluded). Lets the orchestrator
+                     # run on the server with the same memory/hooks/agents/settings.
+          path = "~/.claude";
+          devices = [ "matts-computer" ];
         };
       };
     };
