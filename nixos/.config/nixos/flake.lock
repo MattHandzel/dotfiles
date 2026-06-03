@@ -445,8 +445,8 @@
         ]
       },
       "locked": {
-        "lastModified": 1777952743,
-        "narHash": "sha256-tpUfTogMs9SkwHbNfHohqy91+ErHPWBt0yHXrabEdCw=",
+        "lastModified": 1780390903,
+        "narHash": "sha256-GeP32WId9aV/lNJDQU9PV/8hK0aueYa0pxxy9SrsbG4=",
         "path": "/home/matth/Projects/life-scheduler",
         "type": "path"
       },
@@ -896,8 +896,8 @@
         ]
       },
       "locked": {
-        "lastModified": 1775763208,
-        "narHash": "sha256-n685IFPQ9isa9Y+Y+zmAcx7+0V2EyA12Ybi9f1a994c=",
+        "lastModified": 1778618664,
+        "narHash": "sha256-ByYgZrcdkXqfAC+mbjyhAU6LjtisIfM/hEa+XOnZYwg=",
         "path": "/home/matth/Projects/SecondBrainSpeech",
         "type": "path"
       },

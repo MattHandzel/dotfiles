@@ -95,14 +95,14 @@
     # packages.x86_64-linux = notion-repackaged.packages.${system}.default;
 
     nixosConfigurations = {
-      desktop = nixpkgs.lib.nixosSystem {
-        inherit system;
-        modules = [(import ./hosts/desktop)];
-        specialArgs = {
-          host = "desktop";
-          inherit self inputs username sharedVariables;
-        };
-      };
+      # desktop = nixpkgs.lib.nixosSystem {
+      #   inherit system;
+      #   modules = [(import ./hosts/desktop)];
+      #   specialArgs = {
+      #     host = "desktop";
+      #     inherit self inputs username sharedVariables;
+      #   };
+      # };
       server = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [(import ./hosts/server)];

@@ -159,6 +159,12 @@ in {
       word-count = "wl-paste | wc";
       paste-image = "wl-paste -t image/png >";
 
+      # Per-project Claude orchestrator session (MAT-111): `project-session <exocortex|bores|nyc>`
+      project-session = "$HOME/Obsidian/Main/scripts/linear/project-session.sh";
+
+      # Fleet: manage all project orchestrators + the registry (MAT-176): `fleet list|add|rm|new|up|down|dash`
+      fleet = "$HOME/Obsidian/Main/scripts/linear/fleet.sh";
+
       # Nixos
       ns = "nix-shell --run zsh";
       nd = "nix develop";

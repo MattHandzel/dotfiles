@@ -46,6 +46,24 @@ o.laststatus = 3
 o.showmode = false
 
 o.clipboard = "unnamedplus"
+
+-- Over SSH, route the system clipboard (+/*) to the LOCAL machine via OSC 52.
+-- Locally (no SSH), wl-copy already handles unnamedplus, so leave it alone.
+-- (MAT-132: shared clipboard server -> laptop)
+if vim.env.SSH_CONNECTION ~= nil then
+	vim.g.clipboard = {
+		name = "OSC 52",
+		copy = {
+			["+"] = require("vim.ui.clipboard.osc52").copy("+"),
+			["*"] = require("vim.ui.clipboard.osc52").copy("*"),
+		},
+		paste = {
+			["+"] = require("vim.ui.clipboard.osc52").paste("+"),
+			["*"] = require("vim.ui.clipboard.osc52").paste("*"),
+		},
+	}
+end
+
 o.cursorline = true
 o.cursorlineopt = "number"
 

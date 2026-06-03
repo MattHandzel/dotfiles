@@ -16,7 +16,7 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    # Installs @bitbonsai/mcpvault + mcp-remote into a state directory on first
+    # Installs @bitbonsai/mcpvault + supergateway into a state directory on first
     # start, then bridges the stdio MCP server to HTTP/SSE on port 22360.
     systemd.services.obsidian-mcp = {
       description = "Obsidian Vault MCP Server";
@@ -38,21 +38,24 @@ in {
 
       path = [ pkgs.nodejs_22 ];
 
-      # Install npm packages on first boot (or if they've been wiped).
+      # Install npm packages on first boot (or if they've been wiped). The
+      # sentinel is supergateway (the new dependency) so an existing install
+      # that only has the old mcp-remote gets re-provisioned.
       preStart = ''
-        if [ ! -f ${stateDir}/node_modules/.bin/mcpvault ]; then
+        if [ ! -f ${stateDir}/node_modules/.bin/supergateway ]; then
           ${pkgs.nodejs_22}/bin/npm install \
             @bitbonsai/mcpvault \
-            mcp-remote
+            supergateway
         fi
       '';
 
+      # supergateway runs the stdio MCP server (mcpvault) and exposes it over
+      # SSE at /sse + /message on ${toString port}. mcp-remote bridges the wrong
+      # direction (remote SSE -> local stdio) and treated --port as a URL.
       script = ''
-        exec ${stateDir}/node_modules/.bin/mcp-remote \
-          --port ${toString port} \
-          -- \
-          ${stateDir}/node_modules/.bin/mcpvault \
-          ${cfg.vaultPath}
+        exec ${stateDir}/node_modules/.bin/supergateway \
+          --stdio "${stateDir}/node_modules/.bin/mcpvault ${cfg.vaultPath}" \
+          --port ${toString port}
       '';
     };
 

@@ -54,8 +54,8 @@ in {
   # --- Web server (nginx) with ACME ---
   services.nginx = {
     virtualHosts.${domain} = {
-      enableACME = false;
-      forceSSL = false;
+      enableACME = true;
+      forceSSL = true;
     };
 
     virtualHosts."freshrss-tailscale" = {
@@ -94,7 +94,7 @@ in {
   # --- Harden PHP-FPM via module defaults (FreshRSS module already sets up pools) ---
   # If you need custom php.ini flags, you can extend phpOptions here:
   services.phpfpm.pools.freshrss.phpOptions = lib.mkForce ''
-    open_basedir = "${config.services.freshrss.dataDir}:${config.services.freshrss.package}/lib/FreshRSS:${config.services.freshrss.package}/share/FreshRSS:${freshrssWebroot}:/nix/store";
+    open_basedir = "${config.services.freshrss.dataDir}:${config.services.freshrss.package}/lib/FreshRSS:${config.services.freshrss.package}/share/FreshRSS:${freshrssWebroot}:/nix/store:/tmp";
     # upload_max_filesize = 32M
     # post_max_size = 32M
   '';

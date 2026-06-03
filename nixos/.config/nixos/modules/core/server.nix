@@ -29,6 +29,14 @@
     (import ./ntfy-capture-listener.nix)
     (import ./taskchampion-sync-server.nix)
     (import ./notify-poller.nix)
+    (import ./self-improve-watchdog.nix) # MAT-120 dead-man's-switch (watchdog hourly + weekly digest)
+    (import ./self-improve-pipeline.nix) # MAT-61 self-improvement automation (weekly mistake-mining + daily enricher)
+    (import ./focus-dns.nix)
+    (import ./focus-mode-resolver.nix)
+    (import ./focus-nameserver-watchdog.nix)
+    (import ./focus-pause.nix)
+    (import ./self-improve-pipeline.nix)
+    (import ./linear-vault-attachments.nix) # MAT-438 auto-attach vault docs referenced in Linear issues (30-min sweep)
   ];
 
   virtualisation.docker.enable = true;
