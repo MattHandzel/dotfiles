@@ -102,19 +102,23 @@
           devices = ["matts-computer" "Pixel 9a"];
         };
         "claude" = {
-          # ~/.claude (Claude Code config + memory). MAT-169.
+          # ~/.claude (Claude Code config + memory + transcripts). MAT-169 (Option A).
           # Declared so overrideFolders (default true) does NOT prune this
-          # imperatively-added folder on rebuild. ignorePatterns mirror the
-          # live ~/.claude/.stignore: sync durable config + auto-memory, keep
-          # hot append-only runtime state (transcripts, self-improve store)
-          # machine-local so Syncthing never sync-conflicts on it.
+          # imperatively-added folder on rebuild. ignorePatterns mirror the live
+          # ~/.claude/.stignore. Option A KEEPS session transcripts synced (so
+          # `--resume` and the self-improve analyzer see every machine's sessions);
+          # the occasional conflict is made self-healing instead — the
+          # claude-conflict-cleanup timer (below) reaps stale `*.sync-conflict-*`
+          # copies and the analyzer de-dupes by session-id (run-retro-sweep.sh).
+          # Still kept MACHINE-LOCAL: /self-improve (per-host runtime + the
+          # react-to-act idempotency store, MAT-166 — syncing it double-fires
+          # reactions) and pure runtime junk (cache, daemon.log, …).
           path = "~/.claude";
           devices = ["matts-computer"];
           ignorePatterns = [
             "!/.credentials.json"
             "!/projects/**/memory/**" # KEEP auto-memory synced (carve-out first)
-            "/projects/**/*.jsonl" # hot session+subagent transcripts (conflict source)
-            "/self-improve" # per-host runtime + idempotency store
+            "/self-improve" # per-host runtime + react-to-act idempotency store (MAT-166)
             "/cache"
             "/shell-snapshots"
             "/file-history"
@@ -137,6 +141,30 @@
           ];
         };
       };
+    };
+  };
+
+  # MAT-169 (Option A): self-heal Syncthing conflict copies of the live, synced
+  # Claude transcripts. Reaps stale `*.sync-conflict-*` copies under
+  # ~/.claude/projects so they never pile up (they hit 386 MB once). Server-only:
+  # Syncthing propagates the deletes to the desktop, so one timer covers both
+  # peers. Logic lives in the synced vault script (ships without a rebuild).
+  systemd.services.claude-conflict-cleanup = {
+    description = "MAT-169: reap stale Syncthing sync-conflict copies of Claude transcripts";
+    path = with pkgs; [bash coreutils fd];
+    environment = {HOME = "/home/matth";};
+    serviceConfig = {
+      Type = "oneshot";
+      User = "matth";
+      ExecStart = "${pkgs.bash}/bin/bash /home/matth/Obsidian/Main/scripts/maintenance/claude-sync-conflict-cleanup.sh";
+    };
+  };
+  systemd.timers.claude-conflict-cleanup = {
+    description = "Hourly sweep of Claude transcript sync-conflict copies (MAT-169)";
+    wantedBy = ["timers.target"];
+    timerConfig = {
+      OnCalendar = "*-*-* *:17:00";
+      Persistent = true;
     };
   };
 
