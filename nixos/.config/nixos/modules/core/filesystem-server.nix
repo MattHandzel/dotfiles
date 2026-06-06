@@ -6,8 +6,18 @@
 #     file:///home/matth/Obsidian/Main/x.md  →  http://filesystem.matthandzel.com/home/matth/Obsidian/Main/x.md
 #
 # i.e. strip `file://` and prepend `http://filesystem.matthandzel.com`. The URL path IS the
-# absolute filesystem path, so no mental translation is needed. Markdown renders as HTML;
-# directories are browsable; everything else shows inline or downloads.
+# absolute filesystem path, so no mental translation is needed.
+#
+# WHAT YOU GET (MAT-565 + the two follow-up asks "open in nvim" / "explore folders"):
+#   • FILES open in a styled viewer: markdown renders to HTML; any other text/code shows in a
+#     readable code block. Every viewer has an "✎ Edit in nvim" button and a "raw" link.
+#     Append `?raw=1` to get the unstyled bytes (what the viewer fetches under the hood).
+#   • DIRECTORIES open in a styled browser: click folders to descend, click files to view, and
+#     every file row has its own "✎ nvim" link. Append `?json=1` for the raw JSON listing.
+#   • "✎ Edit in nvim" emits a `nvim://matts-server/<abs-path>` link. The laptop handler
+#     (modules/home/nvim-url-handler.nix) opens it in nvim — the local syncthing copy if present,
+#     else over SSH to this server. That handler is the ONE piece that needs the laptop rebuilt.
+#   • images/PDF render inline; other binaries download.
 #
 # ── SECURITY MODEL (this exposes filesystem paths, so it is deliberately conservative) ───────────
 # Mirrors the proven, in-production pattern of `dashboard.server.matthandzel.com`
@@ -29,6 +39,9 @@
 #      path in /home other than Obsidian/ and Projects/, regardless of what the config or ACLs say.
 # Plus: READ-ONLY (only GET/HEAD; no upload/delete/write). Transport is WireGuard-encrypted by
 # Tailscale, so plain HTTP is fine and needs no cert — exactly like ntfy (:8124) and the dashboard.
+# NOTE: the markdown/directory rendering is 100% CLIENT-SIDE (a static, vendored HTML+JS shell that
+# fetches `?raw=1`/`?json=1`); the server stays static-file-only (no app code, no exec), so the
+# secret-deny + scoped-root rules still gate every single byte the browser can fetch.
 #
 # ── WHY v1 404'd (every link), and the fix ───────────────────────────────────────────────────────
 # NixOS hardens `services.nginx` with `ProtectHome=yes` by default. That replaces /home with an
@@ -46,6 +59,7 @@
 let
   tailnetIP = "100.118.206.104";          # this server's Tailscale IP (blocky / same as the dashboard)
   hosts     = [ "filesystem.matthandzel.com" "filesystem.server.matthandzel.com" ];
+  nvimHost  = "matts-server";              # host embedded in nvim:// links (the laptop handler ssh's here)
 
   # The ONLY filesystem subtrees served. Add a dir here to widen access (keep it narrow). These cover
   # the vault notes + repo files that Linear `file://` links point at. `rootDirs` (no trailing slash)
@@ -55,26 +69,32 @@ let
 
   # nginx `location` prefix blocks for the allowed roots. `root /;` makes the URL path map 1:1 to the
   # real filesystem path (URI /home/matth/Obsidian/x → file /home/matth/Obsidian/x). Plain prefix
-  # (NOT `^~`) so the regex blocks below (secret-deny, inline-text) still get a chance to match first.
+  # (NOT `^~`) so the regex blocks below (secret-deny, viewer, browser) still get a chance to match
+  # first. A directory hit here (no trailing slash) 301-redirects to add the slash, which then matches
+  # the directory-browser regex below.
   rootLocations = lib.concatMapStrings (r: ''
     location ${r} {
       root /;
     }
   '') roots;
 
-  # Extensions rendered inline as readable UTF-8 text (notes, code, configs, logs…). Markdown is
-  # handled separately (rendered to HTML); this is for everything else that should show, not download.
-  # `types { }` clears nginx's mime table for this location so EVERYTHING here serves as text/plain
-  # (otherwise `.json`→application/json etc. make the browser download instead of show).
+  # Extensions treated as text and shown in the viewer's code block (notes, code, configs, logs…).
+  # Markdown (.md/.markdown) is handled separately (rendered to HTML by the viewer); this is for
+  # everything else that should display, not download. Served as text/plain when fetched with `?raw=1`.
   textExts = "txt|text|org|rst|adoc|log|conf|cfg|ini|toml|nix|sh|bash|zsh|fish|py|rb|pl|lua|vim|el|js|mjs|cjs|jsx|ts|tsx|json|ya?ml|csv|tsv|sql|c|h|cc|cpp|hpp|rs|go|java|kt|php|css|scss|sass|html?|xml|svg|env-sample|gitignore-sample";
 
-  # ── Markdown viewer ──────────────────────────────────────────────────────────────────────────────
-  # A self-contained HTML shell that fetches the raw markdown (same URL + `?raw=1`) and renders it
-  # client-side with a VENDORED marked.js (no external network at view time → works offline on the
-  # tailnet, zero CDN trust). nginx serves this for `*.md` requests that lack `?raw`; the shell then
-  # asks for `?raw=1` to get the source. Rendering is client-side so the server stays static-file-only
-  # (no app code, minimal attack surface) and the secret-deny rules still gate every byte fetched.
-  mdViewer = pkgs.writeText "fsview.html" ''
+  # ── Unified viewer/browser ─────────────────────────────────────────────────────────────────────
+  # ONE self-contained HTML+JS shell that handles BOTH a file and a directory, decided client-side
+  # from the URL (a directory URL ends in `/`). nginx serves this shell for:
+  #   • a directory request without `?json` (the shell then fetches `?json=1` → JSON autoindex), and
+  #   • a markdown/text file request without `?raw` (the shell then fetches `?raw=1` → the bytes).
+  # Rendering is client-side with a VENDORED marked.js (no external network at view time → works
+  # offline on the tailnet, zero CDN trust). The server itself only ever serves static bytes / the
+  # JSON listing, so the secret-deny + scoped-root rules gate everything the shell can request.
+  #
+  # "✎ Edit in nvim" links are `nvim://matts-server/<abs-path>`; the laptop's nvim:// handler opens
+  # them (local copy if synced, else SSH). encodeURI keeps the path slashes but escapes spaces.
+  fsview = pkgs.writeText "fsview.html" ''
     <!doctype html>
     <html lang="en">
     <head>
@@ -85,10 +105,29 @@ let
       :root { color-scheme: light dark; }
       body { margin: 0; background: #fff; color: #1f2328; font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
       @media (prefers-color-scheme: dark) { body { background: #0d1117; color: #e6edf3; } }
-      header { position: sticky; top: 0; padding: 8px 16px; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; background: rgba(127,127,127,.10); border-bottom: 1px solid rgba(127,127,127,.25); backdrop-filter: blur(6px); display: flex; gap: 12px; justify-content: space-between; }
-      header a { color: inherit; opacity: .7; text-decoration: none; }
+      header { position: sticky; top: 0; z-index: 5; padding: 8px 16px; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; background: rgba(127,127,127,.10); border-bottom: 1px solid rgba(127,127,127,.25); backdrop-filter: blur(6px); display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+      header .crumbs { overflow-wrap: anywhere; }
+      header a { color: inherit; opacity: .75; text-decoration: none; }
       header a:hover { opacity: 1; text-decoration: underline; }
-      main { max-width: 860px; margin: 0 auto; padding: 24px 16px 96px; }
+      header .actions { display: flex; gap: 12px; white-space: nowrap; }
+      header .nvim { opacity: 1; font-weight: 600; color: #1a7f37; }
+      @media (prefers-color-scheme: dark) { header .nvim { color: #3fb950; } }
+      main { max-width: 980px; margin: 0 auto; padding: 20px 16px 96px; }
+      /* directory listing */
+      .listing { list-style: none; margin: 0; padding: 0; font: 14px/1.9 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .listing li { display: flex; align-items: center; gap: 10px; padding: 2px 6px; border-radius: 6px; }
+      .listing li:hover { background: rgba(127,127,127,.10); }
+      .listing .name { flex: 1; overflow-wrap: anywhere; }
+      .listing .name a { color: #0969da; text-decoration: none; }
+      @media (prefers-color-scheme: dark) { .listing .name a { color: #4493f8; } }
+      .listing .name a:hover { text-decoration: underline; }
+      .listing .dir a { font-weight: 600; }
+      .listing .meta { opacity: .55; font-size: 12px; white-space: nowrap; }
+      .listing .nv { font-size: 12px; opacity: .6; color: #1a7f37; text-decoration: none; white-space: nowrap; }
+      @media (prefers-color-scheme: dark) { .listing .nv { color: #3fb950; } }
+      .listing li:hover .nv { opacity: 1; }
+      .listing .nv:hover { text-decoration: underline; }
+      /* rendered markdown */
       .md h1, .md h2 { border-bottom: 1px solid rgba(127,127,127,.25); padding-bottom: .3em; }
       .md h1, .md h2, .md h3, .md h4 { margin-top: 1.4em; line-height: 1.25; }
       .md a { color: #0969da; } @media (prefers-color-scheme: dark) { .md a { color: #4493f8; } }
@@ -98,22 +137,109 @@ let
       .md blockquote { margin: 0; padding: 0 1em; border-left: .25em solid rgba(127,127,127,.35); opacity: .85; }
       .md table { border-collapse: collapse; } .md th, .md td { border: 1px solid rgba(127,127,127,.35); padding: 6px 13px; }
       .md img { max-width: 100%; } .md hr { border: none; border-top: 1px solid rgba(127,127,127,.25); }
+      /* raw code block (non-markdown text files) */
+      pre.code { background: rgba(127,127,127,.10); padding: 16px; border-radius: 8px; overflow: auto; font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .err { color: #cf222e; } @media (prefers-color-scheme: dark) { .err { color: #ff7b72; } }
     </style>
     <script>${builtins.readFile ./marked.min.js}</script>
     </head>
     <body>
-    <header><span id="path"></span><a id="rawlink" href="?raw=1">raw</a></header>
-    <main><div id="c" class="md">Loading…</div></main>
+    <header>
+      <span class="crumbs" id="crumbs"></span>
+      <span class="actions" id="actions"></span>
+    </header>
+    <main><div id="c">Loading…</div></main>
     <script>
       (function () {
-        var p = location.pathname;
-        var name = decodeURIComponent(p.split("/").pop());
-        document.getElementById("path").textContent = decodeURIComponent(p);
-        document.title = name;
-        fetch(p + "?raw=1")
-          .then(function (r) { if (!r.ok) throw new Error(r.status + " " + r.statusText); return r.text(); })
-          .then(function (t) { document.getElementById("c").innerHTML = marked.parse(t); })
-          .catch(function (e) { document.getElementById("c").textContent = "Failed to load source: " + e.message; });
+        var HOST = "${nvimHost}";
+        var pathRaw = location.pathname;                 // %-encoded, exactly as the server sees it
+        var path = decodeURIComponent(pathRaw);          // human-readable
+        var isDir = pathRaw.charAt(pathRaw.length - 1) === "/";
+        var c = document.getElementById("c");
+
+        function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+        function nvimHref(absPath) { return "nvim://" + HOST + encodeURI(absPath); }
+
+        // breadcrumb: each path segment links to its directory
+        (function () {
+          var segs = path.replace(/\/+$/, "").split("/");          // ["", "home", "matth", ...]
+          var acc = "", html = "";
+          for (var i = 0; i < segs.length; i++) {
+            if (segs[i] === "") continue;
+            acc += "/" + segs[i];
+            var isLast = i === segs.length - 1;
+            var href = encodeURI(acc) + (isLast && !isDir ? "" : "/");
+            html += ' / <a href="' + href + '">' + esc(segs[i]) + "</a>";
+          }
+          document.getElementById("crumbs").innerHTML = html || " /";
+        })();
+
+        document.title = path.replace(/\/+$/, "").split("/").pop() || "filesystem";
+
+        var actions = document.getElementById("actions");
+        if (isDir) {
+          actions.innerHTML = '<a href="?json=1">json</a>';
+          fetch(pathRaw + "?json=1")
+            .then(function (r) { if (!r.ok) throw new Error(r.status + " " + r.statusText); return r.json(); })
+            .then(renderDir)
+            .catch(function (e) { c.innerHTML = '<p class="err">Failed to list directory: ' + esc(e.message) + "</p>"; });
+        } else {
+          actions.innerHTML =
+            '<a class="nvim" href="' + nvimHref(path) + '">✎ Edit in nvim</a>' +
+            '<a href="?raw=1">raw</a>';
+          fetch(pathRaw + "?raw=1")
+            .then(function (r) { if (!r.ok) throw new Error(r.status + " " + r.statusText); return r.text(); })
+            .then(renderFile)
+            .catch(function (e) { c.innerHTML = '<p class="err">Failed to load source: ' + esc(e.message) + "</p>"; });
+        }
+
+        function renderFile(text) {
+          if (/\.(md|markdown)$/i.test(path)) {
+            c.className = "md";
+            c.innerHTML = marked.parse(text);
+          } else {
+            c.className = "";
+            c.innerHTML = '<pre class="code">' + esc(text) + "</pre>";
+          }
+        }
+
+        function renderDir(entries) {
+          // nginx autoindex JSON: [{name,type:"directory"|"file",mtime,size}, ...]; dirs first, by name
+          entries.sort(function (a, b) {
+            var ad = a.type === "directory", bd = b.type === "directory";
+            if (ad !== bd) return ad ? -1 : 1;
+            return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1;
+          });
+          var ul = document.createElement("ul");
+          ul.className = "listing";
+          // up-link (unless already at a served root top)
+          if (!/^\/home\/matth\/(Obsidian|Projects)\/?$/.test(path.replace(/\/+$/, "") + "/")) {
+            var up = document.createElement("li");
+            up.innerHTML = '<span class="name dir"><a href="../">../</a></span>';
+            ul.appendChild(up);
+          }
+          entries.forEach(function (e) {
+            var li = document.createElement("li");
+            var isd = e.type === "directory";
+            var enc = encodeURIComponent(e.name) + (isd ? "/" : "");
+            var size = (!isd && typeof e.size === "number") ? human(e.size) : "";
+            var nv = isd ? "" : '<a class="nv" href="' + nvimHref(path + e.name) + '">✎ nvim</a>';
+            li.innerHTML =
+              '<span class="name ' + (isd ? "dir" : "file") + '"><a href="' + enc + '">' + esc(e.name) + (isd ? "/" : "") + "</a></span>" +
+              '<span class="meta">' + size + "</span>" + nv;
+            ul.appendChild(li);
+          });
+          c.className = "";
+          c.innerHTML = "";
+          c.appendChild(ul);
+        }
+
+        function human(n) {
+          if (n < 1024) return n + " B";
+          var u = ["KB", "MB", "GB", "TB"], i = -1;
+          do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
+          return n.toFixed(1) + " " + u[i];
+        }
       })();
     </script>
     </body>
@@ -142,7 +268,7 @@ in
     BindReadOnlyPaths = rootDirs;
   };
 
-  # ── 2. nginx vhost: read-only, tailnet-only, scoped, secret-scrubbed, markdown-rendered ───────────
+  # ── 2. nginx vhost: read-only, tailnet-only, scoped, secret-scrubbed, rendered ────────────────────
   # Bind 0.0.0.0:80 (robust to tailscaled boot-order) and let the ACL below enforce tailnet-only,
   # identical to the exocortex dashboard. Routed by Host header, so it coexists with the other :80
   # vhosts. Plain HTTP: transport is already WireGuard-encrypted over the tailnet.
@@ -161,14 +287,15 @@ in
       if ($request_method !~ ^(GET|HEAD)$) { return 405; }
 
       charset utf-8;
-      autoindex on;            # browsable directory listings (folder exploration)
+      autoindex on;            # directory listings (JSON form is consumed by the browser shell)
+      autoindex_format json;
       autoindex_exact_size off;
       autoindex_localtime on;
 
-      # --- Markdown viewer shell (internal; reached via rewrite below). Self-contained HTML. ---
+      # --- Unified viewer/browser shell (internal; reached via the rewrites below). Self-contained. ---
       location = /__fsview {
         internal;
-        alias ${mdViewer};
+        alias ${fsview};
         default_type text/html;
         charset utf-8;
         add_header X-Content-Type-Options nosniff;
@@ -179,29 +306,28 @@ in
       location ~* (^|/)(id_rsa|id_ed25519|id_ecdsa|known_hosts|authorized_keys|credentials|secrets?)([._/-]|$) { deny all; }
       location ~* \.(pem|key|crt|cer|p12|pfx|ppk|kdbx|jks|keystore|asc|gpg)$  { deny all; }
 
-      # --- Markdown → rendered HTML. Bare URL renders; `?raw=1` returns the source (fetched by the
-      #     viewer). `if`-with-rewrite is the documented-safe subset of `if`. ---
-      location ~* ^/home/matth/(Obsidian|Projects)/.*\.(md|markdown)$ {
+      # --- DIRECTORIES (URL ends in `/`): bare → styled browser shell; `?json=1` → JSON autoindex. ---
+      location ~* ^/home/matth/(Obsidian|Projects)(/.*)?/$ {
         root /;
         charset utf-8;
-        types { }                       # raw markdown source served as plain text
+        default_type application/json;
+        if ($arg_json = "") { rewrite ^ /__fsview last; }
+      }
+
+      # --- MARKDOWN + TEXT/CODE FILES: bare → styled viewer; `?raw=1` → the raw bytes (text/plain).
+      #     `if`-with-rewrite is the documented-safe subset of `if`. ---
+      location ~* ^/home/matth/(Obsidian|Projects)/.*\.(md|markdown|${textExts})$ {
+        root /;
+        charset utf-8;
+        types { }                       # clear the mime map → serve raw fetches as plain text
         default_type text/plain;
         add_header Content-Disposition inline;
         add_header X-Content-Type-Options nosniff;
         if ($arg_raw = "") { rewrite ^ /__fsview last; }
       }
 
-      # --- text/code → inline UTF-8 plain text (scoped to the allowed roots) ---
-      location ~* ^/home/matth/(Obsidian|Projects)/.*\.(${textExts})$ {
-        root /;
-        types { }                       # clear mime map → serve everything here as text/plain
-        default_type text/plain;
-        charset utf-8;
-        add_header Content-Disposition inline;
-        add_header X-Content-Type-Options nosniff;
-      }
-
-      # --- LAYER 3: the only served roots (images/PDF render, binaries download, dirs list) ---
+      # --- LAYER 3: the only served roots (images/PDF render, binaries download; a slash-less
+      #     directory 301-redirects to add the trailing slash → matches the browser regex above) ---
       ${rootLocations}
 
       # Apex: a one-line hint. Anything outside the allowed roots 404s (fail-closed).

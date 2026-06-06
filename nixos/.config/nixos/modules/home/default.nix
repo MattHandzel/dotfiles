@@ -18,6 +18,7 @@
     ++ [(import ./kitty.nix)] # terminal
     ++ [(import ./swaync/swaync.nix)] # notification deamon
     ++ [(import ./nvim.nix)] # neovim editor
+    ++ [(import ./nvim-url-handler.nix)] # nvim:// scheme handler for the tailnet file server (MAT-565)
     ++ [(import ./packages.nix)] # other packages
     ++ [(import ./scripts/scripts.nix)] # personal scripts
     ++ [ ./transcribe-captures.nix ]
@@ -51,6 +52,7 @@
       "text/html" = "zen.desktop";
       "x-scheme-handler/http" = "zen.desktop";
       "x-scheme-handler/https" = "zen.desktop";
+      "x-scheme-handler/nvim" = "nvim-open.desktop"; # MAT-565: "✎ Edit in nvim" links from filesystem.matthandzel.com
       "audio/*" = "mpv.desktop";
       "video/*" = "mpv.desktop";
       "image/*" = "feh.desktop";
