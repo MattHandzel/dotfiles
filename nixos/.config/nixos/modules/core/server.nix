@@ -21,6 +21,7 @@
     (import ./life-scheduler.nix)
     # Canary is intentionally not imported here; Faster Whisper is the default STT service.
     (import ./nginx.nix)
+    (import ./filesystem-server.nix) # MAT-565 read-only tailnet-only web file server (filesystem.matthandzel.com)
     (import ./firefly-iii.nix)
     (import ./freshrss.nix)
     (import ./silverbullet.nix)
