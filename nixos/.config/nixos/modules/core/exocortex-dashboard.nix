@@ -34,6 +34,10 @@ let
   runtimePath = lib.makeBinPath [
     pkgs.bash pkgs.coreutils pkgs.jq pkgs.fd pkgs.ripgrep pkgs.gnugrep
     pkgs.gawk pkgs.gnused pkgs.git pkgs.systemd pkgs.hostname pkgs.tailscale
+    pkgs.curl   # MAT-555: the `lin` Linear helper shells out to curl — without it on PATH every
+                # Linear-derived panel (linear, linear-projects, agents-in-flight) rendered "down"
+                # in the SERVED dashboard. (aggregate.sh also prepends /run/current-system/sw/bin as
+                # a belt-and-suspenders fallback so it works before this rebuild lands.)
   ];
 in
 {
@@ -88,6 +92,28 @@ in
     listen = [ { addr = "0.0.0.0"; port = port; } ];
     root = outDir;
     locations."/".index = "dashboard.html";
+  };
+
+  # ── 2b. Clean hostname: dashboard.server.matthandzel.com (tailnet-only) ───────────────────────
+  # Matt's requested memorable URL (MAT-556). Served on :80 by server_name match. Port 80 is PUBLIC
+  # on this host (ACME http-01), so — unlike the :8137 vhost — we CANNOT rely on the firewall for
+  # privacy. Two layers keep the dashboard (which exposes the whole system map) off the internet:
+  #   (a) the public DNS A record points at the PRIVATE tailnet IP 100.118.206.104 (unroutable
+  #       publicly), and (b) this location ACL allows only the tailnet CGNAT range + loopback, so even
+  #       a direct hit on the public IP with a spoofed Host header is denied.
+  # http-only: no cert is minted for a tailnet-IP name (Tailscale HTTPS-certs are off; ACME http-01
+  # can't validate a private IP). Tailnet transport is WireGuard-encrypted, so plain HTTP is fine.
+  services.nginx.virtualHosts."dashboard.server.matthandzel.com" = {
+    listen = [ { addr = "0.0.0.0"; port = 80; } ];
+    root = outDir;
+    locations."/" = {
+      index = "dashboard.html";
+      extraConfig = ''
+        allow 100.64.0.0/10;   # Tailscale CGNAT range — every tailnet device
+        allow 127.0.0.1;       # the server itself
+        deny all;              # nobody else (defends the public :80 against a spoofed Host header)
+      '';
+    };
   };
 
   # Open 8137 on the tailnet interface only. This list MERGES with the host's existing

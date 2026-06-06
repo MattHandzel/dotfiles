@@ -86,6 +86,12 @@ in {
       # on-box ntfy — never the external hostname (focus-DNS sinkhole guard, MAT-398)
       NTFY_SERVER = "http://localhost:8124";
       NTFY_TOPIC_PREFIX = "claude-fleet";
+      # ── GO-LIVE (MAT-523, 2026-06-05): autospawn ENABLED — the Conductor now spawns
+      #    per-project orchestrators on demand. Set back to "0" to disable. Every spawn is
+      #    still gated by the MAT-505 governor (budget/cooldown/concurrency), active-hours,
+      #    one-per-project /proc liveness, and idle-exit (MAT-503). Watchdog stays OFF for
+      #    the first cycle (CONDUCTOR_WATCHDOG default 0) — flip later once this proves out.
+      CONDUCTOR_AUTOSPAWN = "1";
     };
 
     # A hard crash-LOOP (5 restarts in 10 min) → enter `failed` → fire OnFailure

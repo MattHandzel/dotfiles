@@ -173,6 +173,7 @@ in {
       # notetaker = "kitty sh -c \"cd ~/notes ; neovim .\" --title notetaker --name notetaker --start-as=fullscreen";
 
       # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
+      test-rebuild = "pushd ${sharedVariables.rootDirectory} && git add --all . && sudo nixos-rebuild test --flake ${sharedVariables.rootDirectory}.#${host} && popd";
       rebuild = "pushd ${sharedVariables.rootDirectory} && git add --all . && sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host} && popd";
       rebuildu = "pushd ${sharedVariables.rootDirectory} && cp ${sharedVariables.rootDirectory}flake.lock ${sharedVariables.rootDirectory}flake.$(date +%Y-%m-%d).lock && git add --all . && sudo nixos-rebuild switch --upgrade --flake ${sharedVariables.rootDirectory}.#${host} && popd";
       # testing = "echo \"sudo nixos-rebuild switch --flake ${sharedVariables.rootDirectory}.#${host}\"";
@@ -181,7 +182,6 @@ in {
       nix-flake-update = "sudo nix flake update ${sharedVariables.rootDirectory}#";
       nix-clean = "sudo nix-collect-garbage && sudo nix-collect-garbage -d && sudo rm /nix/var/nix/gcroots/auto/* && nix-collect-garbage && nix-collect-garbage -d";
 
-      cum = "echo TEST";
       # Git
       ga = "git add";
       gaa = "git add --all";
