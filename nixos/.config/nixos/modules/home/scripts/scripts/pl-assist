@@ -1,0 +1,61 @@
+#!/bin/bash
+# pl-assist <mode> [text]
+#
+# Bare-bones, fast Polish helper. Spawns a Claude Code subprocess stripped of
+# system prompt, tools, slash-commands, MCP, and session persistence, with a
+# per-mode prompt. Reads the clipboard (wl-paste) when no text arg is given.
+#
+# Backs the numpad capture modes (MAT-799 / MAT-800). Adding a mode = one row
+# in the case below; nothing else changes.
+#
+# Usage:
+#   pl-assist explain "podejście"     # explain a copied Polish word/phrase
+#   pl-assist explain                 # same, but on the current clipboard
+
+set -euo pipefail
+
+MODE="${1:-}"
+shift || true
+
+# Text comes from the remaining args, or the clipboard if none were given.
+TEXT="$*"
+if [[ -z "$TEXT" ]]; then
+    TEXT="$(wl-paste 2>/dev/null || true)"
+fi
+
+if [[ -z "$MODE" || -z "$TEXT" ]]; then
+    echo "usage: pl-assist <mode> [text]   (falls back to clipboard)" >&2
+    exit 1
+fi
+
+# Fast model — keeps the round-trip under a couple of seconds.
+MODEL="claude-haiku-4-5"
+
+# Per-mode system prompt. Add a mode by adding a case here.
+case "$MODE" in
+    explain)
+        SYSTEM="You are a concise Polish-English tutor for a heritage speaker. \
+Given a Polish word or phrase, give: the English meaning, a one-line grammar \
+note (part of speech, case/aspect if relevant), and a short 'warto zapamiętać' \
+tip. Answer directly, no preamble."
+        ;;
+    *)
+        echo "pl-assist: unknown mode '$MODE'" >&2
+        exit 1
+        ;;
+esac
+
+# Isolated config dir: carries only the credentials, so the user-level
+# settings.json hooks, project CLAUDE.md, and team/agent context are NOT
+# inherited by this subprocess — just auth. Built once, reused after.
+CLEAN_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/pl-assist/claude"
+mkdir -p "$CLEAN_DIR"
+ln -sf "$HOME/.claude/.credentials.json" "$CLEAN_DIR/.credentials.json"
+
+CLAUDE_CONFIG_DIR="$CLEAN_DIR" exec claude -p "$TEXT" \
+    --model "$MODEL" \
+    --system-prompt "$SYSTEM" \
+    --disallowedTools '*' \
+    --strict-mcp-config \
+    --no-session-persistence \
+    < /dev/null
