@@ -4,6 +4,66 @@
   ...
 }: let
   # _2048 = pkgs.callPackage ../../pkgs/2048/default.nix {};
+  project-asset-generator = pkgs.callPackage ../../pkgs/project-asset-generator/default.nix {
+    src = inputs.project-asset-generator-src;
+  };
+
+  # Learn This extension, packaged as an unsigned local XPI (MAT-826). Source is
+  # vendored under pkgs/zen-learn-extension/src/ so the install is reproducible.
+  learn-this-extension = pkgs.callPackage ../../pkgs/zen-learn-extension/default.nix {};
+
+  # Zen browser with declaratively force-installed extensions (MAT-572 — Saul's
+  # Chrome-extension list, ported). The zen flake exposes the *wrapped* browser
+  # as `default`, whose `.override` only takes wrapFirefox args (no `policies`),
+  # so we re-wrap the same `beta-unwrapped` derivation `default` is built from
+  # (mirroring the flake's own `beta = wrapFirefox beta-unwrapped { icon...; }`)
+  # and add `extraPolicies` — nixpkgs writes them into the browser's
+  # policies.json, whose ExtensionSettings auto-installs each add-on from
+  # addons.mozilla.org on launch. Only these 4 are declared, so existing
+  # manually-installed add-ons (uBlock Origin, Stylus, …) are left untouched.
+  # New Tab Override needs its target URL set once in its own options page —
+  # Firefox policy can't set the new-tab URL directly.
+  #
+  # MAT-826: "Learn This" is a *local, unsigned* extension (no AMO listing), so
+  # it is force-installed from a file:// XPI built by the local
+  # zen-learn-extension derivation, and `extraPrefs` relaxes
+  # xpinstall.signatures.required so the unsigned XPI is accepted. This mirrors
+  # what nixpkgs' own `nixExtensions` path does, but without switching to that
+  # mode (which would block all manually-installed add-ons).
+  zenWithExtensions = let
+    system = pkgs.stdenv.hostPlatform.system;
+    # id = the add-on's internal GUID (the ExtensionSettings key Firefox matches
+    # against the installed xpi); slug = its addons.mozilla.org URL slug.
+    forceExt = id: slug: {
+      name = id;
+      value = {
+        install_url = "https://addons.mozilla.org/firefox/downloads/latest/${slug}/latest.xpi";
+        installation_mode = "force_installed";
+      };
+    };
+  in
+    pkgs.wrapFirefox inputs.zen-browser.packages.${system}.beta-unwrapped {
+      icon = "zen-browser";
+      # Accept the unsigned local "Learn This" XPI (MAT-826). Without this the
+      # file:// force_install below is rejected as an unsigned add-on.
+      extraPrefs = ''
+        lockPref("xpinstall.signatures.required", false);
+      '';
+      extraPolicies.ExtensionSettings = builtins.listToAttrs [
+        (forceExt "{d7742d87-e61d-4b78-b8a1-b469842139fa}" "vimium-ff") # Vimium
+        (forceExt "addon@darkreader.org" "darkreader") # Dark Reader
+        (forceExt "{7be2ba16-0f1e-4d93-9ebc-5164397477a9}" "videospeed") # Video Speed Controller
+        (forceExt "newtaboverride@agenedia.com" "new-tab-override") # New Tab Override
+        # Learn This — local unsigned XPI, force-installed from the Nix store.
+        {
+          name = "learn-this@matthandzel.com";
+          value = {
+            install_url = "file://${learn-this-extension}/learn-this@matthandzel.com.xpi";
+            installation_mode = "force_installed";
+          };
+        }
+      ];
+    };
 in {
   home.packages = with pkgs; [
     # _2048
@@ -11,14 +71,18 @@ in {
     audacity
     bitwise # cli tool for bit / hex manipulation
     cbonsai # terminal screensaver
-    evince # gnome pdf viewer
+    sioyek # research-focused pdf viewer
     eza # ls replacement
     entr # perform action when file change
     fd # find replacement
     file # Show file information
     fzf # fuzzy finder
     # gtt # google translate TUI
-    # gifsicle # gif utility
+    gifsicle # gif optimization (project-asset-generator)
+    vhs # terminal GIF recording (project-asset-generator)
+    marp-cli # markdown slides (project-asset-generator)
+    tesseract # OCR for asset verification (project-asset-generator)
+    project-asset-generator # generate-assets CLI (~/Projects/project-asset-generator)
 
     gimp
     gtrash # rm replacement, put deleted files in system trash
@@ -26,7 +90,7 @@ in {
     jdk17 # java
     lazygit
     libreoffice
-    nautilus # file manager
+    kdePackages.dolphin # file manager
     # nitch # systhem fetch util
     nix-prefetch-github
     # pipes # terminal screensaver
@@ -54,15 +118,14 @@ in {
     cmatrix
     gparted # partition manager
     ffmpeg
-    imv # image viewer
+    swayimg # wayland-native image viewer
     killall
     libnotify
     man-pages # extra man pages
     mpv # video player
-    ncdu # disk space
+    gdu # disk space (fast, SSD-optimized)
     openssl
-    pamixer # pulseaudio command line mixer
-    pavucontrol # pulseaudio volume controle (GUI)
+    pwvucontrol # pipewire-native volume control (GUI)
     playerctl # controller for media players
     wl-clipboard # clipboard utils for wayland (wl-copy, wl-paste)
     cliphist # clipboard manager
@@ -113,7 +176,7 @@ in {
     anki
     obsidian
     neomutt
-    feh
+    satty # screenshot annotation tool
     texliveFull
 
     # morgen
@@ -150,8 +213,10 @@ in {
     sshfs
     fastfetch
     wasistlos
+    dialect # GNOME translator — floating popup via SUPER+G submap
+    crow-translate # Alt translator — floating popup via SUPER+SHIFT+G submap
 
-    inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default # This is for zen-browser
+    zenWithExtensions # zen-browser + declarative extensions (MAT-572; see let-block)
     tigervnc
     espanso-wayland
 
@@ -236,6 +301,7 @@ in {
     beeper
     gping
     code-cursor
-    claude-code
+    # claude-code # installing with npm is better
+    chromium
   ];
 }
