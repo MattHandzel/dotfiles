@@ -40,6 +40,7 @@
     (import ./linear-vault-attachments.nix) # MAT-438 auto-attach vault docs referenced in Linear issues (30-min sweep)
     (import ./aes-metrics-collector.nix) # MAT-149 snapshot AES metrics from the live Linear board (30-min collector)
     (import ./linear-watcherd.nix) # MAT-507 Conductor daemon (linear-watcherd): reboot+crash-survivable, default-OFF autospawn, MAT-508 digest
+    (import ./linear-webhook-receiver.nix) # MAT-40 Linear webhook → on-box ntfy push (instant ~2s orchestrator wake, replaces 60s poll). Exposure: tailscale funnel 8131 (Matt-action).
   ];
 
   virtualisation.docker.enable = true;
