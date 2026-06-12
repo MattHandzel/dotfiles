@@ -75,7 +75,24 @@
     direnv
     just
     restic
+
+    # MAT-557: Playwright browser automation on NixOS. The bundled chromium that
+    # `playwright install` downloads can't run here (missing shared libs, e.g.
+    # libglib-2.0.so.0). Ship the Nix-store chromium + the matching nixpkgs
+    # playwright browser bundle, and point Playwright at them via the env vars
+    # below so screenshots/automation use a binary that actually links.
+    chromium
+    playwright-driver.browsers
   ];
+
+  # MAT-557: Playwright resolves its browser from PLAYWRIGHT_BROWSERS_PATH
+  # instead of ~/.cache/ms-playwright (the broken download). SKIP_VALIDATE
+  # suppresses Playwright's host-requirements check, which fails on NixOS even
+  # though the nix-provided browser runs fine.
+  environment.sessionVariables = {
+    PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+    PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+  };
 
   services.syncthing = {
     enable = true;
