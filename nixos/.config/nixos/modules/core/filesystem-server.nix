@@ -9,9 +9,10 @@
 # absolute filesystem path, so no mental translation is needed.
 #
 # WHAT YOU GET (MAT-565 + the two follow-up asks "open in nvim" / "explore folders"):
-#   • FILES open in a styled viewer: markdown renders to HTML; any other text/code shows in a
-#     readable code block. Every viewer has an "✎ Edit in nvim" button and a "raw" link.
-#     Append `?raw=1` to get the unstyled bytes (what the viewer fetches under the hood).
+#   • FILES open in a styled viewer: markdown renders to HTML (incl. inline IMAGES — MAT-1091: both
+#     Obsidian `![[img.png]]` embeds and standard `![](path.png)` resolve to served URLs and display);
+#     any other text/code shows in a readable code block. Every viewer has an "✎ Edit in nvim" button
+#     and a "raw" link. Append `?raw=1` to get the unstyled bytes (what the viewer fetches under the hood).
 #   • DIRECTORIES open in a styled browser: click folders to descend, click files to view, and
 #     every file row has its own "✎ nvim" link. Append `?json=1` for the raw JSON listing.
 #   • "✎ Edit in nvim" emits a `nvim://matts-server/<abs-path>` link. The laptop handler
@@ -193,10 +194,95 @@ let
             .catch(function (e) { c.innerHTML = '<p class="err">Failed to load source: ' + esc(e.message) + "</p>"; });
         }
 
+        // Image extensions we resolve to served URLs (MAT-1091).
+        var IMG_RE = /\.(png|jpe?g|gif|svg|webp|bmp|avif|ico)$/i;
+        // Vault root for the served file (the dir holding `.obsidian/`): /home/matth/Obsidian/<Vault>.
+        // Obsidian's "shortest path" link format resolves a bare `![[name.png]]` vault-wide, and the
+        // default attachment folder is `assets/`, so we probe the vault root's `assets/` as a fallback.
+        function vaultRootOf(absDir) {
+          var m = absDir.match(/^(\/home\/matth\/Obsidian\/[^/]+)(\/|$)/);
+          return m ? m[1] : null;
+        }
+
+        // Turn Obsidian embeds `![[target|size]]` into standard markdown `![](target)` BEFORE marked
+        // runs, so marked emits a normal <img>. `|size`/`|alt` hints are dropped (sizing is best-effort
+        // via CSS max-width). Non-image wikilink embeds (`![[Some Note]]`) are left as plain text — out
+        // of scope. Spaces in the target are %-encoded so marked treats the whole thing as one URL.
+        function preprocessEmbeds(md) {
+          return md.replace(/!\[\[([^\]]+?)\]\]/g, function (whole, inner) {
+            var target = inner.split("|")[0].trim();   // drop |width / |alt
+            if (!IMG_RE.test(target)) return whole;     // not an image embed → leave untouched
+            return "![](" + target.replace(/ /g, "%20") + ")";
+          });
+        }
+
+        // Resolve one image reference (the raw `src` marked produced) to a served absolute URL, given
+        // the served file's directory `absDir` and a basename→absPath index built from autoindex JSON.
+        // Returns null if it cannot be resolved (caller leaves the original src so it visibly 404s).
+        function resolveImg(src, absDir, index) {
+          var raw = src;
+          try { raw = decodeURIComponent(src); } catch (e) {}
+          if (/^(https?:)?\/\//i.test(raw) || /^data:/i.test(raw)) return src;   // external URL / data → pass through
+          if (raw.charAt(0) === "/") {                                            // absolute filesystem path
+            if (/^\/home\/matth\/(Obsidian|Projects)\//.test(raw)) return encodeURI(raw);
+            return null;                                                          // outside served roots
+          }
+          raw = raw.replace(/^\.\//, "");
+          if (raw.indexOf("/") !== -1) {                                          // has a path → resolve vs file dir
+            return encodeURI(absDir + "/" + raw);
+          }
+          var hit = index[raw.toLowerCase()];                                     // bare basename → index lookup
+          return hit ? encodeURI(hit) : null;
+        }
+
+        // Build a basename→absPath index by listing (via the existing `?json=1` autoindex) the served
+        // file's own directory, its immediate subdirectories (one level), and the vault `assets/` dir.
+        // This covers: same-folder attachments, project subfolders (e.g. `mockups/`), and the default
+        // vault attachment folder — every place a bare-basename embed realistically resolves to. Reuses
+        // the server's existing endpoint, so it stays 100% client-side and within the scoped roots.
+        function buildImageIndex(absDir, cb) {
+          var index = {};
+          function add(dirAbs, entries) {
+            entries.forEach(function (e) {
+              if (e.type !== "directory" && IMG_RE.test(e.name)) {
+                var key = e.name.toLowerCase();
+                if (!(key in index)) index[key] = dirAbs + "/" + e.name;   // first wins (closest dir)
+              }
+            });
+          }
+          function listJson(dirAbs) {
+            return fetch(encodeURI(dirAbs) + "/?json=1")
+              .then(function (r) { return r.ok ? r.json() : []; })
+              .catch(function () { return []; });
+          }
+          listJson(absDir).then(function (entries) {
+            add(absDir, entries);
+            var subdirs = entries.filter(function (e) { return e.type === "directory"; })
+                                 .map(function (e) { return absDir + "/" + e.name; });
+            var vaultRoot = vaultRootOf(absDir);
+            var assetsDir = vaultRoot ? vaultRoot + "/assets" : null;
+            if (assetsDir && subdirs.indexOf(assetsDir) === -1 && assetsDir !== absDir) subdirs.push(assetsDir);
+            Promise.all(subdirs.map(function (d) {
+              return listJson(d).then(function (es) { add(d, es); });
+            })).then(function () { cb(index); });
+          });
+        }
+
         function renderFile(text) {
           if (/\.(md|markdown)$/i.test(path)) {
             c.className = "md";
-            c.innerHTML = marked.parse(text);
+            c.innerHTML = marked.parse(preprocessEmbeds(text));
+            var imgs = c.querySelectorAll("img");
+            if (!imgs.length) return;
+            var absDir = path.replace(/\/+$/, "").replace(/\/[^/]*$/, "");   // dir holding the served file
+            buildImageIndex(absDir, function (index) {
+              for (var i = 0; i < imgs.length; i++) {
+                var orig = imgs[i].getAttribute("src") || "";
+                var resolved = resolveImg(orig, absDir, index);
+                if (resolved) imgs[i].setAttribute("src", resolved);
+                imgs[i].setAttribute("loading", "lazy");
+              }
+            });
           } else {
             c.className = "";
             c.innerHTML = '<pre class="code">' + esc(text) + "</pre>";
