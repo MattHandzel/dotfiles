@@ -52,6 +52,22 @@ get_text() {
     wl-paste 2>/dev/null || true
 }
 
+# ensure_header <file> <id> <title> : seed Obsidian frontmatter + H1 if the file
+# doesn't exist yet, so a freshly-created capture file matches the vault style.
+ensure_header() {
+    local file="$1" id="$2" title="$3"
+    [[ -e "$file" ]] && return 0
+    mkdir -p "$(dirname "$file")"
+    {
+        printf -- '---\n'
+        printf 'id: %s\n' "$id"
+        printf 'tags:\n  - polish\n  - ai-generated\n'
+        printf 'created_date: "%s"\n' "$(date '+%Y-%m-%d')"
+        printf -- '---\n\n'
+        printf '# %s\n' "$title"
+    } > "$file"
+}
+
 # --- mode resolution ------------------------------------------------------
 # Either taken from $1 (test path) or chosen from the menu.
 declare -A MENU=(
@@ -107,6 +123,7 @@ case "$MODE" in
 
     grammar)
         OUT="$("$PL_ASSIST" grammar "$TEXT")"
+        ensure_header "$F_GRAMMAR" "grammar-notes" "Polish Grammar Notes"
         {
             printf '\n## %s — %s\n\n' "$TS" "$TEXT"
             printf '> %s\n\n' "$TEXT"
