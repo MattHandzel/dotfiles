@@ -453,6 +453,9 @@ in {
           ", KP_5, exec, prompt-picker"
           ", KP_7, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://gemini.google.com/gem/6dbcf84e326c'"
           ", KP_Home, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://gemini.google.com/gem/6dbcf84e326c'"
+          # Polish capture/assist menu (MAT-800): pick a mode, act on the selection/clipboard, route the result
+          ", KP_8, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-capture"
+          ", KP_Up, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-capture"
 
           "${mainMod}, Tab, focuscurrentorlast"
           # laptop brigthness

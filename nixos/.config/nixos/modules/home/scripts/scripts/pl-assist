@@ -5,12 +5,19 @@
 # system prompt, tools, slash-commands, MCP, and session persistence, with a
 # per-mode prompt. Reads the clipboard (wl-paste) when no text arg is given.
 #
-# Backs the numpad capture modes (MAT-799 / MAT-800). Adding a mode = one row
+# Backs the numpad-8 capture menu (MAT-799 / MAT-800). Adding a mode = one row
 # in the case below; nothing else changes.
 #
+# Objective (Matt, MAT-800): BOTH vocab + grammar, but SPEAKING / conversation
+# first. Spelling + diacritics are DE-PRIORITISED — the prompts focus on what
+# blocks speaking and comprehension, not orthography nitpicks.
+#
 # Usage:
-#   pl-assist explain "podejście"     # explain a copied Polish word/phrase
-#   pl-assist explain                 # same, but on the current clipboard
+#   pl-assist explain "podejście"     # full explain (word/phrase) — gets logged
+#   pl-assist lookup  "podejście"     # instant meaning only — ephemeral
+#   pl-assist grammar "żebym poszedł" # explain a grammar structure
+#   pl-assist correct "<polish text>" # 4-part correction exercise
+#   pl-assist explain                 # any mode: falls back to the clipboard
 
 set -euo pipefail
 
@@ -24,20 +31,59 @@ if [[ -z "$TEXT" ]]; then
 fi
 
 if [[ -z "$MODE" || -z "$TEXT" ]]; then
-    echo "usage: pl-assist <mode> [text]   (falls back to clipboard)" >&2
+    echo "usage: pl-assist <explain|lookup|grammar|correct> [text]   (falls back to clipboard)" >&2
     exit 1
 fi
 
-# Fast model — keeps the round-trip under a couple of seconds.
+# Fast model — keeps the round-trip short for the interactive modes.
 MODEL="claude-haiku-4-5"
 
+# Shared steer for every mode: speaking-first, spelling de-prioritised.
+SPEAKING_FIRST="Focus on what helps the learner SPEAK and UNDERSTAND Polish. \
+Do NOT nitpick spelling, diacritics (ą/ę/ó/ż/ś…), or punctuation — those are \
+deliberately out of scope; only mention a spelling issue if it changes the word \
+into a different word."
+
 # Per-mode system prompt. Add a mode by adding a case here.
+# Path to the canonical 4-part correction prompt (used by `correct`).
+CORRECTION_PROMPT="$HOME/Obsidian/Main/resources/prompts/my-written-polish-to-higher-quality-exercise.md"
+
 case "$MODE" in
     explain)
+        # Full explanation — what gets logged to words-i-come-across-automatic.md.
         SYSTEM="You are a concise Polish-English tutor for a heritage speaker. \
 Given a Polish word or phrase, give: the English meaning, a one-line grammar \
-note (part of speech, case/aspect if relevant), and a short 'warto zapamiętać' \
-tip. Answer directly, no preamble."
+note (part of speech, case/aspect if relevant), 2-3 natural collocations, and a \
+short example sentence. $SPEAKING_FIRST Answer directly, no preamble."
+        ;;
+    lookup)
+        # Instant lookup — meaning only, for a fast popup. Kept terse on purpose.
+        SYSTEM="You are an instant Polish-English dictionary. Given a Polish \
+word or phrase, reply with ONLY its English meaning(s) — a few words, no \
+grammar notes, no examples, no preamble. If it is an inflected form, give the \
+base form in parentheses. Maximum one short line."
+        ;;
+    grammar)
+        # Explain a grammar structure the learner doesn't understand.
+        SYSTEM="You are a Polish grammar tutor for a heritage speaker working \
+toward B2. Given a Polish phrase or sentence, explain the GRAMMAR STRUCTURE at \
+work: name the construction, why this form/case/aspect is used, and a one-line \
+rule of thumb the learner can reuse when speaking. Add one more natural example \
+of the same structure. $SPEAKING_FIRST Answer directly, no preamble."
+        ;;
+    correct)
+        # Full 4-part correction exercise — uses the canonical prompt as system.
+        if [[ -r "$CORRECTION_PROMPT" ]]; then
+            SYSTEM="$(cat "$CORRECTION_PROMPT")
+
+ADDITIONAL STEER (overrides nothing above except emphasis): $SPEAKING_FIRST \
+Treat SPELLING-category errors as lowest priority — you may collapse them into a \
+single note rather than one row each, and never let spelling dominate the Tally."
+        else
+            SYSTEM="You are an expert Polish tutor. Correct the learner's Polish \
+text and explain each correction by grammatical category, then give a natural \
+native rewrite. $SPEAKING_FIRST"
+        fi
         ;;
     *)
         echo "pl-assist: unknown mode '$MODE'" >&2

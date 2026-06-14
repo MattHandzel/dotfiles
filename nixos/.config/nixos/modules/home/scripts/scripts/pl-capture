@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# pl-capture [mode]
+#
+# The numpad-8 Polish capture/assist menu (MAT-800, satisfies MAT-796 R1/R2/R4).
+#
+# Press numpad-8 -> a fuzzel picker lists the modes below. Each mode acts on the
+# current SELECTION/clipboard, optionally shells to the bare-bones `pl-assist`
+# Claude helper (MAT-799), and routes the result to the right place under the
+# canonical B2-polish dir (or pops it up ephemerally).
+#
+# Pass a mode name as $1 to skip the picker (used for testing each mode):
+#   pl-capture explain
+#   pl-capture save
+#
+# Modes:
+#   correction        -> 4-part exercise -> corrections/<ts>.md
+#   explain           -> full entry      -> words-i-come-across-automatic.md
+#   lookup            -> meaning popup   -> ephemeral (not logged)
+#   save              -> raw word/phrase -> words-i-come-across.md (NO Claude)
+#   grammar           -> structure note  -> grammar-notes.md (+ popup)
+
+set -uo pipefail
+
+# --- config ---------------------------------------------------------------
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PL_ASSIST="$SCRIPT_DIR/pl-assist"
+
+# B2_DIR is overridable (PL_B2_DIR) only so the modes can be exercised against a
+# throwaway dir in tests; in normal use it is the canonical vault dir.
+B2_DIR="${PL_B2_DIR:-$HOME/Obsidian/Main/projects/B2-polish}"
+F_AUTO="$B2_DIR/words-i-come-across-automatic.md"   # explain
+F_MANUAL="$B2_DIR/words-i-come-across.md"           # save (no translation)
+F_GRAMMAR="$B2_DIR/grammar-notes.md"                # grammar
+CORRECTIONS_DIR="$B2_DIR/corrections"              # correction
+
+# Picker + clipboard + notifier. fuzzel is the repo's picker (smart-clipboard-picker.sh).
+PICKER=(fuzzel --dmenu -p "Polish > ")
+TS="$(date '+%Y-%m-%d %H:%M')"
+
+# --- helpers --------------------------------------------------------------
+
+# notify <title> <body> : desktop popup, falling back to stdout when headless.
+notify() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send -u normal -i dialog-information "$1" "$2"
+    fi
+    printf '%s\n%s\n' "$1" "$2"
+}
+
+# get_text : the text to act on — current clipboard selection (or empty).
+get_text() {
+    wl-paste 2>/dev/null || true
+}
+
+# --- mode resolution ------------------------------------------------------
+# Either taken from $1 (test path) or chosen from the menu.
+declare -A MENU=(
+    [1]="correction"
+    [2]="explain"
+    [3]="lookup"
+    [4]="save"
+    [5]="grammar"
+)
+
+MODE="${1:-}"
+if [[ -z "$MODE" ]]; then
+    CHOICE="$(printf '%s\n' \
+        "correction — fix my Polish (4-part exercise)" \
+        "explain — what is this word/phrase? (logged)" \
+        "lookup — instant meaning (not logged)" \
+        "save — save word/phrase, no translation" \
+        "grammar — explain this grammar structure" \
+        | "${PICKER[@]}")"
+    [[ -z "$CHOICE" ]] && exit 0          # user pressed Esc
+    MODE="${CHOICE%% *}"                    # first word = the mode keyword
+fi
+
+TEXT="$(get_text)"
+if [[ -z "${TEXT// /}" ]]; then
+    notify "pl-capture" "Clipboard/selection is empty — nothing to capture."
+    exit 1
+fi
+
+# --- modes ----------------------------------------------------------------
+case "$MODE" in
+    save)
+        # NO Claude call. Append the raw word/phrase to the manual file.
+        printf '\n%s\n' "$TEXT" >> "$F_MANUAL"
+        notify "Saved (no translation)" "$TEXT"
+        ;;
+
+    explain)
+        OUT="$("$PL_ASSIST" explain "$TEXT")"
+        {
+            printf '\n## %s — %s\n\n' "$TS" "$TEXT"
+            printf '> %s\n\n' "$TEXT"
+            printf '%s\n' "$OUT"
+        } >> "$F_AUTO"
+        notify "Explained → logged" "$TEXT"
+        ;;
+
+    lookup)
+        # Ephemeral — meaning only, NOT written to any file.
+        OUT="$("$PL_ASSIST" lookup "$TEXT")"
+        notify "$TEXT" "$OUT"
+        ;;
+
+    grammar)
+        OUT="$("$PL_ASSIST" grammar "$TEXT")"
+        {
+            printf '\n## %s — %s\n\n' "$TS" "$TEXT"
+            printf '> %s\n\n' "$TEXT"
+            printf '%s\n' "$OUT"
+        } >> "$F_GRAMMAR"
+        notify "Grammar explained → logged" "$OUT"
+        ;;
+
+    correction)
+        OUT="$("$PL_ASSIST" correct "$TEXT")"
+        mkdir -p "$CORRECTIONS_DIR"
+        FILE="$CORRECTIONS_DIR/$(date '+%Y-%m-%d-%H%M').md"
+        {
+            printf -- '---\n'
+            printf 'id: correction-%s\n' "$(date '+%Y-%m-%d-%H%M')"
+            printf 'created_date: "%s"\n' "$(date '+%Y-%m-%d')"
+            printf 'tags:\n  - polish\n  - correction\n  - ai-generated\n'
+            printf -- '---\n\n'
+            printf '# Polish Correction — %s\n\n' "$(date '+%Y-%m-%dT%H:%M')"
+            printf '## Original (input)\n\n```\n%s\n```\n\n' "$TEXT"
+            printf '%s\n' "$OUT"
+        } > "$FILE"
+        notify "Correction → $(basename "$FILE")" "$TEXT"
+        ;;
+
+    *)
+        notify "pl-capture" "Unknown mode '$MODE'"
+        exit 1
+        ;;
+esac
