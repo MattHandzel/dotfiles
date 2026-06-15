@@ -9,7 +9,9 @@
     notetaker = "📝";
     nautilus = "📁";
     wasistlos = "🟢";
+    "io.github.alainm23.planify" = "✅";
     anki = "🧠";
+    planify = "✅";
     PrusaSlicer = "🧩";
     discord = "󰙯";
     thunderbird = "✉";
