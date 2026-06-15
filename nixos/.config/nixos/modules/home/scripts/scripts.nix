@@ -44,6 +44,8 @@
     ./scripts/transcribe_captures.sh
     ./scripts/TextToSpeechService.sh
     ./scripts/prompt-picker.sh
+    ./scripts/pl-assist # Polish capture: bare-bones fast Claude helper (MAT-799)
+    ./scripts/pl-capture # Polish capture: numpad-8 mode menu + file router (MAT-800)
   ];
 
   # Create shell script bins
