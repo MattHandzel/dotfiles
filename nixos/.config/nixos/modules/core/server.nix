@@ -28,6 +28,7 @@
     (import ./obsidian-mcp.nix)
     (import ./ntfy-scheduler.nix)
     (import ./ntfy-capture-listener.nix)
+    (import ./nameplate-listener.nix) # MAT-1198 ntfy 'nameplate' topic -> render badge -> publish to /var/www/nameplate (served by nginx.nix)
     (import ./taskchampion-sync-server.nix)
     (import ./notify-poller.nix)
     (import ./self-improve-watchdog.nix) # MAT-120 dead-man's-switch (watchdog hourly + weekly digest)
