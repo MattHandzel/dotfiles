@@ -8,8 +8,9 @@ Unions two sources, then hands the ranked list to fuzzel (dmenu mode):
 
 You can match on the page TITLE or the URL (like Zen's `^` history search).
 Clipboard links are boosted: they sort first, and when a URL exists in both
-sources the clipboard copy wins (and borrows the browser's title). Selecting a
-result copies its URL to the clipboard.
+sources the clipboard copy wins (and borrows the browser's title). On a result:
+  Enter       → copy the markdown link  [title](url)
+  Ctrl+Enter  → copy the bare URL
 
 Bound to Super+Shift+V (see modules/home/hyprland/config.nix). Standalone:
 just run `link-search`.
@@ -123,13 +124,13 @@ def browser_links() -> list[tuple[str, str]]:
 
 
 # -------------------------------------------------------------------- build --
-def build_lines() -> tuple[list[str], dict[str, str]]:
+def build_lines() -> tuple[list[str], dict[str, tuple[str, str]]]:
     clip = clipboard_links()
     browser = browser_links()
     title_by_url = {norm(u): t for u, t in browser if t}
 
     lines: list[str] = []
-    display_to_url: dict[str, str] = {}
+    entry_of: dict[str, tuple[str, str]] = {}  # display line -> (url, title)
     used: set[str] = set()
 
     def add(marker: str, url: str, title: str) -> None:
@@ -140,11 +141,11 @@ def build_lines() -> tuple[list[str], dict[str, str]]:
         shown = url if len(url) <= 90 else url[:87] + "…"
         label = title.strip() or "(no title)"
         line = f"{marker}  {label}   —   {shown}"
-        # fuzzel needs unique lines to map a selection back to its URL.
-        while line in display_to_url:
+        # fuzzel needs unique lines to map a selection back to its URL + title.
+        while line in entry_of:
             line += " "
         lines.append(line)
-        display_to_url[line] = url
+        entry_of[line] = (url, title.strip())
 
     # Clipboard first (the boost): newest copies on top, titled from browser history.
     for url in clip:
@@ -153,11 +154,42 @@ def build_lines() -> tuple[list[str], dict[str, str]]:
     for url, title in browser:
         add("🌐", url, title)
 
-    return lines, display_to_url
+    return lines, entry_of
+
+
+def fuzzel_config() -> str:
+    """A temp fuzzel config = the user's theme + a Ctrl+Return binding (url-only).
+
+    custom-1 makes fuzzel exit with code 10 while still printing the selection,
+    which is how we distinguish the two copy actions. (Shift+Return / Ctrl+y are
+    already bound by fuzzel to defaults, so Ctrl+Return is the free chord.)
+    """
+    base = os.path.expanduser("~/.config/fuzzel/fuzzel.ini")
+    text = ""
+    if os.path.exists(base):
+        try:
+            text = open(base, encoding="utf-8").read()
+        except OSError:
+            text = ""
+    if "[key-bindings]" in text:
+        text = text.replace("[key-bindings]", "[key-bindings]\ncustom-1=Control+Return", 1)
+    else:
+        text += "\n[key-bindings]\ncustom-1=Control+Return\n"
+    fd, path = tempfile.mkstemp(prefix="link-search-fuzzel-", suffix=".ini")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text)
+    return path
+
+
+def format_selection(url: str, title: str, url_only: bool) -> str:
+    """Enter → markdown [title](url); Shift+Enter (url_only) → the bare URL."""
+    if url_only:
+        return url
+    return f"[{title or url}]({url})"
 
 
 def main() -> int:
-    lines, display_to_url = build_lines()
+    lines, entry_of = build_lines()
     if os.environ.get("LINK_SEARCH_DUMP"):  # print the fuzzel input and exit (debug)
         print("\n".join(lines))
         return 0
@@ -167,25 +199,35 @@ def main() -> int:
         )
         return 0
 
+    cfg = fuzzel_config()
     try:
-        picked = subprocess.run(
-            ["fuzzel", "--dmenu", "--no-sort", "--width", "100", "--prompt", "link> "],
+        proc = subprocess.run(
+            # Enter → copy markdown [title](url);  Shift+Enter → copy the URL only.
+            ["fuzzel", "--dmenu", "--no-sort", "--config", cfg, "--width", "100",
+             "--lines", "20", "--prompt", "link  ↵md  ^↵url  "],
             input="\n".join(lines),
             capture_output=True,
             text=True,
-        ).stdout.strip()
+        )
     except FileNotFoundError:
         print("fuzzel not found", file=sys.stderr)
         return 1
+    finally:
+        os.unlink(cfg)
 
-    if not picked:
+    picked = proc.stdout.strip()
+    if not picked or proc.returncode not in (0, 10):  # 1/2/130 = dismissed
         return 0
-    url = display_to_url.get(picked)
-    if url is None:  # fuzzel may return custom text; fall back to any URL in it.
+    url, title = entry_of.get(picked, ("", ""))
+    if not url:  # fuzzel returned custom text; fall back to any URL in the line.
         m = URL_RE.search(picked)
         url = clean(m.group(0)) if m else picked
-    subprocess.run(["wl-copy"], input=url, text=True)
-    subprocess.run(["notify-send", "-t", "2000", "link-search", f"Copied: {url}"])
+
+    url_only = proc.returncode == 10  # Shift+Enter → custom-1
+    out = format_selection(url, title, url_only)
+    mode = "URL" if url_only else "markdown"
+    subprocess.run(["wl-copy"], input=out, text=True)
+    subprocess.run(["notify-send", "-t", "2000", "link-search", f"Copied {mode}: {out}"])
     return 0
 
 
