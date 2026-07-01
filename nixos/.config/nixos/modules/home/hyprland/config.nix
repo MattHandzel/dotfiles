@@ -479,6 +479,8 @@ in {
           # clipboard manager
           "${mainMod}, V, exec, cliphist list -max-iterms 1000 -preview-width 1000 | fuzzel --dmenu | cliphist decode | wl-copy"
           "${mainMod} ALT, V, exec, smart-clipboard-picker.sh"
+          # link-search: fuzzy-find links (by title or URL) across clipboard + browser history
+          "${mainMod} SHIFT, V, exec, link-search"
 
           "${mainMod} SHIFT, F23, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\""
         ];
