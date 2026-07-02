@@ -105,7 +105,113 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 	end,
 })
 
+-- Auto-prune stale buffers in notes directories
+local notes_dirs = { vim.fn.expand("~/Obsidian/Main"), vim.fn.expand("~/notes") }
+local function is_notes_dir(dir)
+	for _, d in ipairs(notes_dirs) do
+		if dir == d or vim.startswith(dir, d .. "/") then
+			return true
+		end
+	end
+	return false
+end
+
+local function prune_stale_buffers()
+	if not is_notes_dir(vim.uv.cwd()) then
+		return
+	end
+
+	local bufs = vim.fn.getbufinfo({ buflisted = 1 })
+	if #bufs <= 15 then
+		return
+	end
+
+	table.sort(bufs, function(a, b)
+		return a.lastused > b.lastused
+	end)
+
+	local now = os.time()
+	local two_days = 2 * 24 * 60 * 60
+
+	for i = 16, #bufs do
+		local b = bufs[i]
+		if (now - b.lastused) > two_days and not b.changed then
+			local ok, bufdelete = pcall(require, "bufdelete")
+			if ok then
+				pcall(bufdelete.bufdelete, b.bufnr, false)
+			else
+				pcall(vim.api.nvim_buf_delete, b.bufnr, {})
+			end
+		end
+	end
+end
+
+local prune_group = vim.api.nvim_create_augroup("PruneStaleBuffers", { clear = true })
+
+-- Run after session restore (persistence fires SessionLoadPost)
+vim.api.nvim_create_autocmd("SessionLoadPost", {
+	group = prune_group,
+	callback = function()
+		vim.defer_fn(prune_stale_buffers, 100)
+	end,
+})
+
+-- Run on DirChanged (cd into notes dir)
+vim.api.nvim_create_autocmd("DirChanged", {
+	group = prune_group,
+	callback = prune_stale_buffers,
+})
+
+-- Run periodically on BufEnter (throttled to once per 30s)
+local last_prune = 0
+vim.api.nvim_create_autocmd("BufEnter", {
+	group = prune_group,
+	callback = function()
+		local now = os.time()
+		if now - last_prune < 30 then
+			return
+		end
+		last_prune = now
+		prune_stale_buffers()
+	end,
+})
+
 --------
+-- Inject active project list into new daily/weekly notes
+local obsidian_group = vim.api.nvim_create_augroup("ObsidianProjectList", { clear = true })
+vim.api.nvim_create_autocmd("BufReadPost", {
+	group = obsidian_group,
+	pattern = { "*/dailies/*.md", "*/weeklies/*.md" },
+	callback = function(args)
+		local lines = vim.api.nvim_buf_get_lines(args.buf, 0, -1, false)
+		for i, line in ipairs(lines) do
+			if line:match("^## Active Projects") or line:match("^## Project Review") then
+				-- Check if the next non-empty line is already a table or content
+				local next_content = i + 1
+				while next_content <= #lines and lines[next_content]:match("^%s*$") do
+					next_content = next_content + 1
+				end
+				-- If next content is a separator, header, or end of file — table is missing
+				if next_content > #lines or lines[next_content]:match("^%-%-%-") or lines[next_content]:match("^#") or lines[next_content]:match("^%*%*Stale") then
+					local handle = io.popen("python3 /home/matth/Obsidian/Main/scripts/list-active-projects.py")
+					if handle then
+						local result = handle:read("*a")
+						handle:close()
+						local table_lines = {}
+						for tl in result:gmatch("[^\n]+") do
+							table.insert(table_lines, tl)
+						end
+						if #table_lines > 0 then
+							vim.api.nvim_buf_set_lines(args.buf, i, i, false, table_lines)
+						end
+					end
+				end
+				break
+			end
+		end
+	end,
+})
+
 -- add yours here!
 vim.api.nvim_create_autocmd("BufWritePre", {
 	pattern = "*",

@@ -21,6 +21,26 @@
         "type": "github"
       }
     },
+    "betterbird": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1777531451,
+        "narHash": "sha256-1sNqdXoGiZCnqMmlRPWY6E2n/n/GEAMe/WUeOTo8/TA=",
+        "owner": "Heehaaw",
+        "repo": "betterbird-flake",
+        "rev": "f75ffb51d52edb209dd88f60cf3ed6941fac74e3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Heehaaw",
+        "repo": "betterbird-flake",
+        "type": "github"
+      }
+    },
     "catppuccin": {
       "inputs": {
         "nixpkgs": "nixpkgs_2"
@@ -418,31 +438,10 @@
         "type": "github"
       }
     },
-    "lifelog": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "rust-overlay": "rust-overlay"
-      },
-      "locked": {
-        "lastModified": 1770755780,
-        "narHash": "sha256-uRjeZ7StD0LdknBI5etmlzi4fuLweneunbyza/rFfeg=",
-        "owner": "MattHandzel",
-        "repo": "lifelog",
-        "rev": "b7b9d0f7bf28b2aa9df9770ca17d939e4efe9af4",
-        "type": "github"
-      },
-      "original": {
-        "owner": "MattHandzel",
-        "repo": "lifelog",
-        "type": "github"
-      }
-    },
     "nix-gaming": {
       "inputs": {
         "flake-parts": "flake-parts_2",
-        "nixpkgs": "nixpkgs_6"
+        "nixpkgs": "nixpkgs_5"
       },
       "locked": {
         "lastModified": 1771504976,
@@ -582,22 +581,6 @@
     },
     "nixpkgs_5": {
       "locked": {
-        "lastModified": 1744536153,
-        "narHash": "sha256-awS2zRgF4uTwrOKwwiJcByDzDOdo3Q1rPZbiHQg/N38=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "18dd725c29603f582cf1900e0d25f9f1063dbf11",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_6": {
-      "locked": {
         "lastModified": 1770843696,
         "narHash": "sha256-LovWTGDwXhkfCOmbgLVA10bvsi/P8eDDpRudgk68HA8=",
         "owner": "NixOS",
@@ -612,7 +595,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_7": {
+    "nixpkgs_6": {
       "locked": {
         "lastModified": 1771482645,
         "narHash": "sha256-MpAKyXfJRDTgRU33Hja+G+3h9ywLAJJNRq4Pjbb4dQs=",
@@ -628,7 +611,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_8": {
+    "nixpkgs_7": {
       "locked": {
         "lastModified": 1771369470,
         "narHash": "sha256-0NBlEBKkN3lufyvFegY4TYv5mCNHbi5OmBDrzihbBMQ=",
@@ -644,7 +627,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_9": {
+    "nixpkgs_8": {
       "locked": {
         "lastModified": 1772198003,
         "narHash": "sha256-I45esRSssFtJ8p/gLHUZ1OUaaTaVLluNkABkk6arQwE=",
@@ -663,7 +646,7 @@
     "nur": {
       "inputs": {
         "flake-parts": "flake-parts_3",
-        "nixpkgs": "nixpkgs_8"
+        "nixpkgs": "nixpkgs_7"
       },
       "locked": {
         "lastModified": 1771525728,
@@ -703,18 +686,32 @@
         "type": "github"
       }
     },
+    "project-asset-generator-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1775801793,
+        "narHash": "sha256-ZmqecSgy1AjbtmQfiw8HbF7wcjmAdJjx6opC1/YU2Sw=",
+        "path": "/home/matth/Projects/project-asset-generator",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/matth/Projects/project-asset-generator",
+        "type": "path"
+      }
+    },
     "root": {
       "inputs": {
         "alejandra": "alejandra",
+        "betterbird": "betterbird",
         "catppuccin": "catppuccin",
         "claude-desktop": "claude-desktop",
         "home-manager": "home-manager",
         "hypr-contrib": "hypr-contrib",
         "hyprpicker": "hyprpicker",
-        "lifelog": "lifelog",
         "nix-gaming": "nix-gaming",
-        "nixpkgs": "nixpkgs_7",
+        "nixpkgs": "nixpkgs_6",
         "nur": "nur",
+        "project-asset-generator-src": "project-asset-generator-src",
         "second-brain-search": "second-brain-search",
         "sops-nix": "sops-nix",
         "spicetify-nix": "spicetify-nix",
@@ -737,24 +734,6 @@
         "owner": "rust-lang",
         "ref": "nightly",
         "repo": "rust-analyzer",
-        "type": "github"
-      }
-    },
-    "rust-overlay": {
-      "inputs": {
-        "nixpkgs": "nixpkgs_5"
-      },
-      "locked": {
-        "lastModified": 1746585402,
-        "narHash": "sha256-Pf+ufu6bYNA1+KQKHnGMNEfTwpD9ZIcAeLoE2yPWIP0=",
-        "owner": "oxalica",
-        "repo": "rust-overlay",
-        "rev": "72dd969389583664f87aa348b3458f2813693617",
-        "type": "github"
-      },
-      "original": {
-        "owner": "oxalica",
-        "repo": "rust-overlay",
         "type": "github"
       }
     },
@@ -936,7 +915,7 @@
     "zen-browser": {
       "inputs": {
         "home-manager": "home-manager_2",
-        "nixpkgs": "nixpkgs_9"
+        "nixpkgs": "nixpkgs_8"
       },
       "locked": {
         "lastModified": 1772945022,

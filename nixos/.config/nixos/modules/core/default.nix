@@ -25,16 +25,11 @@ in {
       (import ./virtualization.nix)
       (import ./bluetooth.nix)
       (import ./sops.nix)
-
-      (import ./firefly-iii.nix)
-      (import ./freshrss.nix)
-      (import ./mcp-server.nix)
-      (import ./nginx.nix)
-      (import ./second-brain-search.nix)
-      (import ./text-to-speech-service.nix)
+      (import ./gocryptfs-vault.nix)
+      (import ./disk-space-alert.nix)
     ]
     ++ (
-      if host == "desktop" || host == "laptop"
+      if host == "desktop"
       then desktop-imports
       else []
     );

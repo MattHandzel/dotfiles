@@ -38,29 +38,42 @@ Options:
 EOF
 }
 
+require_arg() {
+  if [[ $# -lt 2 || -z "${2+x}" ]]; then
+    echo "Option $1 requires an argument." >&2
+    exit 1
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --voice)
+      require_arg "$@"
       VOICE="$2"
       shift 2
       ;;
     --speed)
+      require_arg "$@"
       SPEED="$2"
       shift 2
       ;;
     --format)
+      require_arg "$@"
       FORMAT="$2"
       shift 2
       ;;
     --input-format)
+      require_arg "$@"
       INPUT_FORMAT="$2"
       shift 2
       ;;
     --save)
+      require_arg "$@"
       OUTPUT_PATH="$2"
       shift 2
       ;;
     --out)
+      require_arg "$@"
       OUTPUT_PATH="$2"
       shift 2
       ;;
@@ -77,6 +90,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --url)
+      require_arg "$@"
       SERVICE_URL="$2"
       shift 2
       ;;

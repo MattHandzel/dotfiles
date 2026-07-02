@@ -108,7 +108,7 @@ return {
 
 	{
 		"stevearc/oil.nvim",
-		cmd = "Oil",
+		lazy = false, -- load at startup so it hijacks netrw and handles `:e .`/directory buffers
 		opts = {
 			default_file_explorer = true,
 			view_options = {

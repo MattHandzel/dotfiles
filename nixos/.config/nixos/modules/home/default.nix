@@ -23,7 +23,7 @@
     ++ [(import ./scripts/scripts.nix)] # personal scripts
     # ++ [(import ./spicetify.nix)] # spotify client
     ++ [(import ./starship.nix)] # shell prompt
-    ++ [(import ./swaylock.nix)] # lock screen
+    # swaylock removed — using hyprlock instead
     ++ [(import ./vscodium.nix)] # vscode forck
     ++ [(import ./waybar)] # status bar
     ++ [(import ./zsh.nix)] # shell
@@ -33,10 +33,14 @@
     ++ [(import ./todoist.nix)]
     ++ [./transcribe-captures.nix]
     ++ [./luck-scheduler.nix]
+    ++ [./polish-pipeline.nix]
     ++ [./memwatch.nix]
     ++ [./electron-app-daily-restart.nix]
+    ++ [./health-dashboard.nix]
     ++ [./zen-config.nix]
     ++ [./app-memory-caps.nix]
+    ++ [./lifelog-collector.nix]
+    ++ [./linear-notify.nix] # poll Linear → swaync desktop notifications
     ++ [inputs.catppuccin.homeModules.catppuccin]
     ++ [(import ./foliate.nix)]
     # ++ [(import ./notion.nix)]
@@ -64,7 +68,7 @@
       "x-scheme-handler/https" = "zen-beta.desktop";
       "audio/*" = "mpv.desktop";
       "video/*" = "mpv.desktop";
-      "image/*" = "feh.desktop";
+      "image/*" = "swayimg.desktop";
       "text/css" = "nvim.desktop";
       "text/*" = "nvim.desktop";
       "application/json" = "nvim.desktop";

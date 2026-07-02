@@ -54,11 +54,11 @@
 
     catppuccin.url = "github:catppuccin/nix";
 
-    lifelog = {
-      url = "github:MattHandzel/lifelog";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # lifelog = {
+    #   url = "github:MattHandzel/lifelog";
+    #   flake = true;
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
 
     claude-desktop = {
       url = "github:aaddrick/claude-desktop-debian";
@@ -72,6 +72,16 @@
 
     text-to-speech-service = {
       url = "path:/home/matth/Projects/SecondBrainSpeech";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    project-asset-generator-src = {
+      url = "path:/home/matth/Projects/project-asset-generator";
+      flake = false;
+    };
+
+    betterbird = {
+      url = "github:Heehaaw/betterbird-flake";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

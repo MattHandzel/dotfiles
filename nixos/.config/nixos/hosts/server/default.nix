@@ -22,7 +22,7 @@
   services.obsidian-mcp.enable = true;
   services.text-to-speech-service.enable = true;
   services.text-to-speech-service.defaultVoice = "en_US-lessac-high";
-  networking.firewall.allowedTCPPorts = [ 47772 ];
+  networking.firewall.allowedTCPPorts = [47772];
   networking.hostName = "matts-server";
 
   # Bootloader.
@@ -66,23 +66,26 @@
 
     settings = {
       devices = {
-        "matts-computer" = { id = "QKTFBXV-BQA4F7D-KH665IF-H3O4ZUT-BC5LWMM-BKCLRZX-7P7Y4UA-WFWMMQ3"; };
-        "Pixel 9a" = { id = "OUXTWJX-MARBGAE-ANVOBSS-ANCZDVY-QGJGWNC-YXK62MC-IPV22XX-PV3RMA5"; };
+        "matts-computer" = {id = "QKTFBXV-BQA4F7D-KH665IF-H3O4ZUT-BC5LWMM-BKCLRZX-7P7Y4UA-WFWMMQ3";};
+        "Pixel 9a" = {id = "OUXTWJX-MARBGAE-ANVOBSS-ANCZDVY-QGJGWNC-YXK62MC-IPV22XX-PV3RMA5";};
       };
       folders = {
-        "sx2ys-nb2px" = { # Recordings
+        "sx2ys-nb2px" = {
+          # Recordings
           path = "~/notes/capture/raw_capture/audio_recordings/";
-          devices = [ "matts-computer" "Pixel 9a" ];
+          devices = ["matts-computer" "Pixel 9a"];
         };
-        "r9mpp-yvvmy" = { # Obsidian
+        "r9mpp-yvvmy" = {
+          # Obsidian
           path = "~/Obsidian";
-          devices = [ "matts-computer" "Pixel 9a" ];
+          devices = ["matts-computer" "Pixel 9a"];
         };
-        "claude" = { # ~/.claude — Claude Code config + memory (see ~/.claude/.stignore;
-                     # transcripts/credentials/caches excluded). Lets the orchestrator
-                     # run on the server with the same memory/hooks/agents/settings.
+        "claude" = {
+          # ~/.claude — Claude Code config + memory (see ~/.claude/.stignore;
+          # transcripts/credentials/caches excluded). Lets the orchestrator
+          # run on the server with the same memory/hooks/agents/settings.
           path = "~/.claude";
-          devices = [ "matts-computer" ];
+          devices = ["matts-computer"];
         };
       };
     };
@@ -124,13 +127,23 @@
   services.thermald.enable = true;
   zramSwap.enable = true;
 
-  home-manager.backupFileExtension = "backup_$(date +%Y-%m-%d_%H-%M-%S)";
+  # Static suffix only — a `$(date …)` here is never evaluated and breaks the
+  # activation backup `mv` (see laptop host for the full explanation).
+  home-manager.backupFileExtension = "hm-backup";
 
   services.ntfy-sh = {
     enable = true;
     settings = {
       base-url = "http://server.matthandzel.com:8124";
       listen-http = ":8124";
+      # Exempt internal publishers/subscribers from the per-visitor request rate
+      # limit. All server-side services (focus-mode resolver, schedulers, capture
+      # listener) and the ~dozen claude-fleet `--max-time 60` curl mirror loops hit
+      # ntfy over localhost, sharing ONE visitor bucket whose default replenish
+      # (1 token/5s) the fleet reconnects fully drain — starving every publish into
+      # HTTP 429. Exempting localhost + the Tailscale CGNAT range (laptop subscriber)
+      # removes the starvation. 100.64.0.0/10 is Tailscale's IP space.
+      visitor-request-limit-exempt-hosts = "127.0.0.1,::1,100.64.0.0/10";
     };
   };
   services.openssh.enable = true;
@@ -142,7 +155,7 @@
       to = 61000;
     }
   ];
-  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 80 443 8124 ];
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [80 443 8124];
   networking.firewall.interfaces.tailscale0.allowedTCPPortRanges = [
     {
       from = 7180;

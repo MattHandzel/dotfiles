@@ -167,7 +167,9 @@ in {
   # services.printing.enable = true;
   # services.printing.drivers = [ pkgs.printer-drivers ];
 
-  home-manager.backupFileExtension = "backup_$(date +%Y-%m-%d_%H-%M-%S)";
+  # Static suffix only — a `$(date …)` here is never evaluated and breaks the
+  # activation backup `mv` (see laptop host for the full explanation).
+  home-manager.backupFileExtension = "hm-backup";
 
   services.fprintd.enable = true;
   services.openssh.enable = true;

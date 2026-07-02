@@ -19,6 +19,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 SCHEDULE_FILE = Path("/home/matth/Obsidian/Main/agent/ntfy-schedule.json")
 STATE_FILE = Path("/home/matth/.local/state/ntfy-scheduler/state.json")
@@ -102,7 +103,8 @@ def main():
 
     schedule = json.loads(SCHEDULE_FILE.read_text())
     state = load_state()
-    now = datetime.now()
+    tz_name = schedule.get("_timezone", "America/Los_Angeles")
+    now = datetime.now(ZoneInfo(tz_name))
 
     for entry in schedule.get("recurring", []):
         if not entry.get("enabled", True):

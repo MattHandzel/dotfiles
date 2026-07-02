@@ -21,7 +21,7 @@
     calendar = "C";
     yazi = "F";
     btop = "B";
-    nautilus = "E";
+    dolphin = "E";
     PrusaSlicer = "P";
     cura = "U";
     "gemini.google.com" = "Y";
@@ -30,6 +30,7 @@
     "notetaker" = "N";
     gimp = "G";
     beeper = "H";
+    linear = "L";
   };
 in let
   makeStringToIncaseSensitiveRegex = str: let
@@ -37,7 +38,7 @@ in let
   in "(?i).*${escapedStr}.*";
 
   singleton_windows = sharedVariables.singletonApplications;
-  floating_windows = ["imv" ".blueman-manager-wrapped" "Volume Control" "org.speedcrunch."];
+  floating_windows = ["swayimg" ".blueman-manager-wrapped" "Volume Control" "org.speedcrunch." "floating-pl"];
 
   # Mapping of application names to specific workspace numbers or names
   workspaceMapping = {
@@ -128,6 +129,9 @@ in {
         "aw-watcher-window > /home/matth/log_for_aw.txt"
         "aw-watcher-afk > /home/matth/log_for_aw1.txt"
         "hyprlock"
+        # espanso is started by its systemd unit (WantedBy=hyprland-session.target),
+        # which Hyprland's own stop/start of that target launches once the compositor
+        # is up — no manual restart needed (it only added an extra ~14s re-init).
         "/home/matth/Projects/LifeLogging/result/bin/lifelog --config /home/matth/Projects/LifeLogging/config.toml"
         # "lifelog-logger &"
       ];
@@ -176,8 +180,11 @@ in {
       ];
 
       input = {
-        kb_layout = "pl,us";
-        kb_options = "grp:alt_caps_toggle";
+        # Plain us (QWERTY) at the xkb level. The custom Corne layout is produced by
+        # kanata (modules/core/kanata-homerow.nix), which remaps physical keys BEFORE
+        # xkb — so xkb must stay identity here or letters would double-translate.
+        kb_layout = "us,pl";
+        kb_options = "grp:alt_caps_toggle,caps:swapescape";
         numlock_by_default = true;
         follow_mouse = 1;
         sensitivity = 0.25;
@@ -292,9 +299,13 @@ in {
           "fadeShadow, 1, 6, smoothIn"
           "fadeDim, 1, 6, smoothIn"
 
-          # Borders: subtle color crossfade + slow gradient-angle rotation.
+          # Borders: subtle color crossfade only. The gradient-angle rotation
+          # (borderangle …, loop) was removed: a looping animation never lets
+          # the compositor idle, which defeats `vfr = true` and forces constant
+          # GPU repaints/wakeups even on a static screen — wasted battery on a
+          # laptop for a barely-visible effect. The active border keeps its
+          # static mauve→teal 45° gradient.
           "border, 1, 6, emphasized"
-          "borderangle, 1, 60, linear, loop"
 
           # Workspaces: slidefade reads as polished and shows direction.
           "workspaces, 1, 5, emphasized, slidefade 15%"
@@ -316,6 +327,11 @@ in {
           # show keybinds list
           "${mainMod}, F1, exec, show-keybinds"
           "${mainMod}, delete, exit"
+
+          # nixos-assistant: floating Claude Code harness for editing this flake,
+          # with a validated rebuild offered on exit. (Replaced the older
+          # system-fix binding here; that script stays available as a command.)
+          "${mainMod}, grave, exec, nixos-assistant"
 
           # keybindings
           # Avoid relying on the default tmux socket path/name. If the default
@@ -354,6 +370,15 @@ in {
           # screenshot
           "ALT, Print, exec, ocr-screenshot && wl-paste -t text/plain > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').txt"
           ",Print, exec, grimblast --notify --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
+
+          # Power tooling — parallels from Saul's Mac list (MAT-572).
+          # clip2md: rich text on the clipboard -> Markdown, in place.
+          "${mainMod} SHIFT, M, exec, clip2md"
+          # screenshot-search: Alfred's "ss" picker over ~/Pictures/Screenshots.
+          "${mainMod} SHIFT, S, exec, screenshot-search"
+          # leader: press SUPER+SHIFT+SPACE, release, then a digit -> N-min timer
+          # (0 = 10). A general leader submap — see extraConfig below to extend it.
+          "${mainMod} SHIFT, Space, submap, leader"
 
           "${mainMod}, N, exec, ~/Projects/KnowledgeManagementSystem/result/bin/kms-capture"
 
@@ -448,11 +473,25 @@ in {
           "${mainMod}, mouse_up, workspace, e+1"
           "${mainMod} SHIFT CONTROL, q, exec, reboot"
 
-          ", KP_1, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --copy"
-          ", KP_End, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --copy"
-          ", KP_2, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --type"
-          ", KP_Down, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --type"
+          # stt-tune cutover (2026-05-10): KP_1/2 → v2 (primary). SHIFT keeps v1
+          # as backup so Matt can A/B and roll back without rebuilding.
+          ", KP_1, exec, bash /home/matth/Projects/stt-tune/toggle-stt-v2.sh --copy"
+          ", KP_End, exec, bash /home/matth/Projects/stt-tune/toggle-stt-v2.sh --copy"
+          ", KP_2, exec, bash /home/matth/Projects/stt-tune/toggle-stt-v2.sh --type"
+          ", KP_Down, exec, bash /home/matth/Projects/stt-tune/toggle-stt-v2.sh --type"
+          # Both Alt keys together = speech-to-text (copy to clipboard). Detected as a
+          # kanata CHORD (lalt+ralt → F14 in modules/core/kanata-homerow.nix), NOT a
+          # hyprland ALT+Alt bind: hyprland treats both Alts as the same ALT modifier,
+          # so the old `ALT, Alt_L`/`ALT, Alt_R` binds wrongly fired on a SINGLE alt
+          # press. The chord requires both physical alts. (Needs kanata running.)
+          ", F14, exec, bash /home/matth/Projects/stt-tune/toggle-stt-v2.sh --copy"
+          # KP_3 (live mode) stays on v1 — v2 doesn't yet implement live streaming
           ", KP_3, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --live"
+          # SHIFT modifier = v1 backup (use if v2 misbehaves)
+          "SHIFT, KP_1, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --copy"
+          "SHIFT, KP_End, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --copy"
+          "SHIFT, KP_2, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --type"
+          "SHIFT, KP_Down, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --type"
           ", KP_Next, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --live"
           ", KP_4, exec, wl-paste | /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/prompt-llm.py | wl-copy ; notify-send -u normal -i dialog-information 'Copied to clipboard' ''"
           ", KP_Left, exec, wl-paste | /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/prompt-llm.py | wl-copy ; notify-send -u normal -i dialog-information 'Copied to clipboard' ''"
@@ -462,6 +501,13 @@ in {
           ", KP_Home, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://gemini.google.com/gem/6dbcf84e326c'"
           ", KP_6, exec, /home/matth/Projects/universal-calendar-capture/calendar-capture.sh"
           ", KP_Right, exec, /home/matth/Projects/universal-calendar-capture/calendar-capture.sh"
+          # Polish learning (heritage speaker, projects/B2-polish)
+          ", KP_8, exec, /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-explain.py"
+          ", KP_Up, exec, /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-explain.py"
+          ", KP_9, exec, kitty --title float_kitty --hold /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-fix.py"
+          ", KP_Prior, exec, kitty --title float_kitty --hold /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-fix.py"
+          ", KP_0, exec, /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-correct.py"
+          ", KP_Insert, exec, /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-correct.py"
 
           "${mainMod}, Tab, focuscurrentorlast"
           # laptop brigthness
@@ -479,14 +525,32 @@ in {
           "CONTROL ALT, V, exec, wtype -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
           "SHIFT CONTROL ALT, V, exec, wtype -m shift -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M shift -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
 
+          # Tap the copilot key: quick "learn this" launcher — pick a mode,
+          # type/paste a word or concept, get an answer instantly in a fresh
+          # Claude chat. SUPER+SHIFT opens/focuses the full Claude.ai app, which
+          # now lives on its own "claude.ai" workspace (see shared_variables.nix).
+          ",${copilotKey}, exec, claude-ask"
           "SUPER SHIFT, ${copilotKey}, exec, focus_app claude.ai"
           # "SUPER SHIFT, ${copilotKey}, exec, focus_app gemini.google.com"
 
           # clipboard manager
-          "${mainMod}, V, exec, cliphist list -max-iterms 1000 -preview-width 1000 | fuzzel --dmenu | cliphist decode | wl-copy"
+          # Same window footprint, smaller text => more entries visible. Large -preview-width
+          # so fuzzel can fuzzy-match text anywhere in an entry, not just the start.
+          "${mainMod}, V, exec, cliphist list -preview-width 5000 | fuzzel --dmenu --match-mode=fzf --font=\"${config.theme.font.ui}:size=9\" --line-height=14 --lines=18 --width=70 | cliphist decode | wl-copy"
           "${mainMod} ALT, V, exec, smart-clipboard-picker.sh"
 
+          # Password picker (pass + GPG). X types the selected secret into the
+          # focused field; SHIFT+X copies it to the clipboard for 45s instead.
+          "${mainMod}, X, exec, password-picker"
+          "${mainMod} SHIFT, X, exec, password-picker copy"
+
           "${mainMod} SHIFT, F23, exec, notify-send -t 2000 -u normal -i dialog-information \"Starting rebuild 👷!\" \"\""
+
+          # Translate: SUPER+G enters Dialect submap, SUPER+SHIFT+G enters Crow submap.
+          # In submap: letter picks dest language. Bare = current selection, SHIFT = clipboard.
+          # Escape exits.
+          "${mainMod}, G, submap, translate"
+          "${mainMod} SHIFT, G, submap, translate-crow"
         ];
 
       # mouse binding
@@ -506,6 +570,16 @@ in {
           "center 1, match:title ^(float_kitty)$"
           "size 950 600, match:title ^(float_kitty)$"
 
+          # system-fix Claude session — larger floating window for real work
+          "float 1, match:title ^(system-fix)$"
+          "center 1, match:title ^(system-fix)$"
+          "size 1400 900, match:title ^(system-fix)$"
+
+          # nixos-assistant Claude session — large floating window for real work
+          "float 1, match:title ^(nixos-assistant)$"
+          "center 1, match:title ^(nixos-assistant)$"
+          "size 1400 900, match:title ^(nixos-assistant)$"
+
           "float 1, match:class ^(audacious)$"
           "tile 1, match:class ^(neovide)$"
           # "idleinhibit focus, match:class ^(mpv)$"
@@ -521,12 +595,24 @@ in {
 
           # Betterbird: 50% larger than a standard window size
           "size 1800 1000, match:class ^(eu\\.betterbird\\.Betterbird)$"
+
+          # Dialect (translator) — small floating popup
+          "float 1, match:class ^(app\\.drey\\.Dialect)$"
+          "center 1, match:class ^(app\\.drey\\.Dialect)$"
+          "size 720 520, match:class ^(app\\.drey\\.Dialect)$"
+          "pin 1, match:class ^(app\\.drey\\.Dialect)$"
+
+          # Crow Translate — small floating popup
+          "float 1, match:class ^([Cc]row-?[Tt]ranslate)$"
+          "center 1, match:class ^([Cc]row-?[Tt]ranslate)$"
+          "size 720 520, match:class ^([Cc]row-?[Tt]ranslate)$"
+          "pin 1, match:class ^([Cc]row-?[Tt]ranslate)$"
         ]
         ++ [
           "float 1, match:title ^(Picture-in-Picture)$"
           "opacity 1.0 override 1.0 override, match:title ^(Picture-in-Picture)$"
           "pin 1, match:title ^(Picture-in-Picture)$"
-          "opacity 1.0 override 1.0 override, match:title ^(.*imv.*)$"
+          "opacity 1.0 override 1.0 override, match:title ^(.*swayimg.*)$"
           "opacity 1.0 override 1.0 override, match:title ^(.*mpv.*)$"
           "opacity 1.0 override 1.0 override, match:class (Aseprite)"
           "opacity 1.0 override 1.0 override, match:class (Unity)"
@@ -535,7 +621,7 @@ in {
           "float 1, match:class ^(zenity)$"
           "center 1, match:class ^(zenity)$"
           "size 850 500, match:class ^(zenity)$"
-          "float 1, match:class ^(pavucontrol)$"
+          "float 1, match:class ^(pwvucontrol)$"
           "float 1, match:class ^(SoundWireServer)$"
           "float 1, match:class ^(.sameboy-wrapped)$"
           "float 1, match:class ^(file_progress)$"
@@ -563,13 +649,106 @@ in {
 
     extraConfig = "
 
+# Leader submap (MAT-572) — entered via SUPER+SHIFT+SPACE.
+# Replicates Saul's sequential-hotkey timer: press the leader, release, then a
+# digit to start an N-minute timer (1-9 = 1-9 min, 0 = 10 min). Runs in the
+# graphical session, so the start/done desktop notifications fire correctly
+# (a kanata system service runs sandboxed and cannot reach the session — see
+# MAT-572). This is a GENERAL leader: add more `bind = , <key>, exec, ...` +
+# `bind = , <key>, submap, reset` lines below to bind other one-shot actions.
+submap = leader
+bind = , 1, exec, leader-timer 1
+bind = , 1, submap, reset
+bind = , 2, exec, leader-timer 2
+bind = , 2, submap, reset
+bind = , 3, exec, leader-timer 3
+bind = , 3, submap, reset
+bind = , 4, exec, leader-timer 4
+bind = , 4, submap, reset
+bind = , 5, exec, leader-timer 5
+bind = , 5, submap, reset
+bind = , 6, exec, leader-timer 6
+bind = , 6, submap, reset
+bind = , 7, exec, leader-timer 7
+bind = , 7, submap, reset
+bind = , 8, exec, leader-timer 8
+bind = , 8, submap, reset
+bind = , 9, exec, leader-timer 9
+bind = , 9, submap, reset
+bind = , 0, exec, leader-timer 10
+bind = , 0, submap, reset
+bind = , escape, submap, reset
+submap = reset
+
+# Translate submap — entered via SUPER+G.
+# Bare letter = translate current selection. SHIFT+letter = translate clipboard.
+# e=English  p=Polish  f=French  s=Spanish  m=Mandarin (zh-CN)  r=Russian
+submap = translate
+bind = , e, exec, dialect -n -s auto -d en
+bind = , e, submap, reset
+bind = , p, exec, dialect -n -s auto -d pl
+bind = , p, submap, reset
+bind = , f, exec, dialect -n -s auto -d fr
+bind = , f, submap, reset
+bind = , s, exec, dialect -n -s auto -d es
+bind = , s, submap, reset
+bind = , m, exec, dialect -n -s auto -d zh-CN
+bind = , m, submap, reset
+bind = , r, exec, dialect -n -s auto -d ru
+bind = , r, submap, reset
+bind = SHIFT, e, exec, dialect -t \"$(wl-paste)\" -s auto -d en
+bind = SHIFT, e, submap, reset
+bind = SHIFT, p, exec, dialect -t \"$(wl-paste)\" -s auto -d pl
+bind = SHIFT, p, submap, reset
+bind = SHIFT, f, exec, dialect -t \"$(wl-paste)\" -s auto -d fr
+bind = SHIFT, f, submap, reset
+bind = SHIFT, s, exec, dialect -t \"$(wl-paste)\" -s auto -d es
+bind = SHIFT, s, submap, reset
+bind = SHIFT, m, exec, dialect -t \"$(wl-paste)\" -s auto -d zh-CN
+bind = SHIFT, m, submap, reset
+bind = SHIFT, r, exec, dialect -t \"$(wl-paste)\" -s auto -d ru
+bind = SHIFT, r, submap, reset
+bind = , escape, submap, reset
+submap = reset
+
+# Translate (Crow Translate) submap — entered via SUPER+SHIFT+G.
+# Same key scheme as Dialect submap: letter picks dest language,
+# bare = primary selection (wl-paste -p), SHIFT = clipboard (wl-paste).
+submap = translate-crow
+bind = , e, exec, wl-paste -p | crow --stdin -s auto -t en
+bind = , e, submap, reset
+bind = , p, exec, wl-paste -p | crow --stdin -s auto -t pl
+bind = , p, submap, reset
+bind = , f, exec, wl-paste -p | crow --stdin -s auto -t fr
+bind = , f, submap, reset
+bind = , s, exec, wl-paste -p | crow --stdin -s auto -t es
+bind = , s, submap, reset
+bind = , m, exec, wl-paste -p | crow --stdin -s auto -t zh-CN
+bind = , m, submap, reset
+bind = , r, exec, wl-paste -p | crow --stdin -s auto -t ru
+bind = , r, submap, reset
+bind = SHIFT, e, exec, wl-paste | crow --stdin -s auto -t en
+bind = SHIFT, e, submap, reset
+bind = SHIFT, p, exec, wl-paste | crow --stdin -s auto -t pl
+bind = SHIFT, p, submap, reset
+bind = SHIFT, f, exec, wl-paste | crow --stdin -s auto -t fr
+bind = SHIFT, f, submap, reset
+bind = SHIFT, s, exec, wl-paste | crow --stdin -s auto -t es
+bind = SHIFT, s, submap, reset
+bind = SHIFT, m, exec, wl-paste | crow --stdin -s auto -t zh-CN
+bind = SHIFT, m, submap, reset
+bind = SHIFT, r, exec, wl-paste | crow --stdin -s auto -t ru
+bind = SHIFT, r, submap, reset
+bind = , escape, submap, reset
+submap = reset
+
 # # # tablet mode
 #       monitor=eDP-1,preferred,0x0,1.0
 #       # monitor=DP-1,3840x2400,0x1080,auto, transform, 2
 #       monitor=DP-1,preferred,0x1080,1.0
 
       monitor=eDP-1,preferred,0x0,1
-      monitor=DP-1,preferred,2880x0,1
+      monitor=DP-1,preferred,0x-2160,1 #  monitor above this one
       monitor=HDMI-A-1,preferred,-1920x0,1.0
 
       # this

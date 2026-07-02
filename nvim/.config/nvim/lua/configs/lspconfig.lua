@@ -34,17 +34,43 @@ lspconfig.ts_ls.setup({
 	},
 })
 
+-- Markdown/prose grammar+spell now runs on harper-ls (Rust, ~20MB RSS, no JVM)
+-- instead of ltex-ls. ltex spawned one 512MB+ LanguageTool JVM PER GIT ROOT — the
+-- Obsidian vault (a git repo) plus every project repo you edit markdown in — which
+-- left ~1.3GB of idle JVMs parked in zram on this 16GB machine. harper's footprint
+-- is negligible. Dictionary lives in spell/harper-dict.txt (one word per line).
+lspconfig.harper_ls.setup({
+	filetypes = { "markdown", "gitcommit" },
+	settings = {
+		["harper-ls"] = {
+			userDictPath = vim.fn.expand("~/dotfiles/nvim/.config/nvim/spell/harper-dict.txt"),
+		},
+	},
+})
+
+-- ltex-ls kept for LaTeX ONLY. tex is rare, so its heavy JVM now spawns rarely
+-- instead of once per markdown git root. Markdown moved to harper_ls above.
 lspconfig.ltex.setup({
 	cmd = {
 		"env",
 		"JAVA_TOOL_OPTIONS=-Xms128m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Dorg.bsplines.ltexls.logLevel=WARNING",
 		"ltex-ls",
 	},
-	filetypes = { "markdown", "tex" },
+	filetypes = { "tex" },
 	flags = { debounce_text_changes = 1000 },
 	settings = {
 		ltex = {
 			checkFrequency = "save",
+			dictionary = {
+				["en-US"] = {
+					"LMNT",
+					"malate",
+					"Malate",
+					"erythritol",
+					"BulkSupplements",
+					"Zvi",
+				},
+			},
 		},
 	},
 })

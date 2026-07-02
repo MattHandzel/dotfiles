@@ -46,6 +46,7 @@ in {
     wget
     git
     lm_sensors
+    mosh
     nvme-cli
     wsdd
   ];

@@ -43,7 +43,7 @@ in {
         color: #${p.lavender};
     }
 
-    #tray, #pulseaudio, #network, #cpu, #memory, #disk, #clock, #battery, #custom-notification, #custom-stt-mic {
+    #tray, #pulseaudio, #network, #cpu, #memory, #disk, #clock, #battery, #custom-notification, #custom-stt-mic, #custom-kb-lang {
         font-size: ${custom.font_size};
         color: ${custom.text_color};
     }
@@ -88,6 +88,20 @@ in {
     }
     #custom-stt-mic.speaking {
         color: #${p.green};
+    }
+    #custom-kb-lang {
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+    #custom-kb-lang.pl {
+        color: #${p.red};
+    }
+    #custom-kb-lang.en {
+        color: #${p.blue};
+    }
+    #custom-kb-lang.unknown,
+    #custom-kb-lang.other {
+        color: rgba(205, 214, 244, 0.6);
     }
     #custom-focus-mode {
         padding-left: 9px;
