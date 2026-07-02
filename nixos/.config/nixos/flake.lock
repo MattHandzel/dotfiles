@@ -745,8 +745,8 @@
         ]
       },
       "locked": {
-        "lastModified": 1774249177,
-        "narHash": "sha256-xrr1ES/aH5tF5TMvGDLMZ3ygJAco7C0awQnxZr0SYAQ=",
+        "lastModified": 1780696302,
+        "narHash": "sha256-lgEOhgGDnf4DBsQ/U0xBDRvwfNpsaaLh/yyGIRm+m7U=",
         "path": "/home/matth/Projects/SecondBrainSearch",
         "type": "path"
       },
@@ -879,8 +879,8 @@
         ]
       },
       "locked": {
-        "lastModified": 1774249178,
-        "narHash": "sha256-40zlEuK7/tTc0AifphJbAZj7NL9CFqliTSAH7BHqT8s=",
+        "lastModified": 1778618664,
+        "narHash": "sha256-ByYgZrcdkXqfAC+mbjyhAU6LjtisIfM/hEa+XOnZYwg=",
         "path": "/home/matth/Projects/SecondBrainSpeech",
         "type": "path"
       },

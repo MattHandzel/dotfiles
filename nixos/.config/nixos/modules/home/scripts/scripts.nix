@@ -67,6 +67,8 @@
     ./scripts/clip2md.sh # clipboard rich-text -> Markdown (SUPER+SHIFT+M)
     ./scripts/screenshot-search.sh # fuzzel picker over ~/Pictures/Screenshots (SUPER+SHIFT+S)
     ./scripts/leader-timer.sh # N-minute timer behind the SUPER+SHIFT+SPACE leader submap
+    ./scripts/pl-assist # Polish capture: bare-bones fast Claude helper (MAT-799)
+    ./scripts/pl-capture # Polish capture: numpad-8 mode menu + file router (MAT-800)
   ];
 
   # Create shell script bins
@@ -118,6 +120,7 @@ in {
       authCodeWatcher
       focusEnforcer
       ntfyDesktopSub
+      (import ./scripts/link-search/default.nix {inherit pkgs;})
     ];
 
   # GUI ntfy client: a standalone web-app window for the server's ntfy web UI,

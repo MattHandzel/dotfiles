@@ -9,8 +9,9 @@
     notetaker = "📔";
     dolphin = "📁";
     wasistlos = "🟢";
+    "io.github.alainm23.planify" = "✅";
     anki = "🧠";
-    tasker = "📝";
+    planify = "✅";
     PrusaSlicer = "🧩";
     discord = "󰙯";
     betterbird = "✉️";

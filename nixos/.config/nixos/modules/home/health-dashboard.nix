@@ -1,74 +1,103 @@
 {
   config,
-  lib,
   pkgs,
   ...
 }: let
-  readinessBin = pkgs.writeShellApplication {
-    name = "readiness";
-    runtimeInputs = with pkgs; [coreutils python311];
-    bashOptions = ["nounset"];
-    text = ''
-      exec ${pkgs.python311}/bin/python3 "$HOME/Projects/health-data-dashboard/bin/readiness" "$@"
-    '';
-  };
+  # Where the health-data-dashboard pipeline lives. The importer itself
+  # (refresh.sh = pull.py [Google Sheet -> parquet] -> render.py -> the vault
+  # digest) is part of *that* project, not the dotfiles — this module only
+  # schedules it. See projects/health-data-dashboard/SPEC.md item 5.
+  projectDir = "${config.home.homeDirectory}/Projects/health-data-dashboard";
 
-  refreshWrapper = pkgs.writeShellApplication {
-    name = "health-dashboard-refresh";
-    runtimeInputs = with pkgs; [coreutils nix bash];
-    bashOptions = ["nounset"];
-    text = ''
-      LOG_DIR="$HOME/.local/state/health-dashboard"
-      mkdir -p "$LOG_DIR"
-      LOG="$LOG_DIR/refresh.log"
+  # Loud-alert endpoint. Mirrors the dashboard's own anomaly push (SPEC AC-11).
+  # The whole point of this timer is to turn the silent multi-week staleness
+  # failure into either a fresh dashboard or a visible ping.
+  ntfyUrl = "http://server.matthandzel.com:8124/claude";
 
-      log() { echo "[$(date -Iseconds)] $*" >> "$LOG"; }
+  refreshScript = pkgs.writeShellScript "health-dashboard-refresh" ''
+    set -uo pipefail
 
-      REPO="$HOME/Projects/health-data-dashboard"
-      if [ ! -d "$REPO" ]; then
-        log "ERROR: $REPO not found"
-        exit 1
-      fi
+    project_dir="${projectDir}"
+    log() { printf '%s %s\n' "$(${pkgs.coreutils}/bin/date -Is)" "$*"; }
 
-      cd "$REPO" || { log "ERROR: cd $REPO failed"; exit 1; }
-      log "starting refresh.sh"
-      if ./refresh.sh --quiet >> "$LOG" 2>&1; then
-        log "ok"
-      else
-        log "FAILED with exit $?"
-        exit 1
-      fi
-    '';
-  };
+    # POST one line to ntfy; never let a notification failure mask the real
+    # exit status (|| true).
+    notify() {
+      ${pkgs.curl}/bin/curl -fsS \
+        -H "Title: Health dashboard" \
+        -H "Tags: health-dashboard" \
+        -d "$1" "${ntfyUrl}" >/dev/null 2>&1 || true
+    }
+
+    host="$(${pkgs.coreutils}/bin/uname -n)"
+
+    # Code-missing path: alert loudly instead of silently doing nothing. This is
+    # the failure mode this issue exists to kill — blindness must never be quiet.
+    if [ ! -e "$project_dir/refresh.sh" ]; then
+      log "ERROR: $project_dir/refresh.sh not found on $host — health data is BLIND."
+      notify "Health import did NOT run: refresh.sh missing at $project_dir on $host. Dashboard is going stale."
+      exit 1
+    fi
+
+    cd "$project_dir" || {
+      notify "Health import did NOT run: cannot cd into $project_dir on $host."
+      exit 1
+    }
+
+    # Project-local secrets (Google Drive OAuth token path, etc.) live in .env,
+    # mirroring the gdoc-sync / personal-website-sync pattern.
+    if [ -f .env ]; then
+      set -a
+      . ./.env
+      set +a
+    fi
+
+    log "Starting health-dashboard refresh"
+    # The project's shell.nix provides python + pandas/plotly/google-api deps
+    # (SPEC tech stack). Run inside it when present; otherwise trust refresh.sh
+    # to provision its own environment.
+    if [ -f shell.nix ]; then
+      ${pkgs.nix}/bin/nix-shell shell.nix --run "bash ./refresh.sh"
+    else
+      bash ./refresh.sh
+    fi
+    status=$?
+
+    if [ "$status" -ne 0 ]; then
+      log "ERROR: refresh.sh exited $status"
+      notify "Health import FAILED (exit $status) on $host — dashboard not updated. Check: journalctl --user -u health-dashboard-refresh"
+      exit "$status"
+    fi
+
+    log "health-dashboard refresh completed"
+  '';
 in {
-  home.packages = [readinessBin];
-
-  systemd.user.tmpfiles.rules = [
-    "d %h/.local/state/health-dashboard 0700 - - - -"
-  ];
-
   systemd.user.services.health-dashboard-refresh = {
     Unit = {
-      Description = "Health Data Dashboard refresh (Google Sheet → dashboard.html + LLM digest)";
-      After = ["network-online.target"];
+      Description = "Refresh the multi-source health-data dashboard (pull -> render)";
+      After = ["network.target"];
     };
     Service = {
       Type = "oneshot";
-      ExecStart = "${refreshWrapper}/bin/health-dashboard-refresh";
-      Environment = [
-        "PATH=/run/current-system/sw/bin:${config.home.homeDirectory}/.nix-profile/bin:/etc/profiles/per-user/matth/bin"
-      ];
+      ExecStart = "${pkgs.bash}/bin/bash ${refreshScript}";
+      # Heavy pandas/plotly run — stay out of the way of interactive work.
+      IOSchedulingClass = "idle";
+      CPUSchedulingPolicy = "idle";
     };
+    # Timer-driven only. Do NOT enable on default.target: a long oneshot started
+    # during Home Manager activation makes `nixos-rebuild switch` appear to hang
+    # (see the personal-website-sync note in services.nix).
   };
 
   systemd.user.timers.health-dashboard-refresh = {
     Unit = {
-      Description = "Daily 09:00 trigger for health-dashboard refresh";
+      Description = "Daily 09:00 health-dashboard refresh (Persistent: a missed run fires on next boot)";
     };
     Timer = {
-      OnCalendar = "09:00:00";
-      # Persistent=true: if laptop was off at 09:00, run on next wake.
-      # Daily health summary is still useful even if it's an hour late.
+      OnCalendar = "*-*-* 09:00:00";
+      # CRITICAL: the laptop is routinely asleep/off at 09:00. Persistent makes
+      # systemd run the most recent missed trigger on the next boot/login, so the
+      # import can't silently skip for days — the exact failure this issue fixes.
       Persistent = true;
       Unit = "health-dashboard-refresh.service";
     };

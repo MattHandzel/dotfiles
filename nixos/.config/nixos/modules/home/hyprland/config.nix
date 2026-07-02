@@ -499,15 +499,9 @@ in {
           ", KP_5, exec, prompt-picker"
           ", KP_7, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://gemini.google.com/gem/6dbcf84e326c'"
           ", KP_Home, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/open-website-as-standalone-app.sh 'https://gemini.google.com/gem/6dbcf84e326c'"
-          ", KP_6, exec, /home/matth/Projects/universal-calendar-capture/calendar-capture.sh"
-          ", KP_Right, exec, /home/matth/Projects/universal-calendar-capture/calendar-capture.sh"
-          # Polish learning (heritage speaker, projects/B2-polish)
-          ", KP_8, exec, /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-explain.py"
-          ", KP_Up, exec, /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-explain.py"
-          ", KP_9, exec, kitty --title float_kitty --hold /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-fix.py"
-          ", KP_Prior, exec, kitty --title float_kitty --hold /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-fix.py"
-          ", KP_0, exec, /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-correct.py"
-          ", KP_Insert, exec, /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-correct.py"
+          # Polish capture/assist menu (MAT-800): pick a mode, act on the selection/clipboard, route the result
+          ", KP_8, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-capture"
+          ", KP_Up, exec, bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/pl-capture"
 
           "${mainMod}, Tab, focuscurrentorlast"
           # laptop brigthness
@@ -538,6 +532,8 @@ in {
           # so fuzzel can fuzzy-match text anywhere in an entry, not just the start.
           "${mainMod}, V, exec, cliphist list -preview-width 5000 | fuzzel --dmenu --match-mode=fzf --font=\"${config.theme.font.ui}:size=9\" --line-height=14 --lines=18 --width=70 | cliphist decode | wl-copy"
           "${mainMod} ALT, V, exec, smart-clipboard-picker.sh"
+          # link-search: fuzzy-find links (by title or URL) across clipboard + browser history
+          "${mainMod} SHIFT, V, exec, link-search"
 
           # Password picker (pass + GPG). X types the selected secret into the
           # focused field; SHIFT+X copies it to the clipboard for 45s instead.

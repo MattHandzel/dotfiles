@@ -30,6 +30,7 @@
     ++ [(import ./thunderbird.nix)] # thunder bird
     ++ [(import ./tmux.nix)] # terminal multiplexer
     ++ [(import ./services.nix)]
+    ++ [(import ./health-dashboard.nix)] # daily 09:00 health-data import timer
     ++ [(import ./todoist.nix)]
     ++ [./transcribe-captures.nix]
     ++ [./luck-scheduler.nix]
