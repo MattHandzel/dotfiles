@@ -13,14 +13,18 @@ in {
   # The binary itself (~/Projects/lifelog/target/release/lifelog-collector) is
   # built outside this flake; the unit just wires it into systemd.
   #
-  # The unit is intentionally NOT wired into default.target — the collector
-  # used to respawn aggressively (Restart=always). Start it manually when
-  # wanted: `systemctl --user start lifelog-collector`.
+  # Auto-starts with the graphical session (2026-07-15, Matt's ask: capture
+  # must be persistent). Tied to graphical-session.target because screen
+  # capture needs a live Wayland compositor.
   systemd.user.services.lifelog-collector = {
     Unit = {
       Description = "Lifelog Collector (user)";
-      After = ["network-online.target"];
+      After = ["network-online.target" "graphical-session.target"];
       Wants = ["network-online.target"];
+      PartOf = ["graphical-session.target"];
+    };
+    Install = {
+      WantedBy = ["graphical-session.target"];
     };
     Service = {
       Type = "simple";
@@ -49,7 +53,5 @@ in {
        && [ ! -L "$HOME/.config/systemd/user/lifelog-collector.service" ]; then
       rm -f "$HOME/.config/systemd/user/lifelog-collector.service"
     fi
-    # Old enable symlink (we no longer want auto-start).
-    rm -f "$HOME/.config/systemd/user/default.target.wants/lifelog-collector.service"
   '';
 }

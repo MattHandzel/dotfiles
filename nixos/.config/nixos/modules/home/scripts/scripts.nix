@@ -24,6 +24,7 @@
     ./scripts/secondary-monitor-update.sh
     ./scripts/tmux-sessionizer.sh
     ./scripts/focus_app.sh
+    ./scripts/lifelog-search.sh
     ./scripts/toggle-focus-mode.sh
     ./scripts/focus-distracting-apps.sh
     ./scripts/focus-delay-gate.sh
@@ -50,11 +51,16 @@
     ./scripts/TextToSpeechService.sh
     ./scripts/prompt-picker.sh
     ./scripts/smart-clipboard-picker.sh
+    ./scripts/grammar-check.sh # SUPER+C — LanguageTool on current selection
+    ./scripts/paste-second-clip.sh
+    ./scripts/wispr-hub.sh
+    ./scripts/wispr-status.sh # waybar: Wispr running / dictating
     ./scripts/open-website-as-standalone-app.sh
     ./scripts/claude.ai.sh
     ./scripts/claude-ask.sh
     ./scripts/gemini.google.com.sh
     ./scripts/linear.sh
+    ./scripts/zoom-web.sh
     ./scripts/toggle-stt.sh
     ./scripts/kb-lang-status.sh
     ./scripts/btop-gui.sh
@@ -69,6 +75,8 @@
     ./scripts/leader-timer.sh # N-minute timer behind the SUPER+SHIFT+SPACE leader submap
     ./scripts/pl-assist # Polish capture: bare-bones fast Claude helper (MAT-799)
     ./scripts/pl-capture # Polish capture: numpad-8 mode menu + file router (MAT-800)
+    ./scripts/hyprland-session-save.sh # snapshot windows/workspaces (timer in hyprland/hyprsession.nix)
+    ./scripts/hyprland-session-restore.sh # relaunch saved windows on their workspaces
   ];
 
   # Create shell script bins
@@ -121,6 +129,7 @@ in {
       focusEnforcer
       ntfyDesktopSub
       (import ./scripts/link-search/default.nix {inherit pkgs;})
+      (import ./scripts/read-aloud/default.nix {inherit pkgs;})
     ];
 
   # GUI ntfy client: a standalone web-app window for the server's ntfy web UI,
