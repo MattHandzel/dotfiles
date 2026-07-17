@@ -298,6 +298,14 @@ return {
 			require("configs.iron")
 		end,
 	},
+	{
+		-- Per-directory sessions, auto-saved on exit. Auto-restored in notes
+		-- dirs via the VimEnter autocmd in autocommands.lua; manual restore
+		-- with <leader>qs / <leader>ql (mappings.lua).
+		"folke/persistence.nvim",
+		event = "BufReadPre",
+		opts = {},
+	},
 	{ "dccsillag/magma-nvim", event = "VeryLazy", enabled = false },
 	{
 		"lervag/vimtex",
@@ -1630,7 +1638,7 @@ return {
 		build = "make tiktoken", -- Only on MacOS or Linux
 		opts = {
 			debug = false, -- Keep CopilotChat logging minimal to avoid noisy LSP logs
-			model = "copilot:claude-4.6-opus", -- Set model to claude-4.6-opus as requested
+			model = "claude-opus-4.8", -- Valid Copilot model id (was "copilot:claude-4.6-opus", which doesn't exist -- see `:CopilotChatModels` for the live list)
 		},
 	},
 	{
@@ -2521,6 +2529,14 @@ return {
 					effort = -0.05,
 				},
 			})
+		end,
+	},
+	{
+		dir = "~/Projects/gdoc-sync.nvim", -- github.com/MattHandzel/gdoc-sync.nvim
+		ft = "markdown",
+		cmd = "Gdoc",
+		config = function()
+			require("gdoc-sync").setup({})
 		end,
 	},
 	{
