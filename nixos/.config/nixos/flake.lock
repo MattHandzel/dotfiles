@@ -285,6 +285,19 @@
         "type": "github"
       }
     },
+    "gdoc-sync-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784305837,
+        "narHash": "sha256-7tSEIMSWUlLO9G1XG07QUPUBihhpF0YuN0uujIYvr2Q=",
+        "path": "/home/matth/Projects/gdoc-sync",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/matth/Projects/gdoc-sync",
+        "type": "path"
+      }
+    },
     "gitignore": {
       "inputs": {
         "nixpkgs": [
@@ -705,6 +718,7 @@
         "betterbird": "betterbird",
         "catppuccin": "catppuccin",
         "claude-desktop": "claude-desktop",
+        "gdoc-sync-src": "gdoc-sync-src",
         "home-manager": "home-manager",
         "hypr-contrib": "hypr-contrib",
         "hyprpicker": "hyprpicker",
@@ -745,8 +759,8 @@
         ]
       },
       "locked": {
-        "lastModified": 1780696302,
-        "narHash": "sha256-lgEOhgGDnf4DBsQ/U0xBDRvwfNpsaaLh/yyGIRm+m7U=",
+        "lastModified": 1774250351,
+        "narHash": "sha256-Q7p22V7EOvJrjkWaHfvRnSVJUjoLvFV02Zm10qI9Uvk=",
         "path": "/home/matth/Projects/SecondBrainSearch",
         "type": "path"
       },
