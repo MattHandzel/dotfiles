@@ -41,9 +41,22 @@
     ++ [./zen-config.nix]
     ++ [./app-memory-caps.nix]
     ++ [./lifelog-collector.nix]
+    # ActivityWatch as durable systemd user services (aw-server + watchers)
+    ++ [./activitywatch.nix]
+    # delete foreign symlinks (manual `systemctl --user enable` leftovers)
+    # that would otherwise abort activation with "would be clobbered"
+    ++ [./hm-clobber-guard.nix]
     ++ [./linear-notify.nix] # poll Linear → swaync desktop notifications
     ++ [inputs.catppuccin.homeModules.catppuccin]
     ++ [(import ./foliate.nix)]
+    # voice dictation (unofficial Linux AppImage port)
+    ++ [./wispr-flow.nix]
+    # un-stick modifiers that Wispr's uinput keyboard strands
+    ++ [./stuck-key-guard.nix]
+    # let Wispr see hot-plugged keyboards (the BT TOTEM) without restarting it
+    ++ [./kbd-relay.nix]
+    # Raycast-style command palette (SUPER+D) — launch/run/timer/calc
+    ++ [./vicinae.nix]
     # ++ [(import ./notion.nix)]
     # ++ [(import ./ntfy.nix)]
     ;
@@ -75,6 +88,8 @@
       "application/json" = "nvim.desktop";
       "application/x-shellscript" = "nvim.desktop";
       "application/pdf" = "zathura.desktop";
+      # Open EPUB ebooks in Calibre's reader (not the ebook editor).
+      "application/epub+zip" = "calibre-ebook-viewer.desktop";
     };
   };
 

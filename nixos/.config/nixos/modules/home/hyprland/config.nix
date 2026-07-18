@@ -25,7 +25,7 @@
     PrusaSlicer = "P";
     cura = "U";
     "gemini.google.com" = "Y";
-    wasistlos = "W";
+    wasistlos = "I"; # W now opens Wispr Flow (see the wispr-hub bind below)
     "tasker" = "T";
     "notetaker" = "N";
     gimp = "G";
@@ -38,7 +38,7 @@ in let
   in "(?i).*${escapedStr}.*";
 
   singleton_windows = sharedVariables.singletonApplications;
-  floating_windows = ["swayimg" ".blueman-manager-wrapped" "Volume Control" "org.speedcrunch." "floating-pl"];
+  floating_windows = ["swayimg" ".blueman-manager-wrapped" "Volume Control" "org.speedcrunch." "floating-pl" "predict-popup"];
 
   # Mapping of application names to specific workspace numbers or names
   workspaceMapping = {
@@ -115,6 +115,12 @@ in {
         "hash dbus-update-activation-environment 2>/dev/null &"
         "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP &"
         "nm-applet &"
+        # Wispr Flow is NOT started here — it runs as the wispr-flow systemd user
+        # service (modules/home/wispr-flow.nix) so its lifecycle can be coupled to
+        # kbd-relay: Wispr enumerates keyboards once at startup, so it must start
+        # after the relay's virtual keyboard and restart whenever the relay does.
+        # Its Hub window is routed to the `wispr` workspace by windowrule below;
+        # the floating pill is pinned + follows the cursor via wispr-pill-follow.
         "wl-clip-persist --clipboard both"
         "swaybg -m fill -i $(find ~/Pictures/wallpapers/ -maxdepth 1 -type f) &"
         "hyprctl setcursor Nordzy-cursors 22 &"
@@ -125,14 +131,18 @@ in {
         "gammastep -l  50:-145.2062 -t 5400:3500 -b 1:1 &"
         # "sudo logkeys --start --device event0 --output $HOME/notes/life-logging/key-logging/keyboard.log &"
 
-        "aw-server & "
-        "aw-watcher-window > /home/matth/log_for_aw.txt"
-        "aw-watcher-afk > /home/matth/log_for_aw1.txt"
+        # ActivityWatch now runs as durable systemd user services
+        # (modules/home/activitywatch.nix): aw-server + aw-watcher-afk +
+        # aw-watcher-window-hyprland. The old exec-once launches were
+        # session-scoped, spawned duplicates on relogin, and the generic
+        # window watcher logged "unknown" titles on Hyprland.
         "hyprlock"
         # espanso is started by its systemd unit (WantedBy=hyprland-session.target),
         # which Hyprland's own stop/start of that target launches once the compositor
         # is up — no manual restart needed (it only added an extra ~14s re-init).
-        "/home/matth/Projects/LifeLogging/result/bin/lifelog --config /home/matth/Projects/LifeLogging/config.toml"
+        # Runs in the low-priority app-lifelog slice (app-memory-caps.nix) so
+        # its zstd/ffmpeg archival jobs can't starve the foreground apps.
+        "systemd-run --user --slice=app-lifelog.slice --scope -- /home/matth/Projects/LifeLogging/result/bin/lifelog --config /home/matth/Projects/LifeLogging/config.toml"
         # "lifelog-logger &"
       ];
 
@@ -151,6 +161,27 @@ in {
       #
       # Fixed device configuration section
       "device" = [
+        {
+          # The TOTEM's firmware sends the keys Matt actually wants (Esc is a
+          # combo on the board) — exclude it from the global caps:swapescape.
+          # NOTE: it enumerates under two different names — this one over
+          # Bluetooth, "zmk-project-..." over USB — so BOTH need the override
+          # or Esc becomes CapsLock on whichever transport is active.
+          "name" = "matt's-totem-keyboard";
+          kb_options = "grp:alt_caps_toggle";
+        }
+        {
+          "name" = "zmk-project-matt's-totem-keyboard";
+          kb_options = "grp:alt_caps_toggle";
+        }
+        {
+          # kbd-relay (modules/home/kbd-relay.nix) re-emits the TOTEM through
+          # this always-present virtual keyboard for Wispr Flow — so it needs
+          # the same exclusion, or the global caps:swapescape maps the TOTEM's
+          # Esc to CapsLock (bit Matt 2026-07-15).
+          "name" = "keyboard-relay";
+          kb_options = "grp:alt_caps_toggle";
+        }
         {
           "name" = "pixa3838:00-093a:3838-touchpad";
           sensitivity = 0.25;
@@ -347,11 +378,16 @@ in {
           "${mainMod} SHIFT, F, fullscreen, 1"
           "${mainMod}, Space, togglefloating,"
           "${mainMod}, A, exec, fuzzel"
+          # Vicinae — Raycast-style command palette (launch/run/timer/calc).
+          "${mainMod}, D, exec, vicinae toggle"
+          # Lifelog: focus/launch the viewer on its Search view (MAT-1413).
+          "${mainMod} SHIFT, L, exec, lifelog-search"
           "${mainMod}, SLASH, exec, $HOME/Projects/quick-reference-hotkey/quick-ref.sh"
           "${mainMod}, Escape, exec, systemctl suspend"
           "${mainMod}, E, exec, wofi-emoji"
           "${mainMod} SHIFT, Escape, exec, shutdown-script"
-          "${mainMod}, P, pseudo,"
+          # Quick prediction capture (MAT-1454); displaced `pseudo` (unused)
+          "${mainMod}, P, exec, $HOME/Obsidian/Main/scripts/predictions/predict-popup"
           "${mainMod}, S, togglesplit,"
           "${mainMod} SHIFT, B, exec, pkill -SIGUSR1 .waybar-wrapped"
           "${mainMod}, C ,exec, hyprpicker -a"
@@ -515,17 +551,41 @@ in {
           "SHIFT CONTROL ALT,XF86MonBrightnessDown, exec, secondary-monitor-update"
           "${mainMod}, XF86MonBrightnessUp, exec, brightness -s 100"
           "${mainMod}, XF86MonBrightnessDown, exec, brightness -s 0"
-          # # make it so control alt v pastes the second item in clipboard history without changing the clipboard history
-          "CONTROL ALT, V, exec, wtype -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
-          "SHIFT CONTROL ALT, V, exec, wtype -m shift -m ctrl -m alt \"v\" (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy ; wtype -M shift -M ctrl \"v\" ; sleep 0.05 ; wtype -m ctrl \"v\" ; (cliphist list | head -n 2) | tail -n 1 | cliphist decode | wl-copy"
+          # Paste the 2nd-most-recent clip without reordering cliphist history.
+          "CONTROL ALT, V, exec, paste-second-clip"
+
+          # Listen to what you're reading. R resolves the text itself: highlighted
+          # text in any app, else a URL in the clipboard, else the focused browser
+          # tab (recovered from history — no extension). Playback is one mpv, so
+          # SPACE pauses it and ,/. jump back/forward 15s.
+          "CONTROL ALT, R, exec, read-aloud"
+          "CONTROL ALT, SPACE, exec, read-aloud --toggle"
+          "CONTROL ALT, S, exec, read-aloud --stop"
+          "CONTROL ALT, comma, exec, read-aloud --seek -15"
+          "CONTROL ALT, period, exec, read-aloud --seek 15"
+          # NumPad control panel: one key pops a fuzzel menu (pause/stop/seek/
+          # speed + read selection/tab/clipboard) — no memorized chords. KP_7 is
+          # taken by Gemini; using KP_9 (say the word to move it to KP_7). Both
+          # keysyms: KP_9 with NumLock on, KP_Prior with it off.
+          ", KP_9, exec, read-aloud --menu"
+          ", KP_Prior, exec, read-aloud --menu"
+          # Focus/raise the Wispr Flow Hub on its own workspace (see windowrule).
+          # W, not I: WhatsApp (wasistlos) gave the key up — see appKeyboardShortcuts.
+          "${mainMod} ALT, W, exec, wispr-hub"
 
           # Tap the copilot key: quick "learn this" launcher — pick a mode,
           # type/paste a word or concept, get an answer instantly in a fresh
           # Claude chat. SUPER+SHIFT opens/focuses the full Claude.ai app, which
           # now lives on its own "claude.ai" workspace (see shared_variables.nix).
-          ",${copilotKey}, exec, claude-ask"
+          ",${copilotKey}, exec, focus_app claude.ai"
           "SUPER SHIFT, ${copilotKey}, exec, focus_app claude.ai"
+          ",XF86Tools, exec, focus_app claude.ai"
+          "SUPER SHIFT, XF86Tools, exec, focus_app claude.ai"
           # "SUPER SHIFT, ${copilotKey}, exec, focus_app gemini.google.com"
+          # F13 mirrors the laptop's Copilot key so the split keyboards (which
+          # have no code:201 hardware key) can reach claude-ask from a layer.
+          ",F13, exec, claude-ask"
+          "SUPER SHIFT, F13, exec, focus_app claude.ai"
 
           # clipboard manager
           # Same window footprint, smaller text => more entries visible. Large -preview-width
@@ -534,6 +594,11 @@ in {
           "${mainMod} ALT, V, exec, smart-clipboard-picker.sh"
           # link-search: fuzzy-find links (by title or URL) across clipboard + browser history
           "${mainMod} SHIFT, V, exec, link-search"
+
+          # Grammar-check the current selection (fallback: clipboard) with local
+          # LanguageTool; issues arrive as a notification. Works in any app —
+          # Slack, Obsidian, browser. Script: scripts/grammar-check.sh
+          "${mainMod}, C, exec, grammar-check"
 
           # Password picker (pass + GPG). X types the selected secret into the
           # focused field; SHIFT+X copies it to the clipboard for 45s instead.
@@ -560,6 +625,48 @@ in {
         generated_singleton_windowrule
         ++ generated_floating_windowrule
         ++ [
+          # Wispr Flow ships two windows under one class: "Hub" (the main app) and
+          # "Status" (the floating dictation pill). Only the Hub is a singleton on
+          # its own workspace — matching on class alone would banish the pill too,
+          # and the pill must stay visible on whatever workspace Matt is on.
+          "workspace name:wispr, match:class ^(wispr-flow)$, match:title ^(Hub)$"
+          "float 0, match:class ^(wispr-flow)$, match:title ^(Hub)$"
+
+          # The pill is always mapped but Wispr parks it on one monitor/workspace,
+          # so dictation ran unseen. Pin it (visible on every workspace) and keep
+          # it out of the focus/keyboard path; wispr-pill-follow moves it to the
+          # cursor when dictation starts.
+          "float 1, match:class ^(wispr-flow)$, match:title ^(Status)$"
+          "pin 1, match:class ^(wispr-flow)$, match:title ^(Status)$"
+          "no_focus 1, match:class ^(wispr-flow)$, match:title ^(Status)$"
+          "decorate 0, match:class ^(wispr-flow)$, match:title ^(Status)$"
+
+          # Every espanso (re)start maps a real window — "Espanso Sync Tool", the
+          # Wayland sync helper from espanso-detect — which took focus, tiled
+          # itself, and reflowed the layout. The espanso-rebind/watchdog units
+          # restart espanso on resume, keyboard hotplug and kanata restarts, so
+          # this was firing mid-task and yanking focus away.
+          #
+          # suppress_event is the load-bearing rule, not no_focus: the window
+          # *requests activation*, and misc:focus_on_activate=1 hands focus to
+          # anything that asks. Verified: without it, focus still moved despite
+          # no_focus; with it, focus holds across a restart.
+          #
+          # It has nothing to show a human, so it also goes to a hidden workspace.
+          # CAVEAT: hiding it means it never gets keyboard focus, and espanso
+          # 2.3.0's get_modifiers_state() blocks forever waiting for a
+          # wl_keyboard.modifiers event that only arrives on focus — so on its
+          # own this rule GUARANTEES "espanso running but not expanding". The
+          # espanso-wayland overlay patch (modules/core/overlays) gives that
+          # loop a 500ms timeout, which is what lets espanso proceed to evdev
+          # registration from the hidden workspace. Keep the two together.
+          "suppress_event activate activatefocus, match:class ^(Espanso\\.SyncTool)$"
+          "no_initial_focus 1, match:class ^(Espanso\\.SyncTool)$"
+          "no_focus 1, match:class ^(Espanso\\.SyncTool)$"
+          "float 1, match:class ^(Espanso\\.SyncTool)$"
+          "no_anim 1, match:class ^(Espanso\\.SyncTool)$"
+          "workspace special:hidden silent, match:class ^(Espanso\\.SyncTool)$"
+
           # Legacy windowrule entries moved to windowrule
           "tile 1, match:class ^(Aseprite)$"
           "float 1, match:title ^(float_kitty)$"
@@ -575,6 +682,13 @@ in {
           "float 1, match:title ^(nixos-assistant)$"
           "center 1, match:title ^(nixos-assistant)$"
           "size 1400 900, match:title ^(nixos-assistant)$"
+
+          # Zoom's Qt popups (menus, confirm dialogs) close themselves the
+          # moment they lose focus, and Hyprland takes focus from them
+          # immediately — so they vanish before they can be clicked. Pinning
+          # focus on them is the established fix (hyprwm/Hyprland#4809).
+          "stay_focused 1, match:class ^(zoom)$, match:title ^(menu window)$"
+          "stay_focused 1, match:class ^(zoom)$, match:title ^(confirm window)$"
 
           "float 1, match:class ^(audacious)$"
           "tile 1, match:class ^(neovide)$"
@@ -743,7 +857,7 @@ submap = reset
 #       # monitor=DP-1,3840x2400,0x1080,auto, transform, 2
 #       monitor=DP-1,preferred,0x1080,1.0
 
-      monitor=eDP-1,preferred,0x0,1
+      monitor=eDP-1,preferred,0x0,1.33
       monitor=DP-1,preferred,0x-2160,1 #  monitor above this one
       monitor=HDMI-A-1,preferred,-1920x0,1.0
 
