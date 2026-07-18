@@ -552,10 +552,16 @@ def main():
             chunk_bytes = seg.frame_bytes * 20  # ~20 frames per read
             
             try:
-                while not terminate_flag:
+                # Drain to EOF even after stop. The SIGINT handler sets
+                # terminate_flag AND SIGTERMs ffmpeg, so proc.stdout EOFs shortly
+                # after stop. The old `while not terminate_flag` exited the instant
+                # stop was pressed, abandoning up to ~2s of audio still buffered in
+                # the pipe — that was the end-of-transcript clipping. Reading until
+                # EOF captures the whole tail; seg.flush() then emits the final utt.
+                while True:
                     chunk = proc.stdout.read(chunk_bytes)
                     if not chunk:
-                        # ffmpeg exited or stream closed
+                        # EOF: ffmpeg exited (normal on stop) or the stream closed.
                         if not terminate_flag:
                             sys.stderr.write("[stt] ffmpeg stream closed unexpectedly.\n")
                             notify_error("Microphone disconnected or ffmpeg failed.")

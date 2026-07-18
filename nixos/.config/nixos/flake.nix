@@ -54,11 +54,11 @@
 
     catppuccin.url = "github:catppuccin/nix";
 
-    lifelog = {
-      url = "github:MattHandzel/lifelog";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # lifelog = {
+    #   url = "github:MattHandzel/lifelog";
+    #   flake = true;
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
 
     claude-desktop = {
       url = "github:aaddrick/claude-desktop-debian";
@@ -72,6 +72,30 @@
 
     text-to-speech-service = {
       url = "path:/home/matth/Projects/SecondBrainSpeech";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    project-asset-generator-src = {
+      url = "path:/home/matth/Projects/project-asset-generator";
+      flake = false;
+    };
+
+    gdoc-sync-src = {
+      url = "path:/home/matth/Projects/gdoc-sync";
+      flake = false;
+    };
+
+    betterbird = {
+      url = "github:Heehaaw/betterbird-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Hyprland-native ActivityWatch window watcher — reports real window titles
+    # via the Hyprland IPC socket. The generic aw-watcher-window logs "unknown"
+    # on Hyprland (no wlr-foreign-toplevel title). Not in nixpkgs; upstream
+    # ships a clean Rust flake. Consumed by modules/home/activitywatch.nix.
+    aw-watcher-window-hyprland = {
+      url = "github:bobvanderlinden/aw-watcher-window-hyprland";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

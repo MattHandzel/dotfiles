@@ -36,8 +36,8 @@ in {
     };
     Service = {
       Type = "oneshot";
-      ExecStart = "/home/matth/Obsidian/Main/scripts/second-brain-automation.py";
-      Environment = ["PATH=/run/current-system/sw/bin"];
+      ExecStart = "/etc/profiles/per-user/matth/bin/python3 /home/matth/Obsidian/Main/scripts/second-brain-automation.py";
+      Environment = ["PATH=/etc/profiles/per-user/matth/bin:/run/current-system/sw/bin"];
     };
   };
 
@@ -145,6 +145,26 @@ in {
     };
     Install = {
       WantedBy = ["timers.target"];
+    };
+  };
+
+  # Path watcher: trigger automation immediately when captures change
+  # (complements the 10-minute timer with instant processing)
+  systemd.user.paths."para-automation-watcher" = {
+    Unit = {
+      Description = "Watch capture directory for new files";
+    };
+    Path = {
+      PathChanged = [
+        "${notesDir}/capture/raw_capture"
+        "${notesDir}/resources"
+      ];
+      Unit = "second-brain-automation.service";
+      # Debounce: don't trigger more than once per 30 seconds
+      MakeDirectory = true;
+    };
+    Install = {
+      WantedBy = ["paths.target"];
     };
   };
 

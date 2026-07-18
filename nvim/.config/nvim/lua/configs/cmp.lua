@@ -98,6 +98,7 @@ local options = {
 		end, { "i", "s" }),
 	},
 	sources = {
+		{ name = "filemention" },
 		{ name = "nvim_lsp" },
 		{ name = "luasnip" },
 		{ name = "buffer" },

@@ -5,7 +5,10 @@
 }: let
   espansoPkg = pkgs.espanso-wayland;
 in {
-  # Run espanso as a user service pointing at the packaged binary.
+  # Point at the packaged binary directly. `espanso restart` will refuse
+  # because /proc/self/exe (via the suid wrapper chain) doesn't match
+  # ExecStart — use `systemctl --user restart espanso` instead. Input access
+  # comes from the `input` group, not the suid wrapper's capabilities.
   systemd.user.services.espanso = {
     Unit = {
       Description = "Espanso text expander";

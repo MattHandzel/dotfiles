@@ -50,6 +50,7 @@
 
       # Nvim image in document
       imagemagick
+      ghostscript # provides `gs`, required by imagemagick to rasterize PDFs (snacks.nvim image preview)
 
       # Go
       # gopher-nvim

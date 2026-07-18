@@ -4,22 +4,24 @@
     calendar = "📅";
     cura = "🖨";
     obsidian = "🪨";
-    slack = "💬";
+    slack = "🕴️";
     btop = "📈";
-    notetaker = "📝";
-    nautilus = "📁";
+    notetaker = "📔";
+    dolphin = "📁";
     wasistlos = "🟢";
     "io.github.alainm23.planify" = "✅";
     anki = "🧠";
+    tasker = "📝";
     planify = "✅";
     PrusaSlicer = "🧩";
     discord = "󰙯";
-    thunderbird = "✉";
+    betterbird = "✉️";
     gimp = "🎨";
     yazi = "🗂";
     "gemini.google.com" = "🧠";
     "claude.ai" = "🧠";
     beeper = "🔔";
+    linear = "📐";
     spotify = "";
   };
 in {
@@ -45,6 +47,7 @@ in {
       "memory"
       # "disk"
       "pulseaudio"
+      "custom/kb-lang"
       "custom/stt-mic"
       "custom/focus-mode"
       "battery"
@@ -159,14 +162,30 @@ in {
         default = [" "];
       };
       scroll-step = 5;
-      on-click = "pamixer -t";
+      on-click = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
     };
     "custom/stt-mic" = {
-      interval = 1;
+      # Was interval=1 with `bash -lc` — a full *login* shell spawned every
+      # second just to cat a status file. interval=3 + `bash -c` (no profile
+      # sourcing) cuts that idle churn ~3x with no visible change.
+      interval = 3;
       return-type = "json";
       format = "{}";
-      exec = ''bash -lc 'status_file="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/stt-waybar-status.json"; if [[ -s "$status_file" ]]; then cat "$status_file"; else printf "%s\n" "{\"text\":\"\",\"class\":[\"off\"],\"tooltip\":\"STT off (click to toggle live)\"}"; fi' '';
+      exec = ''bash -c 'status_file="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/stt-waybar-status.json"; if [[ -s "$status_file" ]]; then cat "$status_file"; else printf "%s\n" "{\"text\":\"\",\"class\":[\"off\"],\"tooltip\":\"STT off (click to toggle live)\"}"; fi' '';
       on-click = "bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --live";
+      tooltip = true;
+    };
+    "custom/kb-lang" = {
+      # Polls the main Hyprland keyboard's active layout (flag + class).
+      # Click cycles to the next layout via `kb-lang-status toggle` (the
+      # existing `grp:alt_caps_toggle` key combo still works alongside).
+      # signal=8 lets the toggle path send RTMIN+8 for instant refresh.
+      interval = 2;
+      return-type = "json";
+      format = "{}";
+      exec = "kb-lang-status";
+      on-click = "kb-lang-status toggle";
+      signal = 8;
       tooltip = true;
     };
     battery = {

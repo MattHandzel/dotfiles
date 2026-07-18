@@ -30,7 +30,7 @@ map("n", "<leader>bc", "<cmd>Hbac close_unpinned<CR>", { desc = "Close Unpinned 
 --   require("nvchad.tabufline").close_buffer()
 -- end, { desc = "Buffer Close" })
 
-local function open_explorer()
+local function open_oil()
 	local lazy_ok, lazy = pcall(require, "lazy")
 	if lazy_ok then
 		pcall(lazy.load, { plugins = { "oil.nvim" } })
@@ -42,23 +42,23 @@ local function open_explorer()
 		return
 	end
 
-	local snacks_ok, snacks = pcall(require, "snacks")
-	if snacks_ok and snacks.explorer then
-		snacks.explorer()
-		return
-	end
-
-	vim.notify("No file explorer backend is available", vim.log.levels.ERROR)
+	vim.notify("Oil is not available", vim.log.levels.ERROR)
 end
 
-map("n", "<leader>e", open_explorer, { desc = "Toggle Explorer" })
+map("n", "<leader>e", open_oil, { desc = "Oil Explorer" })
 
 map("n", "<leader>E", function()
-	local ok, snacks = pcall(require, "snacks")
-	if ok and snacks.explorer then
-		snacks.explorer()
+	local lazy_ok, lazy = pcall(require, "lazy")
+	if lazy_ok then
+		pcall(lazy.load, { plugins = { "oil.nvim" } })
 	end
-end, { desc = "Toggle Tree Explorer" })
+	local oil_ok, oil = pcall(require, "oil")
+	if oil_ok then
+		oil.open_float()
+		return
+	end
+	vim.notify("Oil is not available", vim.log.levels.ERROR)
+end, { desc = "Oil Explorer (float)" })
 
 -- telescope
 -- local telescope_builtin = require("telescope.builtin")
@@ -441,6 +441,9 @@ end
 vim.keymap.set("n", "<leader>gl", "<cmd>ObsidianFollowLink<CR>i", { noremap = true })
 vim.keymap.set("n", "<leader>od", "<cmd>ObsidianDailies<CR>", { noremap = true })
 vim.keymap.set("n", "<leader>op", "<cmd>ObsidianPasteImg<CR>i", { noremap = true })
+-- Visual mode: extract the highlighted text into a new note. `:` prefills the
+-- `'<,'>` range so ObsidianExtractNote receives the selection.
+vim.keymap.set("x", "<leader>oe", ":ObsidianExtractNote<CR>", { noremap = true, silent = true, desc = "Obsidian Extract Note from selection" })
 
 function PasteClipboardImage()
 	-- Get the current timestamp
@@ -580,3 +583,5 @@ vim.keymap.set("n", "<leader>sc", function()
 		sc_im.open_in_scim()
 	end)
 end, { noremap = true, silent = true, desc = "Open in sc-im" })
+
+vim.keymap.set("n", "<leader>cf", "<cmd>ClaudeFix<CR>", { noremap = true, silent = true, desc = "ClaudeFix: launch Claude to fix errors/warnings" })

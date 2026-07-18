@@ -6,6 +6,20 @@
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = true;
 
+  # Auto-connect trusted devices on boot/resume. NOTE: do NOT set
+  # `Experimental = true` here — it enables BlueZ LE Audio, which makes the
+  # EarFun buds connect over LE (no A2DP transport ⇒ no PipeWire sink ⇒
+  # "connected but silent"). Keeping it off forces classic A2DP.
+  hardware.bluetooth.settings = {
+    General = {
+      FastConnectable = true;
+      JustWorksRepairing = "always";
+    };
+    Policy = {
+      AutoEnable = true;
+    };
+  };
+
   # adding headset button controls
   systemd.user.services.mpris-proxy = {
     description = "Mpris proxy";

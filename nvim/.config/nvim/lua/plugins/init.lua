@@ -298,6 +298,14 @@ return {
 			require("configs.iron")
 		end,
 	},
+	{
+		-- Per-directory sessions, auto-saved on exit. Auto-restored in notes
+		-- dirs via the VimEnter autocmd in autocommands.lua; manual restore
+		-- with <leader>qs / <leader>ql (mappings.lua).
+		"folke/persistence.nvim",
+		event = "BufReadPre",
+		opts = {},
+	},
 	{ "dccsillag/magma-nvim", event = "VeryLazy", enabled = false },
 	{
 		"lervag/vimtex",
@@ -324,7 +332,7 @@ return {
 
 	{
 
-		"epwalsh/obsidian.nvim",
+		"obsidian-nvim/obsidian.nvim",
 		event = "VeryLazy",
 		-- config = function()
 		-- 	require("obsidian").setup({
@@ -971,68 +979,12 @@ return {
 		opts = {
 			bigfile = { enabled = true },
 			dashboard = { enabled = true },
-			explorer = { enabled = true, replace_netrw = true },
+			explorer = { enabled = false }, -- use oil.nvim for file/dir browsing instead
 			indent = { enabled = true },
 			input = { enabled = true },
 			notifier = {
 				enabled = true,
 				timeout = 3000,
-			},
-			picker = {
-				sources = {
-					explorer = {
-						actions = {
-							explorer_del = function(picker) --[[Override]]
-								local actions = require("snacks.explorer.actions")
-								local Tree = require("snacks.explorer.tree")
-								local paths = vim.tbl_map(Snacks.picker.util.path, picker:selected({ fallback = true }))
-								if #paths == 0 then
-									return
-								end
-								local what = #paths == 1 and vim.fn.fnamemodify(paths[1], ":p:~:.")
-									or #paths .. " files"
-								actions.confirm("Put to the trash " .. what .. "?", function()
-									local jobs = #paths
-									local after_job = function()
-										jobs = jobs - 1
-										if jobs == 0 then
-											picker.list:set_selected()
-											actions.update(picker)
-										end
-									end
-									for _, path in ipairs(paths) do
-										local err_data = {}
-										local cmd = "trash " .. path --[[Actual command to run]]
-										local job_id = vim.fn.jobstart(cmd, {
-											detach = true,
-											on_stderr = function(_, data)
-												err_data[#err_data + 1] = table.concat(data, "\n")
-											end,
-											on_exit = function(_, code)
-												pcall(function()
-													if code == 0 then
-														Snacks.bufdelete({ file = path, force = true })
-													else
-														local err_msg = vim.trim(table.concat(err_data, ""))
-														Snacks.notify.error(
-															"Failed to delete `" .. path .. "`:\n- " .. err_msg
-														)
-													end
-													Tree:refresh(vim.fs.dirname(path))
-												end)
-												after_job()
-											end,
-										})
-										if job_id == 0 then
-											after_job()
-											Snacks.notify.error("Failed to start the job for: " .. path)
-										end
-									end
-								end)
-							end,
-						},
-					},
-				},
 			},
 			quickfile = { enabled = true },
 			scope = { enabled = true },
@@ -1082,13 +1034,6 @@ return {
 					Snacks.picker.notifications()
 				end,
 				desc = "Notification History",
-			},
-			{
-				"<leader>e",
-				function()
-					Snacks.explorer()
-				end,
-				desc = "File Explorer",
 			},
 			-- find
 			{
@@ -1642,6 +1587,35 @@ return {
 	},
 
 	{
+		"sindrets/diffview.nvim",
+		dependencies = { "nvim-lua/plenary.nvim" },
+		cmd = {
+			"DiffviewOpen",
+			"DiffviewClose",
+			"DiffviewToggleFiles",
+			"DiffviewFocusFiles",
+			"DiffviewRefresh",
+			"DiffviewFileHistory",
+		},
+		keys = {
+			{ "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Diffview: open" },
+			{ "<leader>gD", "<cmd>DiffviewClose<cr>", desc = "Diffview: close" },
+			{ "<leader>gh", "<cmd>DiffviewFileHistory<cr>", desc = "Diffview: repo history" },
+			{ "<leader>gf", "<cmd>DiffviewFileHistory --follow %<cr>", desc = "Diffview: file history" },
+		},
+		opts = {
+			enhanced_diff_hl = true,
+			view = {
+				default = { winbar_info = true },
+				merge_tool = {
+					layout = "diff3_mixed",
+					disable_diagnostics = true,
+				},
+			},
+		},
+	},
+
+	{
 
 		"CRAG666/code_runner.nvim",
 		config = function()
@@ -1664,7 +1638,7 @@ return {
 		build = "make tiktoken", -- Only on MacOS or Linux
 		opts = {
 			debug = false, -- Keep CopilotChat logging minimal to avoid noisy LSP logs
-			model = "copilot:claude-4.6-opus", -- Set model to claude-4.6-opus as requested
+			model = "claude-opus-4.8", -- Valid Copilot model id (was "copilot:claude-4.6-opus", which doesn't exist -- see `:CopilotChatModels` for the live list)
 		},
 	},
 	{
@@ -2543,9 +2517,38 @@ return {
 
 	{
 		dir = "~/Projects/task.nvim",
+		lazy = false, -- load at startup so global keymaps (<leader>tt, <leader>ta, etc.) work
 		config = function()
-			require("task").setup()
+			require("taskwarrior").setup({
+				on_delete = "delete",
+				urgency_coefficients = {
+					utility = 1.0,
+					-- effort is in minutes (PT1H = 60). -0.05 means:
+					-- 15 min → -0.75, 60 min → -3, 240 min → -12, 480 min → -24.
+					-- Higher effort → lower urgency (do quick wins first).
+					effort = -0.05,
+				},
+			})
 		end,
-		cmd = { "Task", "TaskFilter", "TaskRefresh", "TaskUndo", "TaskHelp" },
+	},
+	{
+		dir = "~/Projects/gdoc-sync.nvim", -- github.com/MattHandzel/gdoc-sync.nvim
+		ft = "markdown",
+		cmd = "Gdoc",
+		config = function()
+			require("gdoc-sync").setup({})
+		end,
+	},
+	{
+		"neo451/feed.nvim",
+		cmd = "Feed",
+		---@module 'feed'
+		---@type feed.config
+		opts = {},
+	},
+	{
+		"not-manu/filemention.nvim",
+		event = "InsertEnter",
+		opts = {},
 	},
 }

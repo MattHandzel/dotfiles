@@ -7,6 +7,7 @@
   imports =
     [(import ./aseprite/aseprite.nix)] # pixel art editor
     ++ [(import ./audacious/audacious.nix)] # music player
+    ++ [(import ./theme.nix)] # palette/font tokens shared across modules
     ++ [(import ./bat.nix)] # better cat command
     ++ [(import ./btop.nix)] # resouces monitor
     # ++ [(import ./cava.nix)] # audio visualizer
@@ -19,11 +20,10 @@
     ++ [(import ./swaync/swaync.nix)] # notification deamon
     ++ [(import ./nvim.nix)] # neovim editor
     ++ [(import ./packages.nix)] # other packages
-    ++ [(import ./espanso.nix)] # text expander service
     ++ [(import ./scripts/scripts.nix)] # personal scripts
     # ++ [(import ./spicetify.nix)] # spotify client
     ++ [(import ./starship.nix)] # shell prompt
-    ++ [(import ./swaylock.nix)] # lock screen
+    # swaylock removed — using hyprlock instead
     ++ [(import ./vscodium.nix)] # vscode forck
     ++ [(import ./waybar)] # status bar
     ++ [(import ./zsh.nix)] # shell
@@ -33,8 +33,30 @@
     ++ [(import ./health-dashboard.nix)] # daily 09:00 health-data import timer
     ++ [(import ./todoist.nix)]
     ++ [./transcribe-captures.nix]
+    ++ [./luck-scheduler.nix]
+    ++ [./polish-pipeline.nix]
+    ++ [./memwatch.nix]
+    ++ [./electron-app-daily-restart.nix]
+    ++ [./health-dashboard.nix]
+    ++ [./zen-config.nix]
+    ++ [./app-memory-caps.nix]
+    ++ [./lifelog-collector.nix]
+    # ActivityWatch as durable systemd user services (aw-server + watchers)
+    ++ [./activitywatch.nix]
+    # delete foreign symlinks (manual `systemctl --user enable` leftovers)
+    # that would otherwise abort activation with "would be clobbered"
+    ++ [./hm-clobber-guard.nix]
+    ++ [./linear-notify.nix] # poll Linear → swaync desktop notifications
     ++ [inputs.catppuccin.homeModules.catppuccin]
     ++ [(import ./foliate.nix)]
+    # voice dictation (unofficial Linux AppImage port)
+    ++ [./wispr-flow.nix]
+    # un-stick modifiers that Wispr's uinput keyboard strands
+    ++ [./stuck-key-guard.nix]
+    # let Wispr see hot-plugged keyboards (the BT TOTEM) without restarting it
+    ++ [./kbd-relay.nix]
+    # Raycast-style command palette (SUPER+D) — launch/run/timer/calc
+    ++ [./vicinae.nix]
     # ++ [(import ./notion.nix)]
     # ++ [(import ./ntfy.nix)]
     ;
@@ -60,12 +82,14 @@
       "x-scheme-handler/https" = "zen-beta.desktop";
       "audio/*" = "mpv.desktop";
       "video/*" = "mpv.desktop";
-      "image/*" = "feh.desktop";
+      "image/*" = "swayimg.desktop";
       "text/css" = "nvim.desktop";
       "text/*" = "nvim.desktop";
       "application/json" = "nvim.desktop";
       "application/x-shellscript" = "nvim.desktop";
       "application/pdf" = "zathura.desktop";
+      # Open EPUB ebooks in Calibre's reader (not the ebook editor).
+      "application/epub+zip" = "calibre-ebook-viewer.desktop";
     };
   };
 

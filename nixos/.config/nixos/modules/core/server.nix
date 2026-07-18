@@ -26,6 +26,8 @@
     (import ./obsidian-mcp.nix)
     (import ./ntfy-scheduler.nix)
     (import ./ntfy-capture-listener.nix)
+    (import ./focus-dns.nix)
+    (import ./focus-mode-resolver.nix)
   ];
 
   virtualisation.docker.enable = true;

@@ -13,6 +13,10 @@
     input_file="$${1/#\~/$HOME}"
     curl -sS http://${sharedVariables.serverIpAddress}/v1/audio/transcriptions -F file=@"$input_file"
   '';
+  second-brain-archive-script = pkgs.writeShellScript "second_brain_archive.sh" ''
+    #!/usr/bin/env bash
+    mv $1 ~/notes/archive/"$1"
+  '';
 in {
   home.packages = with pkgs; [
     direnv
@@ -25,7 +29,7 @@ in {
 
   home.file.".config/cliphist/config".text = ''
     -max-items 100000
-    -preview-width 256
+    -preview-width 1024
   '';
   # setup direnvrc so that when we cd into a dir then we load some vars
   home.file.".direnvrc".text = ''
@@ -74,7 +78,7 @@ in {
     syntaxHighlighting.enable = true;
 
     history = {
-      size = 100000;
+      size = 1000000;
     };
 
     oh-my-zsh = {
@@ -84,71 +88,100 @@ in {
 
     initContent = lib.mkMerge [
       (lib.mkAfter ''
-      # Vi mode for command-line editing (must load after oh-my-zsh)
-      bindkey -v
-      export KEYTIMEOUT=1
-    '')
+        # Vi mode for command-line editing (must load after oh-my-zsh)
+        bindkey -v
+        export KEYTIMEOUT=1
+
+        # Mirror vi-mode yanks into the Wayland system clipboard.
+        if (( $+commands[wl-copy] )); then
+          function _yank-to-clipboard() {
+            printf '%s' "$CUTBUFFER" | wl-copy 2>/dev/null &!
+          }
+          function vi-yank-clip()            { zle .vi-yank;            _yank-to-clipboard; }
+          function vi-yank-eol-clip()        { zle .vi-yank-eol;        _yank-to-clipboard; }
+          function vi-yank-whole-line-clip() { zle .vi-yank-whole-line; _yank-to-clipboard; }
+          function vi-delete-clip()          { zle .vi-delete;          _yank-to-clipboard; }
+          function vi-change-clip()          { zle .vi-change;          _yank-to-clipboard; }
+          function vi-change-eol-clip()      { zle .vi-change-eol;      _yank-to-clipboard; }
+          zle -N vi-yank vi-yank-clip
+          zle -N vi-yank-eol vi-yank-eol-clip
+          zle -N vi-yank-whole-line vi-yank-whole-line-clip
+          zle -N vi-delete vi-delete-clip
+          zle -N vi-change vi-change-clip
+          zle -N vi-change-eol vi-change-eol-clip
+        fi
+
+        # zoxide-backed `cd`, but ONLY in real interactive use — never when the
+        # shell is spawned by Claude Code / an AI agent. Those shells need the
+        # real `cd` builtin; aliasing it to `z` makes `cd /not/yet/created &&
+        # mkdir foo` jump to another frecent dir (and emit zoxide's config
+        # warning). CLAUDECODE/AI_AGENT are exported by the agent and inherited
+        # by its shell-snapshot generator, so the alias never leaks into them.
+        if [[ -z "$CLAUDECODE" && -z "$AI_AGENT" ]]; then
+          alias cd='z'
+        fi
+      '')
       (lib.mkBefore ''
-      DISABLE_MAGIC_FUNCTIONS=true
-      export "MICRO_TRUECOLOR=1"
-      # Set window title to the current directory
-      precmd() {
-        printf "\033]0;%s\007" "$(basename "$PWD")"
-      }
+        DISABLE_MAGIC_FUNCTIONS=true
+        export "MICRO_TRUECOLOR=1"
+        # Set window title to the current directory
+        precmd() {
+          printf "\033]0;%s\007" "$(basename "$PWD")"
+        }
 
-      function note() {
-        take-note "$*"
-      }
-      function notec() {
-        take-note -c "$*"
-      }
-      function ntfy() {
-        local title="" priority="default" message=""
-        while [[ $# -gt 0 ]]; do
-          case "$1" in
-            -t|--title) title="$2"; shift 2 ;;
-            -p|--priority) priority="$2"; shift 2 ;;
-            *) message="$*"; shift $# ;;
-          esac
-        done
-        if [[ -z "$message" ]]; then
-          echo "Usage: ntfy <message>"
-          echo "       ntfy -t <title> <message>"
-          echo "       ntfy -t <title> -p <priority> <message>"
-          return 1
-        fi
-        local cmd=(curl -s -H "Priority: $priority" -d "$message" "http://${sharedVariables.serverIpAddress}:8124/claude")
-        [[ -n "$title" ]] && cmd+=(-H "Title: $title")
-        "''${cmd[@]}" >/dev/null && echo "Sent: $message" || echo "ERROR: failed to send" >&2
-      }
-      # eval $(pay-respects --alias) # gets fuck command running
+        function note() {
+          take-note "$*"
+        }
+        function notec() {
+          take-note -c "$*"
+        }
+        function ntfy() {
+          local title="" priority="default" message=""
+          while [[ $# -gt 0 ]]; do
+            case "$1" in
+              -t|--title) title="$2"; shift 2 ;;
+              -p|--priority) priority="$2"; shift 2 ;;
+              *) message="$*"; shift $# ;;
+            esac
+          done
+          if [[ -z "$message" ]]; then
+            echo "Usage: ntfy <message>"
+            echo "       ntfy -t <title> <message>"
+            echo "       ntfy -t <title> -p <priority> <message>"
+            return 1
+          fi
+          local cmd=(curl -s -H "Priority: $priority" -d "$message" "http://${sharedVariables.serverIpAddress}:8124/claude")
+          [[ -n "$title" ]] && cmd+=(-H "Title: $title")
+          "''${cmd[@]}" >/dev/null && echo "Sent: $message" || echo "ERROR: failed to send" >&2
+        }
+        # eval $(pay-respects --alias) # gets fuck command running
 
-      # export TODOIST_API_KEY="$(cat /run/secrets/todoist_api_key)"
+        # export TODOIST_API_KEY="$(cat /run/secrets/todoist_api_key)"
 
-      # __conda_setup="$('/home/matth/.conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-      # if [ $? -eq 0 ]; then
-      #   eval "$__conda_setup"
-      # else
-      #   if [ -f "/home/matth/.conda/etc/profile.d/conda.sh" ]; then
-      #     . "/home/matth/.conda/etc/profile.d/conda.sh"
-      #   else
-      #     export PATH="/home/matth/.conda/bin:$PATH"
-      #   fi
-      # fi
-      # unset __conda_setup
+        # __conda_setup="$('/home/matth/.conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+        # if [ $? -eq 0 ]; then
+        #   eval "$__conda_setup"
+        # else
+        #   if [ -f "/home/matth/.conda/etc/profile.d/conda.sh" ]; then
+        #     . "/home/matth/.conda/etc/profile.d/conda.sh"
+        #   else
+        #     export PATH="/home/matth/.conda/bin:$PATH"
+        #   fi
+        # fi
+        # unset __conda_setup
 
-      function y() {
-        local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-        yazi "$@" --cwd-file="$tmp"
-        if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-          builtin cd -- "$cwd"
-        fi
-        rm -f -- "$tmp"
-      }
+        function y() {
+          local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+          yazi "$@" --cwd-file="$tmp"
+          if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+            builtin cd -- "$cwd"
+          fi
+          rm -f -- "$tmp"
+        }
 
-      export PATH="$HOME/.npm-packages/bin:$PATH"
-      video-to-trasncript() { ffmpeg -i $1 -vn $(echo $1 | sed 's/\.mp4$/\.mp3/') } # useful function to convert video to audio
-    '')
+        export PATH="$HOME/.npm-packages/bin:$PATH"
+        video-to-trasncript() { ffmpeg -i $1 -vn $(echo $1 | sed 's/\.mp4$/\.mp3/') } # useful function to convert video to audio
+      '')
     ];
 
     shellAliases = {
@@ -156,7 +189,12 @@ in {
 
       # Utils
       c = "clear";
-      cd = "z";
+      # NOTE: `cd` is intentionally NOT aliased to `z` here. A static alias is
+      # captured by every spawned shell — including Claude Code / AI-agent
+      # shells — where aliasing `cd` to zoxide is a footgun: `cd /not/yet/created
+      # && mkdir foo` makes `z` jump to some other frecent dir and create `foo`
+      # in the wrong place, and it prints zoxide's "configuration issue" warning.
+      # Defined instead as an interactive-only, non-agent alias in initContent.
       tt = "gtrash put";
       cat = "bat";
       code = "codium";
@@ -221,11 +259,14 @@ in {
       gcon = "git config user.name";
       glazy = "git add --all ; git commit -am \"This is an automated commit by $USER because they were too lazy\" ; git pull && git push";
       md2substack = "pandoc -f markdown -t html | wl-copy -t text/html";
-      server = "ssh matth@ssh.matthandzel.com";
+      server = "ssh -p 22 matth@server.matthandzel.com";
       serverfs = "sshfs matth@ssh.matthandzel.com:/home/matth/";
       # make transcribe available as a command
       transcribe = "${transcribe_file_script}";
       claude = "claude --dangerously-skip-permissions";
+
+      # move folder to archive with the same name as the folder
+      second-brain-archive = "${second-brain-archive-script}";
 
       # python
       piv = "python -m venv .venv";
