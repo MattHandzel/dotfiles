@@ -25,6 +25,7 @@
     ./scripts/tmux-sessionizer.sh
     ./scripts/focus_app.sh
     ./scripts/lifelog-search.sh
+    ./scripts/glucose.sh
     ./scripts/toggle-focus-mode.sh
     ./scripts/focus-distracting-apps.sh
     ./scripts/focus-delay-gate.sh
@@ -58,6 +59,7 @@
     ./scripts/open-website-as-standalone-app.sh
     ./scripts/claude.ai.sh
     ./scripts/claude-ask.sh
+    ./scripts/com.anthropic.Claude.sh
     ./scripts/gemini.google.com.sh
     ./scripts/linear.sh
     ./scripts/zoom-web.sh
