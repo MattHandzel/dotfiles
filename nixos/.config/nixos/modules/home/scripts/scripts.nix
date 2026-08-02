@@ -74,5 +74,6 @@ in {
     ++ [
       (import ./scripts/ocr-screenshot/default.nix {inherit pkgs;})
       (import ./scripts/link-search/default.nix {inherit pkgs;})
+      (import ./scripts/kbshot/default.nix {inherit pkgs;})
     ];
 }

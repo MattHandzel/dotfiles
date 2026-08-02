@@ -345,6 +345,21 @@ in {
           # screenshot
           "ALT, Print, exec, ocr-screenshot && wl-paste -t text/plain > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').txt"
           ",Print, exec, grimblast --notify --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
+          # kbshot: keyboard-only object screenshot. The biggest regions on screen
+          # get a one-character label; a letter drills into one, another letter
+          # narrows further inside it, Enter captures what you already have, and
+          # BackSpace goes back up a level. No mouse, no drag.
+          "CTRL, Print, exec, kbshot"
+          # Same picker, but OCR the chosen object and copy its text instead.
+          "CTRL ALT, Print, exec, kbshot --ocr"
+          # Corner mode: no object detection at all. Type a label on a narrowing grid
+          # to place the top-left corner, then again for the bottom-right -- for
+          # regions the detector splits wrongly or does not find.
+          "CTRL SHIFT, Print, exec, kbshot --corners"
+          # Last-resort backstop only; kbshot already yields the keyboard by itself
+          # when a rival overlay appears and times out on its own regardless, so this
+          # is not something to have to remember.
+          "${mainMod} SHIFT, Print, exec, kbshot --abort"
 
           "${mainMod}, N, exec, ~/Projects/KnowledgeManagementSystem/result/bin/kms-capture"
 
