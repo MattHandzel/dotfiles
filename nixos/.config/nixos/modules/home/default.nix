@@ -46,7 +46,12 @@
     # delete foreign symlinks (manual `systemctl --user enable` leftovers)
     # that would otherwise abort activation with "would be clobbered"
     ++ [./hm-clobber-guard.nix]
+    # say so out loud when a boot reverts an hm-switch that no rebuild baked
+    ++ [./hm-drift-guard.nix]
+    # keep the rotating OAuth token out of Syncthing (daily forced re-login)
+    ++ [./claude-syncthing-ignores.nix]
     ++ [./linear-notify.nix] # poll Linear → swaync desktop notifications
+    ++ [./privacy-card.nix] # agent-issuable capped virtual cards (Privacy.com API)
     ++ [inputs.catppuccin.homeModules.catppuccin]
     ++ [(import ./foliate.nix)]
     # voice dictation (unofficial Linux AppImage port)
@@ -57,6 +62,18 @@
     ++ [./kbd-relay.nix]
     # Raycast-style command palette (SUPER+D) — launch/run/timer/calc
     ++ [./vicinae.nix]
+    # periodic markdown ↔ Google Docs reconcile (timer, not a 15s watch loop)
+    ++ [./gdoc-sync.nix]
+    # a shareable Google Doc per upcoming meeting note (the server writes the
+    # notes; gdoc-sync only lives here, so the Doc half runs on the laptop)
+    ++ [./meeting-note-docs.nix]
+    # logged script/service failure → headless Claude Opus diagnoses + fixes it
+    # DISABLED 2026-07-24: the watcher spawned 11 headless Opus repairs in one day
+    # across 3 units without converging (focus-state-agent ×8, bt-keyboard-reconnect,
+    # lifelog-collector). The daily cap does not increment, so the 30-min cooldown was
+    # the only brake — ~48 Opus runs/day/subject. Re-enable only after the cap is fixed
+    # and a per-subject attempt limit exists. See capture/2026-07-24-claude-usage-audit.md
+    # ++ [./claude-autofix.nix]
     # ++ [(import ./notion.nix)]
     # ++ [(import ./ntfy.nix)]
     ;
