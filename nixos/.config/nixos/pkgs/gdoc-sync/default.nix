@@ -7,7 +7,10 @@
 }:
 python3Packages.buildPythonApplication {
   pname = "gdoc-sync";
-  version = "0.5.2";
+  # Must track src/gdoc_sync/__init__.py's __version__. gdoc-sync.nvim's
+  # health check requires >= 0.6 and its :Gdoc watch calls `watch --json`,
+  # which only exists from 0.6.0 (MAT-1780 follow-up).
+  version = "0.9.0";
   pyproject = true;
 
   inherit src;
