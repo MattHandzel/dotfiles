@@ -77,8 +77,42 @@ return {
 		"nvim-treesitter/nvim-treesitter",
 		config = function()
 			require("nvim-treesitter.configs").setup({
-				ensure_installed = { "norg" },
+				-- Languages worth highlighting INSIDE ```fences``` in markdown.
+				-- markdown/markdown_inline are omitted deliberately: Neovim
+				-- bundles those parsers, and listing them here would compile a
+				-- redundant second copy.
+				ensure_installed = {
+					"norg",
+					"python",
+					"bash",
+					"json",
+					"yaml",
+					"nix",
+					"javascript",
+					"typescript",
+					"c",
+					"cpp",
+					"toml",
+					"diff",
+				},
 				highlight = { enable = true },
+			})
+
+			-- nvim-treesitter only starts its highlighter for parsers IT
+			-- installed. markdown's parser ships inside Neovim itself, so
+			-- nvim-treesitter never counts it as installed and never starts —
+			-- which is why fenced blocks had no colour and `**bold**` did not
+			-- render. Start it explicitly for markdown; that also activates the
+			-- injections query, which is what highlights ```python as python.
+			-- Colours come from the capture groups (@keyword, @markup.strong…),
+			-- so the active base46/NvChad theme controls them.
+			vim.api.nvim_create_autocmd("FileType", {
+				group = vim.api.nvim_create_augroup("MarkdownTreesitter", { clear = true }),
+				pattern = { "markdown" },
+				callback = function(args)
+					pcall(vim.treesitter.start, args.buf, "markdown")
+				end,
+				desc = "Treesitter highlighting + fence injections for markdown",
 			})
 		end,
 	},
@@ -2536,8 +2570,43 @@ return {
 		ft = "markdown",
 		cmd = "Gdoc",
 		config = function()
-			require("gdoc-sync").setup({})
+			require("gdoc-sync").setup({
+				-- Only speak up when something is actually broken. A successful
+				-- push/pull/watch tick says nothing at all — check the statusline
+				-- module (lua/chadrc.lua) when you want to know the state.
+				-- "errors" = conflicts + errors only; "changes" also announces every
+				-- file a watcher rewrites; "all" is everything.
+				notify = "errors",
+			})
 		end,
+	},
+	{
+		-- Grammarly bridge (MAT-1780). Mirrors the current buffer into a browser
+		-- textarea over the GhostText protocol; the Grammarly extension then
+		-- checks it there. Sync is BIDIRECTIONAL, so accepting a Grammarly
+		-- suggestion in the browser rewrites this buffer — no copy-paste.
+		--
+		-- This is the only surviving route to a Grammarly Pro subscription: the
+		-- Text Editor SDK shut down 2024-01-10 and znck/grammarly (the
+		-- "grammarly-languageserver" every blog post still links) was archived
+		-- 2024-05-07, so there is no LSP path.
+		--
+		-- Requires `bun`, declared in nixos modules/home/nvim.nix.
+		"wallpants/ghost-text.nvim",
+		cmd = "GhostTextStart",
+		-- REQUIRED. The server is TypeScript with real npm deps (bunvim,
+		-- minimatch, valibot) and lazy only clones the repo. Without this,
+		-- :GhostTextStart dies with "Cannot find package 'bunvim'", nothing ever
+		-- binds port 4001, and the failure is SILENT — the error surfaces only
+		-- in the job output. --production skips the ~40 dev dependencies.
+		-- Second half re-applies the upstream first-document race fix, which lazy
+		-- discards whenever it checks out a new revision. See the patch script.
+		build = "bun install --production && ~/dotfiles/nvim/.config/nvim/patches/apply-ghost-text-patch.sh",
+		opts = {
+			-- Opt-in rather than autostart: otherwise every nvim instance races
+			-- to bind port 4001 and all but the first fail.
+			autostart = false,
+		},
 	},
 	{
 		"neo451/feed.nvim",
