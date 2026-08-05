@@ -86,7 +86,10 @@ in {
 
   # netdata removed globally in modules/core/services.nix
 
-  # Fix: Restart NetworkManager after suspend to resolve wifi flakiness
+  # Fix: Restart NetworkManager after suspend to resolve wifi flakiness.
+  # NOTE: system-sleep hooks run with a bare PATH (no coreutils) — every
+  # command needs an absolute path. A bare `sleep` here failed with
+  # "sleep: command not found" on every resume for months.
   environment.etc."systemd/system-sleep/99-wifi-recover" = {
     mode = "0755";
     text = ''
@@ -95,7 +98,7 @@ in {
       case "$1" in
         post)
           # Wait a moment for hardware to wake up
-          sleep 2
+          /run/current-system/sw/bin/sleep 2
           # Restart NetworkManager to re-initialize connections
           /run/current-system/sw/bin/systemctl restart NetworkManager.service
           ;;
@@ -103,30 +106,13 @@ in {
     '';
   };
 
-  # Fix: espanso stops expanding after suspend. It reads keystrokes straight
-  # from /dev/input (EVDEV) on Wayland and enumerates the keyboards ONCE at
-  # startup — it never re-scans. It's bound to hyprland-session.target, which
-  # fires once at login and not on resume, so after every suspend the worker
-  # keeps running but its capture is stale and silently dead until restarted.
-  # On this laptop that's ~12 suspends/day, which is why "most of the time it
-  # doesn't work." Restart the user service on resume so a fresh worker
-  # re-grabs the input devices every wake. Runs as root from the sleep hook,
-  # so reach matth's user manager over the machined bus.
-  environment.etc."systemd/system-sleep/98-espanso-recover" = {
-    mode = "0755";
-    text = ''
-      #!/bin/sh
-      # Args: $1 = pre|post, $2 = suspend|hibernate|hybrid-sleep
-      case "$1" in
-        post)
-          # Let the input devices and user bus settle before re-grabbing.
-          sleep 2
-          /run/current-system/sw/bin/systemctl --machine=matth@.host --user \
-            restart espanso.service || true
-          ;;
-      esac
-    '';
-  };
+  # REMOVED: the 98-espanso-recover system-sleep hook. It was broken by
+  # design and never worked once: systemd-sleep runs post hooks while
+  # user.slice is still FROZEN, so `systemctl --user --machine` always failed
+  # with "Transport endpoint is not connected" (verified in the journal on
+  # every resume). Espanso resume recovery lives in
+  # modules/core/services.nix (espanso-rebind.service + watchdog), which runs
+  # AFTER the user session is thawed.
 
   nix.settings = {
     auto-optimise-store = true;
@@ -151,8 +137,19 @@ in {
     ./../../modules/core/gmail-automation.nix
     ./../../modules/core/focus-failopen-watchdog.nix
     ./../../modules/core/focus-state-agent.nix
+    ./../../modules/core/calendar-agenda.nix
     ./../../modules/core/kanata-homerow.nix
+    ./../../modules/core/waydroid.nix
+    ./../../modules/core/laptop-sleep.nix
   ];
+
+  # Declared explicitly, even though "nixos" is also the NixOS default. Leaving it
+  # implicit made this the only host with no hostName in its config, which reads
+  # as an oversight and makes "which machine am I on?" answerable only by knowing
+  # what every OTHER host sets. The VALUE has to stay "nixos": it is this
+  # machine's Tailscale/MagicDNS name (100.102.206.80), so renaming it would move
+  # the laptop's tailnet address out from under anything that resolves it.
+  networking.hostName = "nixos";
 
   environment.systemPackages = with pkgs; [
     # hyprsession
@@ -259,6 +256,17 @@ in {
 
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="pci", DRIVER=="pcieport", ATTR{power/wakeup}="disabled"
+    # The dock's Realtek USB Ethernet controller wakes s2idle on link-state
+    # changes. Keep normal input wake sources enabled, but never let this
+    # network adapter wake the laptop. (Lid wake is disabled separately in
+    # modules/core/laptop-sleep.nix — the lid switch is non-compliant and
+    # glitches.)
+    #
+    # `bind` matters: with ACTION=="add" alone this rule silently did nothing —
+    # verified 2026-08-03, the device still read power/wakeup=enabled — because
+    # r8152-cfgselector re-arms wakeup when it probes, which happens after the
+    # `add` event has been processed. `bind` fires after the driver attaches.
+    ACTION=="add|bind", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8156", ATTR{power/wakeup}="disabled"
     # Allow i2c group to access i2c devices (for ddccontrol etc)
     KERNEL=="i2c-[0-9]*", GROUP="i2c", MODE="0660"
   '';
@@ -301,6 +309,9 @@ in {
   # produces a malformed backup path that makes the activation `mv` fail
   # (silently leaving colliding files unmanaged). Plain string only.
   home-manager.backupFileExtension = "hm-backup";
+  # Without this, a stale *.hm-backup left by an earlier activation makes the
+  # next backup attempt fail ("would be clobbered by backing up").
+  home-manager.overwriteBackup = true;
 
   services.fprintd.enable = true;
 }

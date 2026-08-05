@@ -25,7 +25,10 @@ in {
     openFirewall = true;
     host = "0.0.0.0";
   };
-  networking.hostName = "matts-server"; # Define your hostname.
+  # Was "matts-server" — copy-pasted from hosts/server, so two different machines
+  # declared the same hostname. Whichever booted second collided with the other on
+  # the tailnet and in every hostname-keyed lookup.
+  networking.hostName = "matts-desktop";
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
@@ -170,6 +173,9 @@ in {
   # Static suffix only — a `$(date …)` here is never evaluated and breaks the
   # activation backup `mv` (see laptop host for the full explanation).
   home-manager.backupFileExtension = "hm-backup";
+  # Without this, a stale *.hm-backup left by an earlier activation makes the
+  # next backup attempt fail ("would be clobbered by backing up").
+  home-manager.overwriteBackup = true;
 
   services.fprintd.enable = true;
   services.openssh.enable = true;
