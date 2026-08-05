@@ -136,17 +136,21 @@ vim.o.relativenumber = true
 
 -------------------------------------------------------------------------------------------------------------------------------------------------
 
-local function customize_colorscheme()
-	-- Use Vim script syntax with vim.cmd
-	vim.cmd([[
-    highlight LineNr ctermfg=White guifg=#e2e2e2
-    highlight CursorLineNr ctermfg=Yellow guifg=#e5cfff
-highlight Comment ctermfg=Gray guifg=#9898af
-
-    " Add more highlight modifications here
-  ]])
-end
-customize_colorscheme()
+-- REMOVED: a customize_colorscheme() that set
+--   LineNr #e2e2e2 · CursorLineNr #e5cfff · Comment #9898af
+--
+-- It never actually applied. options.lua is required early, and base46 loads its
+-- cached highlights afterwards (nvim.lua), overwriting all three — at startup
+-- those groups measure #45475b / #b4beff / #9399b3, i.e. purely the theme.
+--
+-- The catch was :ReloadConfig, which re-requires this module *after* base46 has
+-- loaded. Then the override won and line numbers turned from grey to white
+-- mid-session, with nothing in the config having changed. Deleting it is a no-op
+-- at startup and makes a reload look identical to a fresh launch.
+--
+-- To genuinely override theme colours, do it on the ColorScheme event so it
+-- re-applies every time base46 reloads, rather than racing it once:
+--   vim.api.nvim_create_autocmd("ColorScheme", { callback = function() ... end })
 
 vim.opt.spell = true
 vim.opt.spelllang = "en_us,pl"
@@ -169,3 +173,26 @@ vim.opt_local.conceallevel = 2
 
 vim.opt.foldmethod = "expr"
 vim.opt.foldexpr = "nvim_treesitter#foldexpr()"
+
+-- Neovim never rotates or truncates lsp.log. The Codeium (neocodeium) language
+-- server logged an ERROR ("[streamChoices] Request id invalid") on essentially
+-- every completion request while unauthenticated — that alone grew
+-- ~/.local/state/nvim/lsp.log to 1.2GB (99.6% of lines). neocodeium is now
+-- disabled (see plugins/quality.lua), but keep this guard regardless.
+-- Silence the log; raise to "WARN"/"DEBUG" temporarily when debugging a server.
+-- This lives in options.lua, not configs/lspconfig.lua, because the latter is
+-- lazy-loaded on LSP attach — too late, and skipped entirely in headless runs.
+vim.lsp.set_log_level("OFF")
+
+-- Belt and braces: if the level is ever raised and forgotten, drop the log at
+-- startup once it passes 50MB so it can never silently reach GB scale again.
+local ok, logpath = pcall(vim.lsp.get_log_path)
+if ok and logpath then
+	local stat = vim.uv.fs_stat(logpath)
+	if stat and stat.size > 50 * 1024 * 1024 then
+		local fd = vim.uv.fs_open(logpath, "w", 420) -- truncate, 0644
+		if fd then
+			vim.uv.fs_close(fd)
+		end
+	end
+end
