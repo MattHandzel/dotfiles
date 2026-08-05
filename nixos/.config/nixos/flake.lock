@@ -88,11 +88,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773630963,
-        "narHash": "sha256-y31ybBmGgCjK3TSk1yd2O9VkBL0EWFgCoAvmVOEcbkA=",
+        "lastModified": 1784433528,
+        "narHash": "sha256-fRp907wIj8ZlXS/NDZUxRFRJn0RC21V6qBv+kE2HKYY=",
         "owner": "aaddrick",
         "repo": "claude-desktop-debian",
-        "rev": "0a70fe7ffbc9f098a9b03298947bab3b71b82c89",
+        "rev": "da1e4f81b2bcd5b70183ec47b676a0f53ef3e8d9",
         "type": "github"
       },
       "original": {
@@ -166,11 +166,11 @@
         "nixpkgs-lib": "nixpkgs-lib"
       },
       "locked": {
-        "lastModified": 1772408722,
-        "narHash": "sha256-rHuJtdcOjK7rAHpHphUb1iCvgkU3GpfvicLMwwnfMT0=",
+        "lastModified": 1782949081,
+        "narHash": "sha256-vp6Y/Grm98ESt6ceOkWiHWyZRDV3J1RID4w+6NWK9yA=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "f20dc5d9b8027381c474144ecabc9034d6a839a3",
+        "rev": "17c9d6cdfc60c64f4ee8d306f9bc0b4ccb51481e",
         "type": "github"
       },
       "original": {
@@ -292,7 +292,7 @@
     },
     "flake-utils_4": {
       "inputs": {
-        "systems": "systems_6"
+        "systems": "systems_7"
       },
       "locked": {
         "lastModified": 1701680307,
@@ -327,8 +327,8 @@
     "gdoc-sync-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1784305837,
-        "narHash": "sha256-7tSEIMSWUlLO9G1XG07QUPUBihhpF0YuN0uujIYvr2Q=",
+        "lastModified": 1785951512,
+        "narHash": "sha256-BmsI9U7rpVCp9GzyHpomv+Ggrxb6yQGqBvpe+OmxYsY=",
         "path": "/home/matth/Projects/gdoc-sync",
         "type": "path"
       },
@@ -527,11 +527,11 @@
     },
     "nixpkgs-lib": {
       "locked": {
-        "lastModified": 1772328832,
-        "narHash": "sha256-e+/T/pmEkLP6BHhYjx6GmwP5ivonQQn0bJdH9YrRB+Q=",
+        "lastModified": 1782614948,
+        "narHash": "sha256-ePjCwr1sNm9NYUqywL7QfK3JnlS015msC+eBu2zKlp8=",
         "owner": "nix-community",
         "repo": "nixpkgs.lib",
-        "rev": "c185c7a5e5dd8f9add5b2f8ebeff00888b070742",
+        "rev": "db3f255737b94216eb71cce308e2912cf6bc2d7c",
         "type": "github"
       },
       "original": {
@@ -565,6 +565,22 @@
       "original": {
         "type": "tarball",
         "url": "https://github.com/NixOS/nixpkgs/archive/eb9ceca17df2ea50a250b6b27f7bf6ab0186f198.tar.gz"
+      }
+    },
+    "nixpkgs-libxml2": {
+      "locked": {
+        "lastModified": 1751274312,
+        "narHash": "sha256-/bVBlRpECLVzjV19t5KMdMFWSwKLtb5RyXdjz3LJT+g=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "50ab793786d9de88ee30ec4e4c24fb4236fc2674",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-24.11",
+        "repo": "nixpkgs",
+        "type": "github"
       }
     },
     "nixpkgs-stable": {
@@ -681,6 +697,22 @@
     },
     "nixpkgs_8": {
       "locked": {
+        "lastModified": 1778869304,
+        "narHash": "sha256-30sZNZoA1cqF5JNO9fVX+wgiQYjB7HJqqJ4ztCDeBZE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "d233902339c02a9c334e7e593de68855ad26c4cb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_9": {
+      "locked": {
         "lastModified": 1772198003,
         "narHash": "sha256-I45esRSssFtJ8p/gLHUZ1OUaaTaVLluNkABkk6arQwE=",
         "owner": "nixos",
@@ -770,6 +802,7 @@
         "sops-nix": "sops-nix",
         "spicetify-nix": "spicetify-nix",
         "text-to-speech-service": "text-to-speech-service",
+        "vicinae": "vicinae",
         "whisper-overlay": "whisper-overlay",
         "zen-browser": "zen-browser"
       }
@@ -826,6 +859,25 @@
       "original": {
         "owner": "Mic92",
         "repo": "sops-nix",
+        "type": "github"
+      }
+    },
+    "soulver-cpp": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_8",
+        "nixpkgs-libxml2": "nixpkgs-libxml2"
+      },
+      "locked": {
+        "lastModified": 1783621734,
+        "narHash": "sha256-YBFO+aurlz2y2hTRN1Kl0RjX6JzHn0mYBmt4zb436Yg=",
+        "owner": "vicinaehq",
+        "repo": "soulver-cpp",
+        "rev": "00e926e2bd03118638c88981f6a67bfa107210c2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vicinaehq",
+        "repo": "soulver-cpp",
         "type": "github"
       }
     },
@@ -940,6 +992,21 @@
         "type": "github"
       }
     },
+    "systems_7": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
     "text-to-speech-service": {
       "inputs": {
         "flake-utils": "flake-utils_3",
@@ -948,14 +1015,37 @@
         ]
       },
       "locked": {
-        "lastModified": 1778618664,
-        "narHash": "sha256-ByYgZrcdkXqfAC+mbjyhAU6LjtisIfM/hEa+XOnZYwg=",
+        "lastModified": 1778618652,
+        "narHash": "sha256-xBvk8aZbc4AxPq5eGDCG32dLDTA4FqG0kKmFc9m32sI=",
         "path": "/home/matth/Projects/SecondBrainSpeech",
         "type": "path"
       },
       "original": {
         "path": "/home/matth/Projects/SecondBrainSpeech",
         "type": "path"
+      }
+    },
+    "vicinae": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "soulver-cpp": "soulver-cpp",
+        "systems": "systems_6"
+      },
+      "locked": {
+        "lastModified": 1784388228,
+        "narHash": "sha256-/5fGvMWlLlyd5ibK7y1dqIK1MTpLABj3v1M0r/VArww=",
+        "owner": "vicinaehq",
+        "repo": "vicinae",
+        "rev": "c55e85716e3e7a68f4b0f6ef6299d02a49623c7c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vicinaehq",
+        "ref": "v0.23.2",
+        "repo": "vicinae",
+        "type": "github"
       }
     },
     "whisper-overlay": {
@@ -984,7 +1074,7 @@
     "zen-browser": {
       "inputs": {
         "home-manager": "home-manager_2",
-        "nixpkgs": "nixpkgs_8"
+        "nixpkgs": "nixpkgs_9"
       },
       "locked": {
         "lastModified": 1772945022,
