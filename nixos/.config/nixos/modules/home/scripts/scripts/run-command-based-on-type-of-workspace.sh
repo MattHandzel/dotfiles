@@ -7,8 +7,12 @@ NIX_FILE="$(eval echo $NIXOS_ROOT_DIR)shared_variables.nix"
 # Extract the singletonApplications array from the nix file
 singletonApplications=$(nix eval --json -f $NIX_FILE singletonApplications | jq -r '.[]')
 
-# Get the current Hyprland workspace name
-current_workspace=$(hyprctl activewindow | grep workspace | awk '{print $3}' | sed -E 's/\((\w*)\)/\1/g')
+# Get the current workspace name (Hyprland, or AeroSpace on macOS)
+if [[ "$(uname)" == Darwin ]]; then
+  current_workspace=$(aerospace list-workspaces --focused)
+else
+  current_workspace=$(hyprctl activewindow | grep workspace | awk '{print $3}' | sed -E 's/\((\w*)\)/\1/g')
+fi
 
 # Get the command line arguments
 command_in_array=$2

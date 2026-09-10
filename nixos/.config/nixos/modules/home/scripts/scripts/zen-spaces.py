@@ -17,6 +17,17 @@ from pathlib import Path
 
 import lz4.block
 
+
+def _pid_alive(pid: int) -> bool:
+    """/proc is Linux-only; kill(pid, 0) answers the same question everywhere."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
 MAGIC = b"mozLz40\0"
 
 
@@ -86,7 +97,7 @@ def _refuse_if_profile_in_use(session_path):
         return                                  # not running
     target = os.readlink(lock)                  # e.g. "127.0.0.2:+5670"
     pid = target.rpartition("+")[2].strip()
-    if pid.isdigit() and Path(f"/proc/{pid}").exists():
+    if pid.isdigit() and _pid_alive(int(pid)):
         sys.exit(
             f"REFUSING: profile {prof.name} is in use by Zen (pid {pid}).\n"
             f"Quit Zen completely, then re-run — otherwise Zen overwrites this file "

@@ -10,7 +10,7 @@ SOURCE_DIRS=(
     "$HOME/Obsidian/Main/archive/capture/raw_capture"
 )
 TARGET_DIR="$HOME/notes/capture/raw_capture/audio_recordings_transcripts"
-TRANSCRIBE_TOOL="/home/matth/Projects/KnowledgeOperatingSystem/MeetingTranscribe"
+TRANSCRIBE_TOOL="${TRANSCRIBE_TOOL:-$HOME/Projects/KnowledgeOperatingSystem/MeetingTranscribe}"
 
 mkdir -p "$TARGET_DIR"
 

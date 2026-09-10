@@ -3,3 +3,7 @@ fish/fish_variables
 *usage_data.json
 **/hardware_configuration.nix
 tmux/.tmux/plugins/
+
+# python bytecode from py_compile / test runs
+__pycache__/
+*.pyc

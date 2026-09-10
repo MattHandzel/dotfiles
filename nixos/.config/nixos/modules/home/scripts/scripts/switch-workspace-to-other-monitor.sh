@@ -1,4 +1,10 @@
-#!/usr/bin/env
+#!/usr/bin/env bash
+
+# macOS/AeroSpace: the focused workspace hops to the next monitor (wrapping),
+# and AeroSpace keeps focus on it.
+if [[ "$(uname)" == Darwin ]]; then
+  exec aerospace move-workspace-to-monitor --wrap-around next
+fi
 
 # Get the current monitor and workspace
 current_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | .name')

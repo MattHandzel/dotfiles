@@ -18,8 +18,12 @@ fi
 # Copy the content to the clipboard
 echo "$input"
 
-# Store the content in cliphist
-echo -n "$input" | cliphist store
-echo -n "$input" | wl-copy
+# Store the content in cliphist (Linux; on macOS Raycast records the clipboard itself)
+if [[ "$(uname)" == Darwin ]]; then
+    echo -n "$input" | pbcopy
+else
+    echo -n "$input" | cliphist store
+    echo -n "$input" | wl-copy
+fi
 
 echo "Content copied to clipboard and stored in history."

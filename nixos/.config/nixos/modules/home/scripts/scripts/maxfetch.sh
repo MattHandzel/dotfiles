@@ -29,7 +29,12 @@ up=$(uptime | awk -F'( |,|:)+' '{
 up=$(sed -e "s/ h/h/g" <<< ${up})
 up=$(sed -e "s/ m/m/g" <<< ${up})
 
-pkgs=$(nix-store --query --requisites /run/current-system | wc -l)
+pkgs=$(nix-store --query --requisites /run/current-system 2>/dev/null | wc -l | tr -d ' ')
+if [[ "$(uname)" == Darwin ]]; then
+    distro="$(sw_vers -productName) $(sw_vers -productVersion)"
+else
+    distro="$(sed -nE "s@PRETTY_NAME=\"([^\"]*)\"@\1@p" /etc/os-release)"
+fi
 
 fetch() {
     echo "${cyan}$(tput bold)     _  ___      ____  ____    ${normal}$(tput sgr0)"
@@ -39,7 +44,7 @@ fetch() {
     echo ""
     echo "  ╭─────────────╮ "
     echo "  │  ${red} ${normal} user    │ ${red}$(whoami)${normal}"
-    echo "  │  ${yellow} ${normal} distro  │ ${yellow}$(sed -nE "s@PRETTY_NAME=\"([^\"]*)\"@\1@p" /etc/os-release)${normal} "
+    echo "  │  ${yellow} ${normal} distro  │ ${yellow}${distro}${normal} "
     echo "  │  ${green} ${normal} kernel  │ ${green}$(uname -r)${normal} "
     echo "  │  ${cyan}󱂬 ${normal} de/wm   │ ${cyan}$XDG_CURRENT_DESKTOP${normal} "
     echo "  │  ${blue} ${normal} uptime  │ ${blue}${up}${normal} "

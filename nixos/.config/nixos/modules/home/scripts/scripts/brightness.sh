@@ -50,6 +50,32 @@ done
 increase_amount=${increase_amount:-0}
 decrease_amount=${decrease_amount:-0}
 
+# macOS: the built-in panel via the `brightness` CLI (brew) when present, else
+# the F1/F2 media key codes (osascript key code 145/144), 1/16 of the range per
+# tap. An external display gets the same interpolated level through m1ddc if
+# that is installed (the ddcutil analogue); otherwise it is left alone.
+if [[ "$(uname)" == Darwin ]]; then
+  if command -v brightness >/dev/null 2>&1; then
+    cur=$(brightness -l 2>/dev/null | awk '/brightness/ {print $NF; exit}')
+    pct=$(echo "${cur:-0.5} * 100" | bc -l)
+    if [[ -n "${set_level:-}" ]]; then new=$set_level; else new=$(echo "$pct + $increase_amount - $decrease_amount" | bc -l); fi
+    new=$(echo "if ($new < 0) 0 else if ($new > 100) 100 else $new" | bc -l)
+    brightness "$(echo "scale=4; $new / 100" | bc -l)" >/dev/null
+  else
+    steps=$(( (${increase_amount:-0} + ${decrease_amount:-0} + 5) / 6 ))
+    [[ -n "${set_level:-}" ]] && steps=16 # no absolute set without the CLI: sweep to an end
+    code=144; [[ ${decrease_amount:-0} -gt 0 || "${set_level:-100}" -eq 0 ]] && code=145
+    for ((i = 0; i < steps; i++)); do osascript -e "tell application \"System Events\" to key code $code"; done
+    new=${set_level:-50}
+  fi
+  if command -v m1ddc >/dev/null 2>&1; then
+    frac=$(echo "scale=4; $new / 100" | bc -l)
+    ext=$(printf "%.0f" "$(echo "$(interpolate "$frac" main_monitor_brightnesses[@] external_monitor_brightnesses[@]) * $max_brightness_for_external_monitor" | bc -l)")
+    m1ddc set luminance "$ext" >/dev/null 2>&1 || true
+  fi
+  exit 0
+fi
+
 # Get current brightness
 current_brightness=$(brightnessctl get)
 max_brightness=$(brightnessctl max)

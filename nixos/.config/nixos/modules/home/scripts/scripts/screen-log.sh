@@ -18,7 +18,11 @@ capture_picture() {
     
     FILENAME="${CURRENT_TIME}_${monitor}.png"
     FILEPATH="${OUTPUT_DIR}/${FILENAME}"
-    grim "$FILEPATH"
+    if [[ "$(uname)" == Darwin ]]; then
+        /usr/sbin/screencapture -x "$FILEPATH"
+    else
+        grim "$FILEPATH"
+    fi
     # for monitor in $monitors; do
     #     grim -o "$monitor" "$FILEPATH"
     #     echo "Saved screenshot for monitor '$monitor' as $FILEPATH"

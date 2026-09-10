@@ -9,5 +9,12 @@
 # mailboxes. It has no generic IMAP support, so matt@matthandzel.com (Namecheap
 # PrivateEmail) cannot be added without moving that domain's mail hosting.
 
+# macOS: prefer the native Superhuman app when it is installed; otherwise the
+# same site as a standalone Chrome app window.
+if [[ "$(uname)" == Darwin ]]; then
+  [ -d "/Applications/Superhuman.app" ] && exec open -a "Superhuman"
+  exec open -na "Google Chrome" --args --app="https://mail.superhuman.com" --user-data-dir="$HOME/.config/chromium-app"
+fi
+
 exec systemd-run --user --slice=app-webapps.slice --scope -- \
   chromium --app="https://mail.superhuman.com" --user-data-dir="$HOME/.config/chromium-app" --ozone-platform=wayland --force-device-scale-factor=1.25 "$@"

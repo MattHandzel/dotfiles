@@ -154,6 +154,48 @@ in {
         serviceExtra.StandardError = "append:${config.home.homeDirectory}/Projects/website/sync.error.log";
       })
 
+      # birthday-check — daily birthday check + notify from the vault. Until
+      # 2026-09-10 this was a hand-`systemctl --user enable`d unit on the laptop
+      # (never in the flake), so it would have been lost in the Mac migration;
+      # the block below reproduces that unit exactly and adds the launchd twin.
+      (scheduled {
+        name = "birthday-check";
+        description = "Birthday Manager - daily check and notify";
+        command = ["/usr/bin/env" "python3" "%h/Obsidian/Main/scripts/birthday-manager.py" "check"];
+        environment.VAULT_ROOT = "%h/Obsidian/Main";
+        linuxLogFile = "%h/.local/log/birthday-manager.log";
+        logFile = "%h/.local/log/birthday-manager.log";
+        onCalendar = "*-*-* 07:00:00";
+        persistent = true;
+        timerDescription = "Run birthday check daily at 7:00 AM CT";
+        startCalendarInterval = {
+          Hour = 7;
+          Minute = 0;
+        };
+        path = [pkgs.python3 pkgs.coreutils];
+        darwinPathEntries = ["${config.home.profileDirectory}/bin" "/usr/bin" "/bin"];
+      })
+
+      # inject-experiment-questions — idempotently inject experiment-declared
+      # questions into today's daily note. Same story: hand-enabled on the laptop,
+      # now declared once for both platforms.
+      (scheduled {
+        name = "inject-experiment-questions";
+        description = "Inject experiment-declared questions into today's daily note (idempotent)";
+        command = ["${config.home.homeDirectory}/Obsidian/Main/scripts/inject-experiment-questions.sh"];
+        # the script defaults VAULT to /home/matth/…; spell it out so the Mac works
+        environment.VAULT = "%h/Obsidian/Main";
+        after = ["graphical-session.target"];
+        onBootSec = "2min";
+        onUnitActiveSec = "30min";
+        persistent = true;
+        timerDescription = "Inject experiment questions into today's daily note (every 30 min)";
+        everySeconds = 1800;
+        path = [pkgs.bash pkgs.coreutils pkgs.gnused pkgs.gawk pkgs.gnugrep];
+        darwinPathEntries = ["${config.home.profileDirectory}/bin" "/usr/bin" "/bin"];
+        logFile = "%h/.local/state/inject-experiment-questions.log";
+      })
+
       # If this unit was previously enabled on default.target, the symlink can stick
       # around and Home Manager activation will try to stop/start it during rebuilds.
       # Make sure it is timer-only. (systemd-only leftover; no launchd analogue.)

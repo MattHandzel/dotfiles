@@ -61,51 +61,54 @@
     ./scripts/notetaker.sh # kitty + nvim in ~/notes (kitty is a cask on macOS)
     ./scripts/wispr-hub.sh # hyprctl focuswindow ↔ open -a "Wispr Flow"
     ./scripts/toggle-stt.sh # whisper pipeline ↔ Wispr Flow hands-free toggle (cliclick Fn+Space)
+    # Second batch, same day: AeroSpace stands in for hyprctl, screencapture /
+    # ffmpeg-avfoundation for grim / arecord, `open -na "Google Chrome" --app=`
+    # (or the native app) for the chromium --app wrappers, kitty is a cask.
+    ./scripts/wall-change.sh # swaybg ↔ System Events desktop picture
+    ./scripts/wallpaper-picker.sh
+    ./scripts/music.sh # audacious ↔ Spotify
+    ./scripts/shutdown-script.sh # ↔ System Events shut down / restart
+    ./scripts/brightness.sh # brightnessctl ↔ `brightness` CLI or F1/F2 key codes; ddcutil ↔ m1ddc
+    ./scripts/switch-workspace-to-other-monitor.sh # ↔ aerospace move-workspace-to-monitor
+    ./scripts/run-command-based-on-type-of-workspace.sh # ↔ aerospace list-workspaces --focused
+    ./scripts/kill-window-and-switch.sh # ↔ aerospace close / workspace-back-and-forth
+    ./scripts/record-lecture.sh # arecord ↔ ffmpeg avfoundation
+    ./scripts/audio-log.sh
+    ./scripts/screen-log.sh # grim ↔ screencapture -x
+    ./scripts/tasker.sh # kitty + nvim Tw
+    ./scripts/btop-gui.sh
+    ./scripts/yazi-gui.sh
+    ./scripts/open-website-as-standalone-app.sh
+    ./scripts/calendar.sh
+    ./scripts/notion-calendar.sh
+    ./scripts/superhuman.sh
+    ./scripts/shortwave.sh
+    ./scripts/otter.sh
+    ./scripts/ntfy-gui.sh
+    ./scripts/claude.ai.sh
+    ./scripts/com.anthropic.Claude.sh # ↔ open -a Claude
+    ./scripts/gemini.google.com.sh
+    ./scripts/linear.sh
+    ./scripts/zoom-web.sh
   ];
 
   # Hyprland / Wayland / NixOS-specific: these talk to hyprctl, the Wayland
   # compositor, chromium --app wrappers, or systemd. macOS equivalents are
   # Phase 6 work on the Mac — see docs/mac-migration/TODO-path-inputs.md.
   linuxScripts = [
-    ./scripts/wall-change.sh
-    ./scripts/wallpaper-picker.sh
     ./scripts/runbg.sh
-    ./scripts/music.sh
     ./scripts/lofi.sh
     ./scripts/toggle_blur.sh
     ./scripts/toggle_oppacity.sh
-    ./scripts/shutdown-script.sh
     ./scripts/keybinds.sh
     ./scripts/vm-start.sh
     ./scripts/record.sh
-    ./scripts/brightness.sh
     ./scripts/secondary-monitor-update.sh
-    ./scripts/switch-workspace-to-other-monitor.sh
-    ./scripts/run-command-based-on-type-of-workspace.sh
-    ./scripts/kill-window-and-switch.sh
-    ./scripts/calendar.sh
-    ./scripts/notion-calendar.sh
-    ./scripts/superhuman.sh
-    ./scripts/shortwave.sh
-    ./scripts/otter.sh
-    ./scripts/tasker.sh
-    ./scripts/record-lecture.sh
-    ./scripts/audio-log.sh
-    ./scripts/screen-log.sh
     ./scripts/suspend-script-runner.sh
     ./scripts/track_window_history.sh
     ./scripts/track_workspace_history.sh
     ./scripts/wispr-status.sh # waybar: Wispr running / dictating
-    ./scripts/open-website-as-standalone-app.sh
-    ./scripts/claude.ai.sh
-    ./scripts/com.anthropic.Claude.sh
-    ./scripts/gemini.google.com.sh
-    ./scripts/linear.sh
-    ./scripts/zoom-web.sh
     ./scripts/kb-lang-status.sh
-    ./scripts/btop-gui.sh
-    ./scripts/yazi-gui.sh
-    ./scripts/ntfy-gui.sh
     ./scripts/system-fix.sh
     ./scripts/nixos-assistant.sh
     ./scripts/hyprland-session-save.sh # snapshot windows/workspaces (timer in hyprland/hyprsession.nix)
@@ -173,6 +176,10 @@ in {
           (import ./scripts/read-aloud/default.nix {inherit pkgs;})
           (import ./scripts/ocr-screenshot/default.nix {inherit pkgs;})
           (import ./scripts/kbshot/default.nix {inherit pkgs;})
+          # stdlib / lz4 Python, no desktop deps: the :WriteFast tracker and the
+          # Zen Spaces editor (its /proc liveness check became kill(pid, 0)).
+          writingSession
+          zenSpaces
         ]
         ++ (with pkgs; [
           bc # for brightness script
@@ -198,9 +205,7 @@ in {
           alsa-utils # for arecord
         ])
         ++ [
-          writingSession
           waybarAgenda
-          zenSpaces
           focusEnforcer
           ntfyDesktopSub
         ];
@@ -271,6 +276,8 @@ in {
       # launched from the toggle button) so it reliably has the session env + socket.
       # Hyprland-socket bound, so it stays Linux-only: the macOS focus story is the
       # server's blocky DNS over Tailscale (Phase 8), not a window-event enforcer.
+      # (focus-mode-sync, the calendar follower, IS shared — see the scheduled
+      # block below the isLinux section.)
       systemd.user.services.focus-mode-enforcer = {
         Unit = {
           Description = "Focus Mode enforcer — block-then-allow delay for distracting apps";
@@ -285,25 +292,6 @@ in {
         };
         Install.WantedBy = ["graphical-session.target"];
       };
-
-      # Calendar-driven Focus Mode: subscribe to the server resolver's ntfy
-      # `focus-mode` topic and force the laptop's /tmp/focus_mode flag to follow the
-      # Life Scheduler calendar (calendar wins). Self-healing: holds last state on any
-      # network error, replays recent transitions on (re)connect.
-      systemd.user.services.focus-mode-sync = {
-        Unit = {
-          Description = "Sync laptop Focus Mode to the calendar (ntfy focus-mode topic)";
-          After = ["graphical-session.target" "network-online.target"];
-          PartOf = ["graphical-session.target"];
-        };
-        Service = {
-          ExecStart = "${focusModeSync}/bin/focus-mode-sync";
-          Environment = ["PATH=${pkgs.lib.makeBinPath [toggleFocusMode pkgs.curl pkgs.jq pkgs.libnotify pkgs.coreutils pkgs.hyprland]}"];
-          Restart = "always";
-          RestartSec = 10;
-        };
-        Install.WantedBy = ["graphical-session.target"];
-      };
     })
 
     (lib.optionalAttrs isDarwin {
@@ -312,8 +300,10 @@ in {
 
     # ntfy → native desktop notifications for Matt's topics. Always-on user service;
     # the real ntfy-sh binary (not the zsh `ntfy` curl-wrapper function) is on PATH
-    # here, so `ntfy subscribe` works.
-    (lib.optionalAttrs isLinux (scheduled {
+    # here, so `ntfy subscribe` works. On macOS it is the same script under launchd:
+    # notify-send is the terminal-notifier shim from compat-shims.nix, reached via
+    # the Home Manager profile bin (a LaunchAgent starts with no PATH at all).
+    (scheduled {
       name = "ntfy-desktop-sub";
       description = "Surface ntfy messages as desktop notifications";
       command = ["${ntfyDesktopSub}/bin/ntfy-desktop-sub"];
@@ -324,7 +314,32 @@ in {
       restartSec = 10;
       install.WantedBy = ["graphical-session.target"];
       linuxPathPackages = [pkgs.ntfy-sh pkgs.libnotify pkgs.bash pkgs.coreutils];
-    }))
+      path = [pkgs.ntfy-sh pkgs.bash pkgs.coreutils];
+      darwinPathEntries = ["${config.home.profileDirectory}/bin" "/usr/bin" "/bin" "/usr/sbin" "/sbin"];
+      logFile = "%h/.local/state/ntfy-desktop-sub.log";
+    })
+
+    # Calendar-driven Focus Mode: subscribe to the server resolver's ntfy
+    # `focus-mode` topic and force the /tmp/focus_mode flag to follow the Life
+    # Scheduler calendar (calendar wins). Self-healing: holds last state on any
+    # network error, replays recent transitions on (re)connect. Pure curl + jq +
+    # a flag file, so the same declaration runs as a launchd agent on macOS
+    # (toggle-focus-mode's hyprctl border tweak is a silenced no-op there).
+    (scheduled {
+      name = "focus-mode-sync";
+      description = "Sync laptop Focus Mode to the calendar (ntfy focus-mode topic)";
+      command = ["${focusModeSync}/bin/focus-mode-sync"];
+      oneshot = false;
+      after = ["graphical-session.target" "network-online.target"];
+      partOf = ["graphical-session.target"];
+      restart = "always";
+      restartSec = 10;
+      install.WantedBy = ["graphical-session.target"];
+      linuxPathPackages = [toggleFocusMode pkgs.curl pkgs.jq pkgs.libnotify pkgs.coreutils pkgs.hyprland];
+      path = [toggleFocusMode pkgs.curl pkgs.jq pkgs.coreutils];
+      darwinPathEntries = ["${config.home.profileDirectory}/bin" "/usr/bin" "/bin" "/usr/sbin" "/sbin"];
+      logFile = "%h/.local/state/focus-mode-sync.log";
+    })
 
     # Watch Gmail for login/verification codes and surface them (notify + copy to
     # clipboard), the way Beeper does for texted codes. The Gmail app password is

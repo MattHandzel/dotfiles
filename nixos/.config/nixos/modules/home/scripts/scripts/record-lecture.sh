@@ -80,7 +80,15 @@ log "Lecture Title: $lecture_title"
 log "Timeout: $timeout"
 log "Output Path: $output_path"
 
-timeout "$timeout" arecord -f cd "$output_path"
+if [[ "$(uname)" == Darwin ]]; then
+    # avfoundation ":0" = default microphone; ffmpeg's -t takes seconds, so
+    # convert the "90m"-style timeout (s/m/h suffix).
+    secs=${timeout%[smh]}
+    case "$timeout" in *m) secs=$((secs * 60)) ;; *h) secs=$((secs * 3600)) ;; esac
+    ffmpeg -hide_banner -loglevel error -f avfoundation -i ":0" -ac 2 -ar 44100 -t "$secs" "$output_path"
+else
+    timeout "$timeout" arecord -f cd "$output_path"
+fi
 
 # Check if recording was successful
 if [[ $? -eq 0 ]]; then

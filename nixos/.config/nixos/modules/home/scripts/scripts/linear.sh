@@ -7,6 +7,13 @@
 # and the Hyprland window rule routes it to its own workspace. (Don't pass
 # --class: Chromium ignores it once a browser session for this profile already
 # exists, and it breaks the --app window launch.)
+# macOS: prefer the native Linear app when it is installed; otherwise the
+# same site as a standalone Chrome app window.
+if [[ "$(uname)" == Darwin ]]; then
+  [ -d "/Applications/Linear.app" ] && exec open -a "Linear"
+  exec open -na "Google Chrome" --args --app="https://linear.app" --user-data-dir="$HOME/.config/chromium-app"
+fi
+
 exec systemd-run --user --slice=app-webapps.slice --scope -- \
   chromium --app="https://linear.app" \
   --user-data-dir="$HOME/.config/chromium-app" \
