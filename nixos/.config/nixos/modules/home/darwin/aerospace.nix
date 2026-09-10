@@ -184,7 +184,9 @@ in {
     alt-shift-g = 'mode translate-alt'
 
     # App hotkeys, ported 1:1 from the laptop (SUPER ALT <key> = focus_app <app> name:<workspace>)
-    alt-ctrl-c = 'exec-and-forget focus-app "Morgen" calendar'
+    # Apple Calendar, not Morgen (Matt, 2026-09-10). Morgen stays installed;
+    # it just no longer owns this hotkey or the calendar workspace.
+    alt-ctrl-c = 'exec-and-forget focus-app "Calendar" calendar'
     alt-ctrl-u = 'exec-and-forget focus-app "UltiMaker Cura" cura'
     alt-ctrl-o = 'exec-and-forget focus-app "Obsidian" obsidian'
     alt-ctrl-k = 'exec-and-forget focus-app "Slack" slack'
@@ -233,7 +235,7 @@ in {
 
     # one workspace per hotkey app (laptop: windowrule = workspace name:<ws>, match:class/title)
     [[on-window-detected]]
-    if.app-name-regex-substring = '^Morgen$'
+    if.app-name-regex-substring = '^Calendar$'
     run = 'move-node-to-workspace calendar'
 
     [[on-window-detected]]

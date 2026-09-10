@@ -7,5 +7,6 @@
     ./sops.nix
     ./kanata.nix
     ./packages.nix
+    ./open-with-nvim.nix
   ];
 }
