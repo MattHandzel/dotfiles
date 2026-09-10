@@ -9,6 +9,13 @@ set -uo pipefail
 
 notify() { notify-send -u normal -i edit-paste "Paste 2nd clip" "$1"; }
 
+# macOS: Raycast owns the clipboard history and has no CLI to read entry #2, so
+# open its Clipboard History (the second row is the one you want; ↵ pastes it).
+if [[ "$(uname)" == Darwin ]]; then
+  open "raycast://extensions/raycast/clipboard-history/clipboard-history"
+  exit 0
+fi
+
 second_line=$(cliphist list | sed -n 2p)
 if [[ -z $second_line ]]; then
   notify "No second item in clipboard history."

@@ -6,6 +6,11 @@
 # Matching by class could focus the pill. Address-match the Hub explicitly.
 set -uo pipefail
 
+# macOS: Wispr Flow is a native app; `open -a` raises its Hub (or launches it).
+if [[ "$(uname)" == Darwin ]]; then
+  exec open -a "Wispr Flow"
+fi
+
 addr=$(hyprctl clients -j | jq -r '
   .[] | select(.class == "wispr-flow" and .title == "Hub") | .address' | head -n1)
 

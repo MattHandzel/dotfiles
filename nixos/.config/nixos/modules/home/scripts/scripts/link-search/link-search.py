@@ -14,16 +14,25 @@ sources the clipboard copy wins (and borrows the browser's title). On a result:
 
 Bound to Super+Shift+V (see modules/home/hyprland/config.nix). Standalone:
 just run `link-search`.
+
+macOS: there is no cliphist, so "clipboard history" is just the current
+clipboard (Raycast owns the history), browser history comes from
+~/Library/Application Support/zen|Firefox, the picker is `choose` (via the
+fuzzel shim) which has no Ctrl+Enter, so `link-search --url` copies the bare
+URL instead of the markdown link.
 """
 from __future__ import annotations
 
 import glob
 import os
+import platform
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+
+DARWIN = platform.system() == "Darwin"
 
 URL_RE = re.compile(r"https?://[^\s\"'<>`\]}]+")
 # Trailing punctuation that clings to a copied URL but isn't part of it.
@@ -47,6 +56,18 @@ def clean(url: str) -> str:
 # ---------------------------------------------------------------- clipboard --
 def clipboard_links() -> list[str]:
     """Full URLs from cliphist history, newest first (list order preserved)."""
+    if DARWIN:
+        try:
+            text = subprocess.run(["pbpaste"], capture_output=True, text=True, timeout=5).stdout
+        except (FileNotFoundError, subprocess.SubprocessError):
+            return []
+        out, seen = [], set()
+        for m in URL_RE.findall(text):
+            u = clean(m)
+            if norm(u) not in seen:
+                seen.add(norm(u))
+                out.append(u)
+        return out
     try:
         listing = subprocess.run(
             ["cliphist", "list"], capture_output=True, text=True, timeout=15
@@ -81,9 +102,14 @@ def clipboard_links() -> list[str]:
 
 # ------------------------------------------------------------------ browser --
 def places_db() -> str | None:
-    candidates = glob.glob(os.path.expanduser("~/.zen/*/places.sqlite")) + glob.glob(
-        os.path.expanduser("~/.mozilla/firefox/*/places.sqlite")
-    )
+    patterns = [
+        "~/.zen/*/places.sqlite",
+        "~/.mozilla/firefox/*/places.sqlite",
+        "~/Library/Application Support/zen/*/places.sqlite",
+        "~/Library/Application Support/zen/Profiles/*/places.sqlite",
+        "~/Library/Application Support/Firefox/Profiles/*/places.sqlite",
+    ]
+    candidates = [c for pat in patterns for c in glob.glob(os.path.expanduser(pat))]
     candidates = [c for c in candidates if os.path.getsize(c) > 0]
     if not candidates:
         return None
@@ -189,6 +215,7 @@ def format_selection(url: str, title: str, url_only: bool) -> str:
 
 
 def main() -> int:
+    url_only_flag = "--url" in sys.argv[1:]
     lines, entry_of = build_lines()
     if os.environ.get("LINK_SEARCH_DUMP"):  # print the fuzzel input and exit (debug)
         print("\n".join(lines))
@@ -199,21 +226,33 @@ def main() -> int:
         )
         return 0
 
-    cfg = fuzzel_config()
-    try:
-        proc = subprocess.run(
-            # Enter → copy markdown [title](url);  Shift+Enter → copy the URL only.
-            ["fuzzel", "--dmenu", "--no-sort", "--config", cfg, "--width", "100",
-             "--lines", "20", "--prompt", "link  ↵md  ^↵url  "],
-            input="\n".join(lines),
-            capture_output=True,
-            text=True,
-        )
-    except FileNotFoundError:
-        print("fuzzel not found", file=sys.stderr)
-        return 1
-    finally:
-        os.unlink(cfg)
+    if DARWIN:
+        try:
+            proc = subprocess.run(
+                ["choose", "-n", "20", "-w", "100", "-p", "link (md)  " if not url_only_flag else "link (url)  "],
+                input="\n".join(lines),
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            print("choose not found", file=sys.stderr)
+            return 1
+    else:
+        cfg = fuzzel_config()
+        try:
+            proc = subprocess.run(
+                # Enter → copy markdown [title](url);  Shift+Enter → copy the URL only.
+                ["fuzzel", "--dmenu", "--no-sort", "--config", cfg, "--width", "100",
+                 "--lines", "20", "--prompt", "link  ↵md  ^↵url  "],
+                input="\n".join(lines),
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            print("fuzzel not found", file=sys.stderr)
+            return 1
+        finally:
+            os.unlink(cfg)
 
     picked = proc.stdout.strip()
     if not picked or proc.returncode not in (0, 10):  # 1/2/130 = dismissed
@@ -223,10 +262,10 @@ def main() -> int:
         m = URL_RE.search(picked)
         url = clean(m.group(0)) if m else picked
 
-    url_only = proc.returncode == 10  # Shift+Enter → custom-1
+    url_only = url_only_flag or proc.returncode == 10  # Shift+Enter → custom-1
     out = format_selection(url, title, url_only)
     mode = "URL" if url_only else "markdown"
-    subprocess.run(["wl-copy"], input=out, text=True)
+    subprocess.run(["pbcopy" if DARWIN else "wl-copy"], input=out, text=True)
     subprocess.run(["notify-send", "-t", "2000", "link-search", f"Copied {mode}: {out}"])
     return 0
 

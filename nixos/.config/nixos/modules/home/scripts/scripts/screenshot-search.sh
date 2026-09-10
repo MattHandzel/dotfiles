@@ -11,6 +11,41 @@ set -euo pipefail
 dir="${SCREENSHOT_DIR:-$HOME/Pictures/Screenshots}"
 font="JetBrainsMono Nerd Font:size=10"
 
+if [[ "$(uname)" == Darwin ]]; then
+  # macOS: where the system drops ⌘⇧4 shots (defaults), else the same folder.
+  if [ -z "${SCREENSHOT_DIR:-}" ]; then
+    loc=$(defaults read com.apple.screencapture location 2>/dev/null || true)
+    [ -n "$loc" ] && dir="${loc/#\~/$HOME}"
+  fi
+  [ -d "$dir" ] || { notify-send "screenshot-search" "No screenshot dir: $dir"; exit 1; }
+  # Newest first (BSD stat), NUL-delimited so odd names survive.
+  mapfile -d '' -t files < <(
+    find "$dir" -maxdepth 1 -type f \
+      \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \) -print0 \
+      | xargs -0 /usr/bin/stat -f '%m%t%N%z' | sort -z -rn -k1,1 | cut -z -f2-
+  )
+  [ "${#files[@]}" -gt 0 ] || { notify-send "screenshot-search" "No screenshots in $dir"; exit 0; }
+  # choose has no thumbnail protocol; names carry the timestamp anyway.
+  pick=$(for f in "${files[@]}"; do basename "$f"; done | choose -n 18 -w 60 -p 'screenshot ') || exit 0
+  [ -n "$pick" ] || exit 0
+  file="$dir/$pick"
+  [ -f "$file" ] || { notify-send "screenshot-search" "File is gone: $file"; exit 1; }
+  action=$(printf 'Copy to clipboard\nOpen\nOpen folder\nDelete' | choose -n 4 -w 40 -p "$pick → ") || exit 0
+  case "$action" in
+    "Copy to clipboard")
+      case "$file" in
+        *.png | *.PNG) /usr/bin/osascript -e 'on run argv' -e 'set the clipboard to (read (POSIX file (item 1 of argv)) as «class PNGf»)' -e 'end run' -- "$file" ;;
+        *) /usr/bin/osascript -e 'on run argv' -e 'set the clipboard to (POSIX file (item 1 of argv))' -e 'end run' -- "$file" ;;
+      esac
+      notify-send "screenshot-search" "Copied to clipboard: $pick"
+      ;;
+    "Open") open "$file" ;;
+    "Open folder") open -R "$file" ;;
+    "Delete") rm -f -- "$file"; notify-send "screenshot-search" "Deleted: $pick" ;;
+  esac
+  exit 0
+fi
+
 [ -d "$dir" ] || { notify-send -u critical "screenshot-search" "No screenshot dir: $dir"; exit 1; }
 
 # Newest first. NUL-delimited throughout so spaces/newlines in names can't

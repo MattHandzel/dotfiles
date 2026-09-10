@@ -6,7 +6,18 @@
 # layout analysis, and a scipy edge/connected-component pass. Every runtime binary
 # is baked into the wrapper's PATH rather than assumed, because this runs from a
 # Hyprland `exec` bind whose PATH is not the login shell's.
-{pkgs}: let
+#
+# macOS has no wl-kbptr/Hyprland, so the darwin build is kbshot-darwin.sh: the
+# same flags over `screencapture -i` (+ tesseract for --ocr, choose for --menu).
+{pkgs}:
+if pkgs.stdenv.hostPlatform.isDarwin
+then
+  pkgs.writeShellApplication {
+    name = "kbshot";
+    runtimeInputs = with pkgs; [tesseract choose-gui terminal-notifier coreutils gawk];
+    text = builtins.readFile ./kbshot-darwin.sh;
+  }
+else let
   python = pkgs.python3.withPackages (ps: with ps; [numpy scipy pillow]);
 
   # wl-kbptr draws one rectangle per candidate and centres that candidate's label

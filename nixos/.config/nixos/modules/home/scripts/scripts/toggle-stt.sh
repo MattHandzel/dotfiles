@@ -24,9 +24,44 @@ for arg in "$@"; do
   esac
 done
 
+# macOS: Wispr Flow is the native dictation engine, so this becomes a thin
+# wrapper around its hands-free toggle (Fn+Space, Wispr's `popo` binding; see
+# ~/Library/Application Support/Wispr Flow/config.json → prefs.user.shortcuts).
+# Wispr types the transcript into the focused field itself (= --type / --live);
+# --copy additionally asks Wispr for its last text with ⌘⌃C (`copy_last_text`).
+# The Fn modifier cannot be synthesised by osascript, hence cliclick. Set
+# STT_MAC_BACKEND=local to use the whisper-server pipeline below instead.
+if [[ "$(uname)" == Darwin && "${STT_MAC_BACKEND:-wispr}" == wispr ]]; then
+  STATE="${TMPDIR:-/tmp}/stt-wispr.state"
+  notify() { notify-send "🎙 STT" "$1" >/dev/null 2>&1 || true; }
+  if ! command -v cliclick >/dev/null 2>&1; then
+    notify "cliclick missing (brew install cliclick) — press Fn+Space for Wispr"; exit 1
+  fi
+  if ! pgrep -xq "Wispr Flow"; then open -a "Wispr Flow"; sleep 2; fi
+  cliclick kd:fn kp:space ku:fn
+  if [[ -e "$STATE" ]]; then
+    rm -f "$STATE"
+    if [[ "${STT_ACTION:-type}" == copy ]]; then
+      sleep 1.5
+      cliclick kd:cmd,ctrl kp:c ku:cmd,ctrl
+      notify "✅ Stopped — transcript copied (Wispr)"
+    else
+      notify "✅ Stopped (Wispr typed it)"
+    fi
+  else
+    : >"$STATE"
+    notify "🎙 Listening (Wispr hands-free) — press again to stop"
+  fi
+  exit 0
+fi
+
 _UID="$(id -u)"
-export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${_UID}/bus"
-export XDG_RUNTIME_DIR="/run/user/${_UID}"
+if [[ "$(uname)" == Darwin ]]; then
+  export XDG_RUNTIME_DIR="${TMPDIR:-/tmp}"
+else
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${_UID}/bus"
+  export XDG_RUNTIME_DIR="/run/user/${_UID}"
+fi
 export PATH="/run/current-system/sw/bin:${HOME}/.nix-profile/bin:${PATH}"
 
 # wtype needs WAYLAND_DISPLAY. If it's not set (e.g. in some environments), 
@@ -45,6 +80,10 @@ LOGFILE="/tmp/stt.log"
 
 BACKEND="pulse"
 DEVICE="alsa_input.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.HiFi__Mic1__source"
+if [[ "$(uname)" == Darwin ]]; then
+  BACKEND="avfoundation" # ffmpeg -f avfoundation -i ":0" = default microphone
+  DEVICE="${STT_MAC_DEVICE:-:0}"
+fi
 RATE=16000
 CHANNELS=1
 
@@ -111,7 +150,9 @@ copy_clipboard() {
 
 paste_text_with_wtype() {
   copy_clipboard
-  if command -v wtype >/dev/null 2>&1; then
+  if [[ "$(uname)" == Darwin ]]; then
+      osascript -e 'tell application "System Events" to keystroke "v" using command down' || notify "⚠️ Failed to paste (osascript)" critical
+  elif command -v wtype >/dev/null 2>&1; then
       wtype -M shift -M ctrl "v" || notify "⚠️ Failed to paste text via wtype" critical
       sleep 0.05
       wtype -m shift -m ctrl || true

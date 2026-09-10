@@ -52,6 +52,15 @@
     ./scripts/leader-timer.sh # N-minute timer behind the SUPER+SHIFT+SPACE leader submap
     ./scripts/pl-assist # Polish capture: bare-bones fast Claude helper (MAT-799)
     ./scripts/pl-capture # Polish capture: numpad-8 mode menu + file router (MAT-800)
+    # Ported to macOS 2026-09-10 with `uname == Darwin` branches (AeroSpace,
+    # osascript, choose, Wispr Flow, launchd) — Linux behaviour unchanged.
+    ./scripts/focus_app.sh # hyprctl focuswindow ↔ aerospace focus --window-id
+    ./scripts/toggle-focus-mode.sh # /tmp/focus_mode flag; hyprctl border colour is a no-op on macOS
+    ./scripts/focus-distracting-apps.sh # pure awk over the blocklist markdown
+    ./scripts/focus-delay-gate.sh # zenity ↔ osascript display dialog … giving up after
+    ./scripts/notetaker.sh # kitty + nvim in ~/notes (kitty is a cask on macOS)
+    ./scripts/wispr-hub.sh # hyprctl focuswindow ↔ open -a "Wispr Flow"
+    ./scripts/toggle-stt.sh # whisper pipeline ↔ Wispr Flow hands-free toggle (cliclick Fn+Space)
   ];
 
   # Hyprland / Wayland / NixOS-specific: these talk to hyprctl, the Wayland
@@ -71,10 +80,6 @@
     ./scripts/record.sh
     ./scripts/brightness.sh
     ./scripts/secondary-monitor-update.sh
-    ./scripts/focus_app.sh
-    ./scripts/toggle-focus-mode.sh
-    ./scripts/focus-distracting-apps.sh
-    ./scripts/focus-delay-gate.sh
     ./scripts/switch-workspace-to-other-monitor.sh
     ./scripts/run-command-based-on-type-of-workspace.sh
     ./scripts/kill-window-and-switch.sh
@@ -88,10 +93,8 @@
     ./scripts/audio-log.sh
     ./scripts/screen-log.sh
     ./scripts/suspend-script-runner.sh
-    ./scripts/notetaker.sh
     ./scripts/track_window_history.sh
     ./scripts/track_workspace_history.sh
-    ./scripts/wispr-hub.sh
     ./scripts/wispr-status.sh # waybar: Wispr running / dictating
     ./scripts/open-website-as-standalone-app.sh
     ./scripts/claude.ai.sh
@@ -99,7 +102,6 @@
     ./scripts/gemini.google.com.sh
     ./scripts/linear.sh
     ./scripts/zoom-web.sh
-    ./scripts/toggle-stt.sh
     ./scripts/kb-lang-status.sh
     ./scripts/btop-gui.sh
     ./scripts/yazi-gui.sh
@@ -164,10 +166,13 @@ in {
         ++ [
           rebootState
           authCodeWatcher
-          # link-search and read-aloud are Linux-only: their runtimeInputs are
-          # cliphist, wl-clipboard, hyprland, fuzzel and libnotify, none of which
-          # build on darwin. They live in the isLinux block below. Porting them
-          # means routing through platform.nix (clip-copy / clip-paste / notify).
+          # Each of these default.nix files is platform-aware (their Wayland
+          # runtimeInputs are `lib.optionals isLinux`; the darwin side uses
+          # screencapture, osascript, choose, pbcopy), so they build on both.
+          (import ./scripts/link-search/default.nix {inherit pkgs;})
+          (import ./scripts/read-aloud/default.nix {inherit pkgs;})
+          (import ./scripts/ocr-screenshot/default.nix {inherit pkgs;})
+          (import ./scripts/kbshot/default.nix {inherit pkgs;})
         ]
         ++ (with pkgs; [
           bc # for brightness script
@@ -182,11 +187,7 @@ in {
 
     (lib.optionalAttrs isLinux {
       home.packages =
-        [
-          (import ./scripts/link-search/default.nix {inherit pkgs;})
-          (import ./scripts/read-aloud/default.nix {inherit pkgs;})
-        ]
-        ++ (with pkgs; [
+        (with pkgs; [
           ddcutil # for brightness script
           socat # focus-mode-enforcer reads the Hyprland event socket
           # quick capture
@@ -197,13 +198,11 @@ in {
           alsa-utils # for arecord
         ])
         ++ [
-          (import ./scripts/ocr-screenshot/default.nix {inherit pkgs;})
           writingSession
           waybarAgenda
           zenSpaces
           focusEnforcer
           ntfyDesktopSub
-          (import ./scripts/kbshot/default.nix {inherit pkgs;})
         ];
 
       # GUI ntfy client: a standalone web-app window for the server's ntfy web UI,

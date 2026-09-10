@@ -15,6 +15,19 @@ FOCUS_MODE_FILE="/tmp/focus_mode"
 # No focus mode -> no friction.
 [ -e "$FOCUS_MODE_FILE" ] || exit 0
 
+# macOS: a real dialog (not a notification) with a Cancel button that gives up
+# by itself after the delay. "gave up:true" = waited it out -> proceed;
+# Cancel makes osascript exit 1 -> do not open the app. Any other failure fails
+# OPEN, same as the zenity path.
+if [[ "$(uname)" == Darwin ]]; then
+  out=$(/usr/bin/osascript -e 'on run argv' \
+    -e 'display dialog ("Opening " & item 1 of argv & " in " & item 2 of argv & "s…  Cancel to stay focused.") with title "Focus Mode" buttons {"Cancel"} giving up after (item 2 of argv as integer) with icon caution' \
+    -e 'end run' -- "$app" "$DELAY" 2>&1) || {
+    case "$out" in *"User canceled"*) exit 1 ;; esac
+  }
+  exit 0
+fi
+
 # If zenity can't run, fail OPEN (don't lock the user out): wait the delay, proceed.
 if ! command -v zenity >/dev/null 2>&1; then
   sleep "$DELAY"

@@ -1,25 +1,21 @@
+# ocr-screenshot: pick a screen region, OCR it with tesseract, copy the text.
+# Stdlib-only Python: grimblast (Linux) or screencapture (macOS) takes the
+# picture, the tesseract CLI reads it, wl-copy / pbcopy receives the text.
 {pkgs ? import <nixpkgs> {}}: let
-  pythonEnv = pkgs.python312.withPackages (ps:
-    with ps; [
-      pillow
-      pytesseract
-    ]);
+  inherit (pkgs.stdenv.hostPlatform) isLinux;
 in
   pkgs.stdenv.mkDerivation {
     name = "ocr-screenshot";
     src = ./.;
 
-    buildInputs = [
-      pythonEnv
-      pkgs.tesseract
-      pkgs.grim
-      pkgs.slurp
-      pkgs.wl-clipboard
-    ];
+    nativeBuildInputs = [pkgs.makeWrapper];
 
     installPhase = ''
       mkdir -p $out/bin
-      cp ocr-screenshot.py $out/bin/ocr-screenshot
-      chmod +x $out/bin/ocr-screenshot
+      cp ocr-screenshot.py $out/bin/.ocr-screenshot-unwrapped
+      chmod +x $out/bin/.ocr-screenshot-unwrapped
+      makeWrapper ${pkgs.python3}/bin/python3 $out/bin/ocr-screenshot \
+        --add-flags "$out/bin/.ocr-screenshot-unwrapped" \
+        --prefix PATH : ${pkgs.lib.makeBinPath ([pkgs.tesseract] ++ pkgs.lib.optionals isLinux [pkgs.grim pkgs.slurp pkgs.wl-clipboard])}
     '';
   }

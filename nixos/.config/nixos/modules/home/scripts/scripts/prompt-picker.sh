@@ -9,10 +9,10 @@ if [ ! -d "$PROMPTS_DIR" ]; then
     exit 1
 fi
 
-# List files, strip extension for cleaner display, sort
-# We use find to get filenames, then sed to strip path and extension
-SELECTED_NAME=$(find "$PROMPTS_DIR" -maxdepth 1 -name "*.md" -printf "%f\n" | \
-    sed 's/\.md$//' | \
+# List files, strip extension for cleaner display, sort. A shell glob rather
+# than GNU find -printf so it also runs on macOS (BSD find), where the fuzzel
+# shim opens `choose` and the wtype shim sends ⌘V.
+SELECTED_NAME=$(for f in "$PROMPTS_DIR"/*.md; do [ -e "$f" ] && basename "$f" .md; done | \
     sort | \
     fuzzel --dmenu --prompt="Prompts > " --lines=15 --width=60)
 

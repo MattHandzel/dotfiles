@@ -22,6 +22,24 @@ if [ -e "$FOCUS_MODE_FILE" ]; then
   fi
 fi
 
+# macOS: AeroSpace knows every window's app name + bundle id; match the class
+# name against either (case-insensitive substring), focus the first hit, else
+# launch it (a -gui wrapper, a command on PATH, or `open -a`).
+if [[ "$(uname)" == Darwin ]]; then
+  win_id=$(aerospace list-windows --all --format '%{window-id}%{tab}%{app-bundle-id}%{tab}%{app-name}' 2>/dev/null \
+    | awk -F'\t' -v re="$class_name" 'BEGIN{IGNORECASE=1} tolower($2) ~ tolower(re) || tolower($3) ~ tolower(re) {print $1; exit}')
+  if [ -n "$win_id" ]; then
+    exec aerospace focus --window-id "$win_id"
+  elif command -v "${class_name}-gui" >/dev/null 2>&1; then
+    "${class_name}-gui" &
+  elif command -v "$class_name" >/dev/null 2>&1; then
+    "$class_name" &
+  else
+    open -a "$class_name" 2>/dev/null || notify-send "focus_app" "No window or app matching '$class_name'"
+  fi
+  exit 0
+fi
+
 # Use hyprctl to list all clients and filter by the class name
 window_id=$(hyprctl clients | grep -Ei "class:.*$class_name" | sed -n 's/.*class: *\([^ ]*\).*/\1/p' | sed -n '1p')
 # .*title: *([^ ]*).*

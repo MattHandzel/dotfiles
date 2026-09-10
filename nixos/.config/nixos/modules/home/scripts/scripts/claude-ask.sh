@@ -30,7 +30,12 @@ mode="$(printf '%s\n' \
 [ -z "${mode:-}" ] && exit 0
 
 # ── Step 2: get the subject (word / concept / question) ──────────────
-input="$(fuzzel --dmenu --lines 0 --prompt "${mode}  ➜  " </dev/null)"
+if [[ "$(uname)" == Darwin ]]; then
+  # choose has no "lines 0" free-text mode; -e -m returns the typed query.
+  input="$(choose -e -m -p "${mode}  ➜  " </dev/null)"
+else
+  input="$(fuzzel --dmenu --lines 0 --prompt "${mode}  ➜  " </dev/null)"
+fi
 [ -z "${input:-}" ] && exit 0
 
 # ── Step 3: build the prompt for the chosen mode ─────────────────────
@@ -117,6 +122,12 @@ esac
 
 # ── Step 4: open Claude with the request prefilled ───────────────────
 encoded="$(jq -rn --arg s "$prompt" '$s|@uri')"
+
+# macOS: the default browser (Zen) gets the prefilled conversation; the Claude
+# desktop app has no URL parameter for a new chat.
+if [[ "$(uname)" == Darwin ]]; then
+  exec open "https://claude.ai/new?q=${encoded}"
+fi
 
 exec systemd-run --user --slice=app-webapps.slice --scope -- \
   chromium \

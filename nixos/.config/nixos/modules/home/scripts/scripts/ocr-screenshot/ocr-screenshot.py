@@ -1,61 +1,74 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+"""ocr-screenshot — select a screen region, OCR it, copy the text to the clipboard.
+
+Linux (Hyprland): grimblast picks the region (mouse drag) and copies the image.
+macOS:            `screencapture -i` picks the region (drag, or space for a window).
+Both then run the tesseract CLI directly — no pytesseract/Pillow needed — and put
+the cleaned text on the clipboard (wl-copy / pbcopy). Stdlib only.
+"""
+import os
+import platform
 import subprocess
-import tempfile
 import sys
-from PIL import Image
-import pytesseract
+import tempfile
+
+DARWIN = platform.system() == "Darwin"
 
 
-def take_screenshot(file_path):
-    """Capture screenshot using grimblast on Wayland"""
+def take_screenshot(file_path: str) -> None:
+    """Capture a user-selected region into file_path (exit 1 if cancelled)."""
+    if DARWIN:
+        # -i interactive, -o no window shadow, -x no camera sound.
+        cmd = ["/usr/sbin/screencapture", "-i", "-o", "-x", file_path]
+    else:
+        cmd = ["grimblast", "--notify", "copysave", "area", file_path]
     try:
-        # Use grimblast to capture a region and save it to the file_path
-        subprocess.run(
-            ["grimblast", "--notify", "copysave", "area", file_path], check=True
-        )
+        subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError:
         print("Screenshot capture canceled or failed")
         sys.exit(1)
     except FileNotFoundError:
-        print("grimblast not found. Please install grim and grimblast.")
-        print("Installation instructions: https://github.com/hyprwm/contrib")
+        print(f"{cmd[0]} not found.")
+        sys.exit(1)
+    if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
+        # screencapture exits 0 on Escape but writes nothing.
+        print("Screenshot capture canceled")
         sys.exit(1)
 
 
-def ocr_from_screenshot():
-    # Create temporary file
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
-        screenshot_path = tmpfile.name
+def copy_text(text: str) -> None:
+    cmd = ["pbcopy"] if DARWIN else ["wl-copy"]
+    subprocess.run(cmd, input=text.encode("utf-8"), check=False)
 
-    # Take screenshot
+
+def ocr_from_screenshot() -> None:
+    fd, screenshot_path = tempfile.mkstemp(suffix=".png")
+    os.close(fd)
     print("Select area to capture (click and drag)...")
-    take_screenshot(screenshot_path)
-
     try:
-        # Open image and perform OCR
-        img = Image.open(screenshot_path)
-        text = pytesseract.image_to_string(img)
-
-        # Clean up empty lines and show results
-        cleaned_text = "\n".join([line for line in text.split("\n") if line.strip()])
+        take_screenshot(screenshot_path)
+        try:
+            out = subprocess.run(
+                ["tesseract", screenshot_path, "stdout"],
+                capture_output=True,
+                check=True,
+            ).stdout.decode("utf-8", "replace")
+        except FileNotFoundError:
+            print("Tesseract OCR not found (nix: pkgs.tesseract; brew: tesseract).")
+            sys.exit(1)
+        except subprocess.CalledProcessError as exc:
+            print("Error: tesseract failed:", exc.stderr.decode("utf-8", "replace"))
+            sys.exit(1)
+        cleaned_text = "\n".join(line for line in out.split("\n") if line.strip())
         print("\nExtracted Text:\n")
         print(cleaned_text)
-        subprocess.run(["wl-copy"], input=cleaned_text.encode("utf-8"))
-
-    except Image.UnidentifiedImageError:
-        print("Error: Could not read screenshot")
+        copy_text(cleaned_text)
     finally:
-        # Clean up temporary file
-        subprocess.run(["rm", screenshot_path])
+        try:
+            os.unlink(screenshot_path)
+        except OSError:
+            pass
 
 
 if __name__ == "__main__":
-    # Check for Tesseract
-    if not pytesseract.get_tesseract_version():
-        print("Tesseract OCR not found. Please install:")
-        print(" - macOS: brew install tesseract")
-        print(" - Linux: sudo apt install tesseract-ocr")
-        print(" - Windows: https://github.com/UB-Mannheim/tesseract/wiki")
-        sys.exit(1)
-
     ocr_from_screenshot()

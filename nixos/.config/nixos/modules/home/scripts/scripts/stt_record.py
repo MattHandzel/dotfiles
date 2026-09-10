@@ -110,8 +110,9 @@ def ffmpeg_input_cmd(backend: str, device: str) -> List[str]:
     """Return ffmpeg input args for the given backend/device."""
     if backend == "alsa":
         return ["-f", "alsa", "-i", device]
-    else:
-        return ["-f", "pulse", "-i", device]
+    if backend == "avfoundation":  # macOS: device is ":<audio index>", ":0" = default mic
+        return ["-f", "avfoundation", "-i", device]
+    return ["-f", "pulse", "-i", device]
 
 
 def extract_text_from_json(raw_bytes: bytes) -> str:
@@ -256,7 +257,7 @@ def main():
     )
     ap.add_argument("--server", default="http://127.0.0.1:47770")
     ap.add_argument("--language", default=None)
-    ap.add_argument("--backend", choices=["pulse", "alsa"], default="pulse")
+    ap.add_argument("--backend", choices=["pulse", "alsa", "avfoundation"], default="pulse")
     ap.add_argument("--device", default="default")
     ap.add_argument("--rate", type=int, default=16000)
     ap.add_argument("--channels", type=int, default=1)

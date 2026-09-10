@@ -17,6 +17,12 @@ arrives, so time-to-first-word stays a second or two regardless of length.
 
 Playback is one mpv instance on an IPC socket, so `read-aloud --toggle` from a
 second keybind pauses/resumes it, and `--stop` kills it.
+
+macOS: same flags, same pipeline. Selection comes from the Accessibility API
+(AXSelectedText) instead of the primary selection, the focused window from
+System Events, browser history from ~/Library/Application Support/zen|Firefox,
+the menu from `choose`, and when neither TTS server is reachable the built-in
+`say` voice is the last fallback so it never goes silent.
 """
 
 from __future__ import annotations
@@ -25,6 +31,7 @@ import argparse
 import glob
 import json
 import os
+import platform
 import re
 import shutil
 import socket
@@ -35,7 +42,11 @@ import tempfile
 import threading
 import urllib.request
 
-RUNTIME = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+DARWIN = platform.system() == "Darwin"
+RUNTIME = os.environ.get(
+    "XDG_RUNTIME_DIR",
+    os.path.expanduser("~/Library/Caches") if DARWIN else f"/run/user/{os.getuid()}",
+)
 IPC_SOCK = os.path.join(RUNTIME, "read-aloud.sock")
 STATE_DIR = os.path.join(RUNTIME, "read-aloud")
 
@@ -53,6 +64,7 @@ SPEED = os.environ.get("READ_ALOUD_SPEED", "1.0")
 CHUNK_CHARS = 600
 
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) read-aloud"
+SAY_VOICE = os.environ.get("READ_ALOUD_SAY_VOICE", "")  # macOS `say -v`; empty = system default
 
 
 def notify(title: str, body: str = "", urgency: str = "normal") -> None:
@@ -89,8 +101,29 @@ def stop_playback() -> None:
 # ---------------------------------------------------------------------------
 # Resolving what to read
 # ---------------------------------------------------------------------------
+def _osascript(script: str, timeout: int = 5) -> str:
+    try:
+        out = subprocess.run(["/usr/bin/osascript", "-e", script], capture_output=True, timeout=timeout)
+        return out.stdout.decode("utf-8", "replace").strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
 def wl_paste(primary: bool = False) -> str:
-    cmd = ["wl-paste", "-n"] + (["-p"] if primary else [])
+    if DARWIN:
+        if primary:
+            # No primary selection on macOS: ask Accessibility for the focused
+            # element's selected text (native apps + Zen/Firefox; Electron: usually "").
+            return _osascript(
+                'tell application "System Events"\n'
+                "set p to first process whose frontmost is true\n"
+                "try\n"
+                'return value of attribute "AXSelectedText" of (value of attribute "AXFocusedUIElement" of p)\n'
+                "on error\nreturn \"\"\nend try\nend tell"
+            )
+        cmd = ["pbpaste"]
+    else:
+        cmd = ["wl-paste", "-n"] + (["-p"] if primary else [])
     try:
         out = subprocess.run(cmd, capture_output=True, timeout=5)
         return out.stdout.decode("utf-8", "replace").strip()
@@ -99,6 +132,13 @@ def wl_paste(primary: bool = False) -> str:
 
 
 def focused_window() -> tuple[str, str]:
+    if DARWIN:
+        app = _osascript('tell application "System Events" to get name of first process whose frontmost is true')
+        title = _osascript(
+            'tell application "System Events" to tell (first process whose frontmost is true)\n'
+            "try\nreturn name of front window\non error\nreturn \"\"\nend try\nend tell"
+        )
+        return app, title
     try:
         out = subprocess.run(
             ["hyprctl", "activewindow", "-j"], capture_output=True, timeout=5
@@ -121,9 +161,15 @@ def url_from_browser_history(title: str) -> str:
     if not page:
         return ""
 
-    dbs = glob.glob(os.path.expanduser("~/.zen/*/places.sqlite")) + glob.glob(
-        os.path.expanduser("~/.mozilla/firefox/*/places.sqlite")
-    )
+    patterns = [
+        "~/.zen/*/places.sqlite",
+        "~/.mozilla/firefox/*/places.sqlite",
+        "~/Library/Application Support/zen/*/places.sqlite",
+        "~/Library/Application Support/zen/Profiles/*/places.sqlite",
+        "~/Library/Application Support/Firefox/Profiles/*/places.sqlite",
+    ]
+    dbs = [d for pat in patterns for d in glob.glob(os.path.expanduser(pat))]
+    dbs.sort(key=lambda d: os.path.getmtime(d), reverse=True)  # live profile first
     for db in dbs:
         # The live DB is locked by the running browser; read a copy.
         with tempfile.NamedTemporaryFile(suffix=".sqlite") as tmp:
@@ -161,7 +207,7 @@ def extract_article(url: str) -> tuple[str, str]:
     return title, text.strip()
 
 
-BROWSER_CLASSES = ("zen", "firefox", "navigator", "chrom", "brave", "vivaldi", "librewolf")
+BROWSER_CLASSES = ("zen", "firefox", "navigator", "chrom", "brave", "vivaldi", "librewolf", "safari", "arc")
 
 
 def is_browser(cls: str) -> bool:
@@ -280,8 +326,35 @@ def synthesize(text: str, path: str) -> bool:
             fh.write(audio)
         return True
 
+    if DARWIN and _say_to_mp3(text, path):
+        return True
+
     notify("read-aloud: TTS failed", last_error, "critical")
     return False
+
+
+def _say_to_mp3(text: str, path: str) -> bool:
+    """macOS fallback: the built-in `say` voice, transcoded to mp3 so the chunk
+    stitches with the server-made ones (all parts share one codec)."""
+    aiff = path + ".aiff"
+    cmd = ["/usr/bin/say", "-r", str(int(175 * float(SPEED))), "-o", aiff]
+    if SAY_VOICE:
+        cmd += ["-v", SAY_VOICE]
+    try:
+        subprocess.run(cmd, input=text.encode("utf-8"), check=True, capture_output=True)
+        subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", aiff, "-codec:a", "libmp3lame", "-q:a", "4", path],
+            check=True,
+            capture_output=True,
+        )
+        return True
+    except (OSError, subprocess.CalledProcessError):
+        return False
+    finally:
+        try:
+            os.unlink(aiff)
+        except OSError:
+            pass
 
 
 def play(title: str, chunks: list[str], tee_path: str | None = None) -> None:
@@ -482,15 +555,16 @@ def run_menu() -> int:
     ]
 
     labels = "\n".join(label for label, _ in entries)
+    picker = ["choose", "-n", "12", "-p", "read-aloud  "] if DARWIN else ["fuzzel", "--dmenu", "--prompt", "read-aloud  "]
     try:
         proc = subprocess.run(
-            ["fuzzel", "--dmenu", "--prompt", "read-aloud  "],
+            picker,
             input=labels.encode(),
             capture_output=True,
             timeout=120,
         )
     except (OSError, subprocess.SubprocessError):
-        notify("read-aloud: menu failed", "fuzzel not available", "critical")
+        notify("read-aloud: menu failed", f"{picker[0]} not available", "critical")
         return 1
 
     action = dict(entries).get(proc.stdout.decode().strip())
