@@ -11,6 +11,7 @@
     ./compat-shims.nix # wl-copy/notify-send/xdg-open/... under their Linux names
     ./zen-config.nix # Zen prefs, macOS profile root
     ./automations.nix # calendar-agenda / disk-space-alert (system services on NixOS)
+    ./sketchybar.nix # the status bar (waybar's replacement): config + launchd agent
   ];
 
   # Home Manager's syncthing module supports darwin (it emits a launchd agent).

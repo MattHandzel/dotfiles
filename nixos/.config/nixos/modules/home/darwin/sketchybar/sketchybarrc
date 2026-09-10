@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# SketchyBar — the waybar of this Mac.
+#
+# One flat strip along the top, Catppuccin Mocha on a solid base ground, no
+# gaps, no rounded bar corners (gaps 0 everywhere else, the bar should sit
+# flush too). The only saturated colour is the focused workspace, in Mauve, so
+# the eye lands there first. Everything else is text-on-base with a soft
+# accent glyph per item so the right side scans without reading.
+#
+#   left    workspaces (AeroSpace)  ·  front app + window title
+#   centre  clock  ·  next calendar event
+#   right   cpu  mem  battery  wifi  volume  tailscale
+#
+# Layout of this directory:
+#   sketchybarrc   this file — bar geometry, defaults, items
+#   colors.sh      the Mocha palette as 0xAARRGGBB
+#   plugins/*.sh   one script per item; each writes back with `sketchybar --set`
+#
+# Owned by modules/home/darwin/sketchybar.nix in the flake; edits here are
+# mirrored there. Reload with `sketchybar --reload`.
+
+CONFIG_DIR="${CONFIG_DIR:-$HOME/.config/sketchybar}"
+PLUGIN_DIR="$CONFIG_DIR/plugins"
+source "$CONFIG_DIR/colors.sh"
+
+FONT="JetBrainsMono Nerd Font"
+APP_FONT="sketchybar-app-font"
+
+# ── the bar ───────────────────────────────────────────────────────────────
+# The built-in display has a 32pt notch strip that macOS never gives to
+# windows; the bar fills it exactly so there is no dead band above the tiles.
+# External displays get the waybar height (30). The bar is solid base: it is a
+# frame, not a floating island.
+sketchybar --bar \
+  position=top \
+  height=30 \
+  notch_display_height=32 \
+  notch_width=200 \
+  color="$BASE" \
+  border_width=0 \
+  corner_radius=0 \
+  margin=0 \
+  y_offset=0 \
+  padding_left=6 \
+  padding_right=6 \
+  blur_radius=0 \
+  sticky=on \
+  topmost=off \
+  shadow=off \
+  display=all
+
+# ── defaults every item starts from ───────────────────────────────────────
+sketchybar --default \
+  updates=when_shown \
+  drawing=on \
+  icon.font="$FONT:Bold:13.0" \
+  icon.color="$SUBTEXT0" \
+  icon.padding_left=6 \
+  icon.padding_right=3 \
+  label.font="$FONT:Medium:12.0" \
+  label.color="$TEXT" \
+  label.padding_left=3 \
+  label.padding_right=6 \
+  padding_left=2 \
+  padding_right=2 \
+  background.color="$TRANSPARENT" \
+  background.corner_radius=5 \
+  background.height=22 \
+  background.drawing=off
+
+# ── events ────────────────────────────────────────────────────────────────
+# AeroSpace fires this from `exec-on-workspace-change` in ~/.aerospace.toml
+# with FOCUSED_WORKSPACE in the environment.
+sketchybar --add event aerospace_workspace_change
+
+# ═══════════════════════════════ LEFT ═════════════════════════════════════
+
+# Workspaces are dynamic: AeroSpace names them (1-20, slack, obsidian, …) and a
+# named one only exists while it has windows. So the items themselves are
+# created and pruned by plugins/aerospace.sh on every change; this hidden item
+# is the one that listens. It also refreshes when the front app changes (a
+# window moved) and on a slow timer as a safety net.
+sketchybar --add item aerospace.updater left \
+  --set aerospace.updater drawing=off \
+    updates=on \
+    update_freq=30 \
+    script="$PLUGIN_DIR/aerospace.sh" \
+  --subscribe aerospace.updater aerospace_workspace_change front_app_switched
+
+# A fixed anchor: workspace items are always inserted *before* this, so the
+# order left→right survives adds and removes.
+sketchybar --add item front_app left \
+  --set front_app \
+    updates=on \
+    update_freq=4 \
+    icon.font="$APP_FONT:Regular:15.0" \
+    icon.color="$TEXT" \
+    icon.padding_left=10 \
+    icon.padding_right=6 \
+    label.font="$FONT:Medium:12.0" \
+    label.color="$SUBTEXT1" \
+    label.max_chars=56 \
+    script="$PLUGIN_DIR/front_app.sh" \
+  --subscribe front_app front_app_switched aerospace_workspace_change
+
+# ══════════════════════════════ CENTRE ════════════════════════════════════
+
+# Clock: `EEE d MMM  HH:mm` — what the laptop showed, minus the seconds.
+sketchybar --add item clock center \
+  --set clock \
+    update_freq=10 \
+    icon="󰃭" \
+    icon.color="$MAUVE" \
+    label.font="$FONT:SemiBold:12.5" \
+    label.padding_right=10 \
+    script="$PLUGIN_DIR/clock.sh"
+
+# Today's next event. Reads the read-only Google agenda the calendar-agenda
+# launchd agent writes (same file waybar read on the laptop); falls back to
+# icalBuddy against Calendar.app; hides itself when there is nothing.
+sketchybar --add item calendar center \
+  --set calendar \
+    update_freq=120 \
+    icon="󰸗" \
+    icon.color="$TEAL" \
+    label.color="$SUBTEXT1" \
+    label.max_chars=44 \
+    click_script="open -a Morgen" \
+    script="$PLUGIN_DIR/calendar.sh"
+
+# ══════════════════════════════ RIGHT ═════════════════════════════════════
+# Right items are added right-to-left (first added = rightmost), so this
+# reads: tailscale · volume · wifi · battery · memory · cpu on screen.
+
+# Tailscale: a dot. Green when the tailnet is up, red when it is not.
+sketchybar --add item tailscale right \
+  --set tailscale \
+    update_freq=30 \
+    icon="●" \
+    icon.font="$FONT:Bold:9.0" \
+    icon.padding_left=8 \
+    icon.padding_right=6 \
+    label.drawing=off \
+    click_script="open -a Tailscale" \
+    script="$PLUGIN_DIR/tailscale.sh"
+
+sketchybar --add item volume right \
+  --set volume \
+    icon.color="$LAVENDER" \
+    icon.font="$FONT:Bold:14.0" \
+    icon.width=22 \
+    icon.align=center \
+    script="$PLUGIN_DIR/volume.sh" \
+  --subscribe volume volume_change
+
+sketchybar --add item wifi right \
+  --set wifi \
+    update_freq=15 \
+    icon.color="$BLUE" \
+    label.max_chars=18 \
+    click_script="open 'x-apple.systempreferences:com.apple.wifi-settings-extension'" \
+    script="$PLUGIN_DIR/wifi.sh" \
+  --subscribe wifi wifi_change system_woke
+
+sketchybar --add item battery right \
+  --set battery \
+    update_freq=60 \
+    icon.color="$GREEN" \
+    icon.font="$FONT:Bold:14.0" \
+    script="$PLUGIN_DIR/battery.sh" \
+  --subscribe battery power_source_change system_woke
+
+sketchybar --add item memory right \
+  --set memory \
+    update_freq=10 \
+    icon="󰾆" \
+    icon.color="$YELLOW" \
+    script="$PLUGIN_DIR/memory.sh"
+
+sketchybar --add item cpu right \
+  --set cpu \
+    update_freq=5 \
+    icon="󰍛" \
+    icon.color="$PEACH" \
+    click_script="open -na kitty --args --title btop -e btop" \
+    script="$PLUGIN_DIR/cpu.sh"
+
+# ── go ────────────────────────────────────────────────────────────────────
+sketchybar --update
+
+# Draw the workspaces once now rather than waiting for the first switch.
+"$PLUGIN_DIR/aerospace.sh"

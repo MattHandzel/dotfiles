@@ -46,7 +46,11 @@
       upgrade = false;
       # Anything installed by hand and not listed here gets removed. That is the
       # point: the list below is the truth about what is on this machine.
-      cleanup = "zap";
+      # LOCAL, UNCOMMITTED MIGRATION OVERRIDE for the first switch.
+      # superhuman, linear, morgen, spotify and claude-code are installed but
+      # absent from the cask list below; "zap" would uninstall them and delete
+      # their application data. Revert to "zap" once the list is reconciled.
+      cleanup = "none";
     };
 
     taps = builtins.attrNames config.nix-homebrew.taps;
@@ -104,11 +108,23 @@
       "shottr" # OCR + annotated screenshots (satty + ocr-screenshot)
       "jankyborders" # focused-window border in Catppuccin Mauve
       "ice" # hide menu-bar clutter
+
+      # ── the status bar's dependencies (modules/home/darwin/sketchybar.nix) ──
+      "sf-symbols" # Apple's glyph set, for the odd item the Nerd Font lacks
+      "font-sketchybar-app-font" # per-app glyphs beside each workspace number
     ];
 
     # Syncthing is deliberately NOT a cask: Home Manager's services.syncthing
     # runs it on darwin too, and having both fight over port 8384 is a
     # long-running, hard-to-see failure.
-    brews = [];
+    brews = [
+      # The status bar. A formula, not a cask: it is a bare binary that draws
+      # its own window over the notch strip. Config + launchd agent are in
+      # modules/home/darwin/sketchybar.nix.
+      "FelixKratz/formulae/sketchybar"
+      # Reads Calendar.app for the bar's "next event" item when the read-only
+      # Google agenda file is missing or stale.
+      "ical-buddy"
+    ];
   };
 }
