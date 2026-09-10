@@ -8,7 +8,24 @@
 # AeroSpace itself is a cask (nikitabobko/tap/aerospace, see
 # modules/darwin/homebrew.nix) — it needs Accessibility permission, which a
 # Nix-built unsigned binary cannot hold.
-_: {
+#
+# 2026-09-10: the TOML below is a verbatim port of the ~/.aerospace.toml Matt
+# tuned live that morning — the [exec] PATH, the focus-app/dwindle-open
+# launchers, and one workspace per hotkey app via [[on-window-detected]]. The
+# two helper scripts the bindings call are packaged in aerospace-helpers.nix so
+# they are on PATH from the flake and not only from ~/.local/bin.
+{
+  config,
+  pkgs,
+  ...
+}: let
+  helpers = import ./aerospace-helpers.nix {inherit pkgs;};
+in {
+  home.packages = [
+    helpers.focus-app
+    helpers.dwindle-open
+  ];
+
   home.file.".aerospace.toml".text = ''
     # AeroSpace — the Hyprland replacement.
     #
@@ -74,6 +91,9 @@ _: {
     outer.top = 0
     outer.right = 0
 
+    [exec]
+    env-vars = { PATH = '/opt/homebrew/bin:${config.home.homeDirectory}/.local/bin:/etc/profiles/per-user/matth/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin' }
+
     [mode.main.binding]
 
     # ── focus / move / resize ──────────────────────────────────────────────────
@@ -137,9 +157,9 @@ _: {
     # ── launchers ──────────────────────────────────────────────────────────────
     # Super+T on Linux was `kitty -e tmux -L hypr new-session`; keep the socket name
     # so tmux-sessionizer and the M-n binding attach to the same server.
-    alt-t = 'exec-and-forget open -na kitty --args -e tmux -L hypr new-session'
+    alt-t = 'exec-and-forget dwindle-open open -na kitty --args -e tmux -L hypr new-session'
     alt-shift-t = ['layout floating', 'exec-and-forget open -na kitty']
-    alt-b = 'exec-and-forget open -a "Zen"'
+    alt-b = 'exec-and-forget dwindle-open open -a "Arc"'
 
     # Raycast takes Vicinae's slot (alt-d), plus emoji and clipboard history on the
     # same letters they had under Hyprland. These are raycast:// deeplinks rather
@@ -153,37 +173,40 @@ _: {
     # On Linux these were Super+Alt+<letter>. Here Option already plays the role of
     # Super, so the second modifier is Ctrl: alt-ctrl-<letter>. `open -a` is
     # focus-or-launch natively, which is exactly what focus_app.sh emulated.
-    alt-ctrl-c = 'exec-and-forget open -a "Google Calendar"'  # Google Calendar
-    alt-ctrl-a = 'exec-and-forget open -a "Anki"'  # Anki
-    alt-ctrl-o = 'exec-and-forget open -a "Obsidian"'  # Obsidian
-    alt-ctrl-p = 'exec-and-forget open -a "PrusaSlicer"'  # PrusaSlicer
-    alt-ctrl-k = 'exec-and-forget open -a "Slack"'  # Slack
-    alt-ctrl-d = 'exec-and-forget open -a "Discord"'  # Discord
-    alt-ctrl-m = 'exec-and-forget open -a "Superhuman"'  # Superhuman
-    alt-ctrl-g = 'exec-and-forget open -a "GIMP"'  # GIMP
-    alt-ctrl-e = 'exec-and-forget open -a "Finder"'  # Finder
-    alt-ctrl-i = 'exec-and-forget open -a "WhatsApp"'  # WhatsApp
-    alt-ctrl-y = 'exec-and-forget open -a "Gemini"'  # Gemini
-    alt-ctrl-u = 'exec-and-forget open -a "UltiMaker Cura"'  # Cura
-    alt-ctrl-h = 'exec-and-forget open -a "Beeper"'  # Beeper
-    alt-ctrl-s = 'exec-and-forget open -a "Spotify"'  # Spotify
-    alt-ctrl-t = 'exec-and-forget open -a "Tasker"'  # tasker
-    alt-ctrl-l = 'exec-and-forget open -a "Linear"'  # Linear
-    alt-ctrl-w = 'exec-and-forget open -a "Wispr Flow"'  # Wispr Flow
-    alt-ctrl-r = 'exec-and-forget open -a "Raycast"'  # Raycast
-    alt-ctrl-z = 'exec-and-forget open -a "Zoom"'  # zoom.us
 
     # Terminal-hosted tools keep their Linux letters but launch a kitty window
     # directly rather than going through the btop-gui/yazi-gui/notetaker wrappers,
     # which are Hyprland-specific.
-    alt-ctrl-b = 'exec-and-forget open -na kitty --args --title btop -e btop'
-    alt-ctrl-f = 'exec-and-forget open -na kitty --args --title yazi -e yazi'
-    alt-ctrl-n = 'exec-and-forget open -na kitty --args --title notetaker -e nvim /Users/matth/Obsidian/Main'
 
     # ── modes ──────────────────────────────────────────────────────────────────
     alt-shift-space = 'mode leader'
     alt-g = 'mode translate'
     alt-shift-g = 'mode translate-alt'
+
+    # App hotkeys, ported 1:1 from the laptop (SUPER ALT <key> = focus_app <app> name:<workspace>)
+    alt-ctrl-c = 'exec-and-forget focus-app "Morgen" calendar'
+    alt-ctrl-u = 'exec-and-forget focus-app "UltiMaker Cura" cura'
+    alt-ctrl-o = 'exec-and-forget focus-app "Obsidian" obsidian'
+    alt-ctrl-k = 'exec-and-forget focus-app "Slack" slack'
+    alt-ctrl-e = 'exec-and-forget focus-app "Finder" dolphin'
+    alt-ctrl-i = 'exec-and-forget focus-app "WhatsApp" wasistlos'
+    alt-ctrl-a = 'exec-and-forget focus-app "Anki" anki'
+    alt-ctrl-p = 'exec-and-forget focus-app "PrusaSlicer" PrusaSlicer'
+    alt-ctrl-d = 'exec-and-forget focus-app "Discord" discord'
+    alt-ctrl-m = 'exec-and-forget focus-app "Superhuman" superhuman'
+    alt-ctrl-g = 'exec-and-forget focus-app "GIMP" gimp'
+    alt-ctrl-y = 'exec-and-forget focus-app "Gemini" gemini'
+    alt-ctrl-h = 'exec-and-forget focus-app "Beeper Desktop" beeper'
+    alt-ctrl-s = 'exec-and-forget focus-app "Spotify" spotify'
+    alt-ctrl-t = 'exec-and-forget focus-app "Tasker" tasker'
+    alt-ctrl-l = 'exec-and-forget focus-app "Linear" linear'
+    alt-ctrl-z = 'exec-and-forget focus-app "zoom.us" zoom'
+    alt-ctrl-b = 'exec-and-forget focus-app --title "^btop" btop -- open -na kitty --args --title btop -e btop'
+    alt-ctrl-f = 'exec-and-forget focus-app --title "^yazi" yazi -- open -na kitty --args --title yazi -e yazi'
+    alt-ctrl-n = 'exec-and-forget focus-app --title "^notetaker" notetaker -- open -na kitty --args --title notetaker -e nvim ${config.home.homeDirectory}/Obsidian/Main'
+    alt-ctrl-w = 'exec-and-forget focus-app "Wispr Flow" wispr'
+    alt-ctrl-v = 'exec-and-forget smart-clipboard-picker'
+    alt-ctrl-r = 'exec-and-forget open -a Raycast'
 
     [mode.leader.binding]
     # N-minute timer, the SUPER+SHIFT+SPACE leader submap from Hyprland.
@@ -207,5 +230,93 @@ _: {
     [mode.translate-alt.binding]
     enter = ['exec-and-forget open -g "raycast://extensions/raycast/translator/translate?fallbackText="', 'mode main']
     esc = 'mode main'
+
+    # one workspace per hotkey app (laptop: windowrule = workspace name:<ws>, match:class/title)
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Morgen$'
+    run = 'move-node-to-workspace calendar'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^UltiMaker\ Cura$'
+    run = 'move-node-to-workspace cura'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Obsidian$'
+    run = 'move-node-to-workspace obsidian'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Slack$'
+    run = 'move-node-to-workspace slack'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Finder$'
+    run = 'move-node-to-workspace dolphin'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^WhatsApp$'
+    run = 'move-node-to-workspace wasistlos'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Anki$'
+    run = 'move-node-to-workspace anki'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^PrusaSlicer$'
+    run = 'move-node-to-workspace PrusaSlicer'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Discord$'
+    run = 'move-node-to-workspace discord'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Superhuman$'
+    run = 'move-node-to-workspace superhuman'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^GIMP$'
+    run = 'move-node-to-workspace gimp'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Gemini$'
+    run = 'move-node-to-workspace gemini'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Beeper\ Desktop$'
+    run = 'move-node-to-workspace beeper'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Spotify$'
+    run = 'move-node-to-workspace spotify'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Tasker$'
+    run = 'move-node-to-workspace tasker'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Linear$'
+    run = 'move-node-to-workspace linear'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^zoom\.us$'
+    run = 'move-node-to-workspace zoom'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^kitty$'
+    if.window-title-regex-substring = '^btop'
+    run = 'move-node-to-workspace btop'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^kitty$'
+    if.window-title-regex-substring = '^yazi'
+    run = 'move-node-to-workspace yazi'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^kitty$'
+    if.window-title-regex-substring = '^notetaker'
+    run = 'move-node-to-workspace notetaker'
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Claude$'
+    run = 'move-node-to-workspace claude'
   '';
 }
