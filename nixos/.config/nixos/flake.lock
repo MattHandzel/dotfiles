@@ -966,14 +966,18 @@
     "project-asset-generator-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1775801793,
-        "narHash": "sha256-ZmqecSgy1AjbtmQfiw8HbF7wcjmAdJjx6opC1/YU2Sw=",
-        "path": "/home/matth/Projects/project-asset-generator",
-        "type": "path"
+        "lastModified": 1789012938,
+        "narHash": "sha256-uidUj3ZIu8Dp6v9mICUuoxnkNZhiwjEoaIzz0SgISSU=",
+        "ref": "main",
+        "rev": "c56922099c6007bd81810fcdd6864ed3d59c1635",
+        "revCount": 4,
+        "type": "git",
+        "url": "ssh://git@github.com/MattHandzel/project-asset-generator"
       },
       "original": {
-        "path": "/home/matth/Projects/project-asset-generator",
-        "type": "path"
+        "ref": "main",
+        "type": "git",
+        "url": "ssh://git@github.com/MattHandzel/project-asset-generator"
       }
     },
     "root": {
@@ -1035,14 +1039,18 @@
         ]
       },
       "locked": {
-        "lastModified": 1774250351,
-        "narHash": "sha256-Q7p22V7EOvJrjkWaHfvRnSVJUjoLvFV02Zm10qI9Uvk=",
-        "path": "/home/matth/Projects/SecondBrainSearch",
-        "type": "path"
+        "lastModified": 1789018592,
+        "narHash": "sha256-TwKIyoB1JAPKS1t2iiLann08KdFPXMwrU8K20CCq8k4=",
+        "ref": "main",
+        "rev": "478293d842fe39c3e0667476c94913c84c5beb10",
+        "revCount": 1,
+        "type": "git",
+        "url": "ssh://git@github.com/MattHandzel/SecondBrainSearch"
       },
       "original": {
-        "path": "/home/matth/Projects/SecondBrainSearch",
-        "type": "path"
+        "ref": "main",
+        "type": "git",
+        "url": "ssh://git@github.com/MattHandzel/SecondBrainSearch"
       }
     },
     "sops-nix": {
@@ -1218,14 +1226,18 @@
         ]
       },
       "locked": {
-        "lastModified": 1778618652,
-        "narHash": "sha256-xBvk8aZbc4AxPq5eGDCG32dLDTA4FqG0kKmFc9m32sI=",
-        "path": "/home/matth/Projects/SecondBrainSpeech",
-        "type": "path"
+        "lastModified": 1789018592,
+        "narHash": "sha256-Lk2yNujk/3YOBmy/ixecO0pyvvhrVjKRcsJvvsa5OEI=",
+        "ref": "main",
+        "rev": "69860cad7dbf744f0b1adf8f327d2ab2449c4013",
+        "revCount": 1,
+        "type": "git",
+        "url": "ssh://git@github.com/MattHandzel/SecondBrainSpeech"
       },
       "original": {
-        "path": "/home/matth/Projects/SecondBrainSpeech",
-        "type": "path"
+        "ref": "main",
+        "type": "git",
+        "url": "ssh://git@github.com/MattHandzel/SecondBrainSpeech"
       }
     },
     "vicinae": {

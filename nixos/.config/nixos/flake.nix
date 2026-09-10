@@ -86,24 +86,23 @@
     };
 
     second-brain-search = {
-      url = "path:/home/matth/Projects/SecondBrainSearch";
+      url = "git+ssh://git@github.com/MattHandzel/SecondBrainSearch?ref=main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     text-to-speech-service = {
-      url = "path:/home/matth/Projects/SecondBrainSpeech";
+      url = "git+ssh://git@github.com/MattHandzel/SecondBrainSpeech?ref=main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     project-asset-generator-src = {
-      url = "path:/home/matth/Projects/project-asset-generator";
+      url = "git+ssh://git@github.com/MattHandzel/project-asset-generator?ref=main";
       flake = false;
     };
 
-    # Real remote (git@github.com:MattHandzel/gdoc-sync.git), not a `path:` input,
-    # so the flake evaluates on a machine that is not this laptop. The other three
-    # project inputs still need their GitHub repos created — see
-    # docs/mac-migration/TODO-path-inputs.md for the exact remaining diff.
+    # All four project inputs are real git remotes rather than `path:` inputs,
+    # so the flake evaluates on a machine that is not this laptop. `nix flake
+    # metadata` must show no type:path nodes.
     gdoc-sync-src = {
       url = "git+ssh://git@github.com/MattHandzel/gdoc-sync?ref=main";
       flake = false;
