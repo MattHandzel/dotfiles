@@ -54,6 +54,13 @@ in {
         unbind r
 
         set -g status-position top
+        # Catppuccin v2 leaves the status line to us (the @catppuccin_status_*
+        # strings only exist after the plugin has loaded, hence here and not in
+        # the plugin's own extraConfig). Session pill on the left, the window
+        # list, and nothing else — like the laptop.
+        set -g status-left "#{E:@catppuccin_status_session}"
+        set -g status-left-length 60
+        set -g status-right ""
         bind-key h select-pane -L
         bind-key j select-pane -D
         bind-key k select-pane -U
@@ -140,6 +147,12 @@ in {
           set -g @catppuccin_window_right_separator " "
           set -g @catppuccin_status_right_separator " "
           set -g @catppuccin_meetings_text "#($HOME/.config/tmux/scripts/cal.sh)"
+          # v2 names (the *_separator options above are v0.x and are ignored):
+          # window tabs show the window NAME, current one filled Mauve.
+          set -g @catppuccin_window_status_style "rounded"
+          set -g @catppuccin_window_text " #W"
+          set -g @catppuccin_window_current_text " #W"
+          set -g @catppuccin_window_number_position "left"
         '';
       }
     ];

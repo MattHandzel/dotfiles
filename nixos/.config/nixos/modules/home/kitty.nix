@@ -16,7 +16,8 @@
       {
         confirm_os_window_close = 0;
         dynamic_background_opacity = "no";
-        window_padding_width = 10;
+        # 6, not 10: with gaps 0 the tile edge is the frame, and 10 read as a gap.
+        window_padding_width = 6;
         scrollback_lines = 20000;
         enable_audio_bell = false;
         mouse_hide_wait = 60;
@@ -29,7 +30,7 @@
         ## Advanced cursor customization
         cursor_shape = "beam";
         cursor_beam_thickness = "1.5";
-        cursor_blink_interval = 0.5;
+        cursor_blink_interval = 0; # a beam that holds still
         cursor_stop_blinking_after = 15.0;
 
         ## URL handling improvements
@@ -77,6 +78,12 @@
         macos_option_as_alt = "yes";
         # AeroSpace owns window placement; kitty must not also restore its own.
         macos_quit_when_last_window_closed = "yes";
+        # The laptop ran kitty at 0.80 through a Hyprland window rule. macOS has
+        # no compositor rule, so kitty does it itself: 0.94 with the system blur
+        # behind it keeps text crisp on a busy wallpaper and still lets the
+        # Mocha ground breathe.
+        background_opacity = "0.94";
+        background_blur = 20;
       };
 
     keybindings = {
