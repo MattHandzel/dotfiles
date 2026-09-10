@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(hyprctl:*)",
+      "Bash(libinput list-devices:*)",
+      "Bash(rebuild)",
+      "Read(//home/matth/.config/**)",
+      "Bash(echo $HOST)",
+      "Read(//dev/input/**)",
+      "Bash(dmesg:*)",
+      "Bash(sudo dmesg:*)",
+      "Bash(timeout:*)",
+      "Read(//proc/bus/input/**)",
+      "Read(//sys/**)",
+      "Bash(cat:*)",
+      "Bash(sudo tee:*)",
+      "Read(//proc/**)",
+      "Bash(lsmod:*)",
+      "Bash(nix flake check:*)",
+      "Bash(systemctl status:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

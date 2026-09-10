@@ -164,8 +164,10 @@ in {
         ++ [
           rebootState
           authCodeWatcher
-          (import ./scripts/link-search/default.nix {inherit pkgs;})
-          (import ./scripts/read-aloud/default.nix {inherit pkgs;})
+          # link-search and read-aloud are Linux-only: their runtimeInputs are
+          # cliphist, wl-clipboard, hyprland, fuzzel and libnotify, none of which
+          # build on darwin. They live in the isLinux block below. Porting them
+          # means routing through platform.nix (clip-copy / clip-paste / notify).
         ]
         ++ (with pkgs; [
           bc # for brightness script
@@ -180,7 +182,11 @@ in {
 
     (lib.optionalAttrs isLinux {
       home.packages =
-        (with pkgs; [
+        [
+          (import ./scripts/link-search/default.nix {inherit pkgs;})
+          (import ./scripts/read-aloud/default.nix {inherit pkgs;})
+        ]
+        ++ (with pkgs; [
           ddcutil # for brightness script
           socat # focus-mode-enforcer reads the Hyprland event socket
           # quick capture

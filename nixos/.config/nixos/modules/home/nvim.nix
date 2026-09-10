@@ -47,8 +47,9 @@
       yaml-language-server
       nixd
       bash-language-server
-      nodePackages.typescript-language-server
-      nodePackages.prettier
+      # `nodePackages` was removed from nixpkgs; both are top-level now.
+      typescript-language-server
+      prettier
       pyright
       alejandra
 

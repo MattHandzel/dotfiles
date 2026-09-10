@@ -125,18 +125,23 @@
     LaunchServices.LSQuarantine = false;
     SoftwareUpdate.AutomaticallyInstallMacOSUpdates = false;
 
-    # Firewall on with stealth mode (Phase 8 security defaults).
-    alf = {
-      globalstate = 1;
-      stealthenabled = 1;
-    };
-
     CustomUserPreferences."com.apple.symbolichotkeys".AppleSymbolicHotKeys = {
       # 64 = Cmd+Space (Spotlight). Disabled so Raycast can take the slot.
       # macOS only re-reads this at login, so the first switch needs a logout
       # (or one manual toggle in System Settings) before it takes effect.
       "64".enabled = false;
     };
+  };
+
+  # Firewall on with stealth mode (Phase 8 security defaults). `system.defaults.alf`
+  # was removed from nix-darwin and is now a hard assertion failure, not a warning.
+  # globalstate = 1 meant "on, allowing signed and explicitly permitted services",
+  # which is `enable` without `blockAllIncoming`; stealthenabled = 1 is
+  # `enableStealthMode`.
+  networking.applicationFirewall = {
+    enable = true;
+    blockAllIncoming = false;
+    enableStealthMode = true;
   };
 
   # Touch ID instead of typing the password for every sudo. This is the macOS
