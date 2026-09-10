@@ -32,4 +32,26 @@
   # NOTE: with nix.enable = false, do NOT set ids.gids.nixbld — nix-darwin only
   # needs it when it is managing the build group itself.
   nix.enable = false;
+
+  # MIGRATION OVERRIDE — Matt's call to lift, not a lane's.
+  #
+  # nix-homebrew refuses to adopt the Homebrew that Track A already installed:
+  #   "An existing /opt/homebrew/Library/Homebrew is in the way"
+  # and offers `nix-homebrew.autoMigrate = true`, which DELETES the existing
+  # installation (keeping the Cellar/Caskroom) and replaces it with the
+  # nix-managed checkout.
+  #
+  # Every cask on this machine — Zen, Slack, Superhuman, Obsidian, Karabiner,
+  # the whole Track A set — came from that installation. Deleting and rebuilding
+  # it unattended, overnight, with no one able to answer a dialog, is not a
+  # trade worth making to gain declarative brew on night one. Everything else in
+  # this configuration activates fine without it.
+  #
+  # To adopt Homebrew later: drop these two lines, set
+  # `nix-homebrew.autoMigrate = true`, and re-switch while watching it. Until
+  # then the cask/brew lists in modules/darwin/homebrew.nix are the declared
+  # truth but are not applied; `cleanup = "none"` there keeps the first
+  # managed run from deleting anything.
+  nix-homebrew.enable = lib.mkForce false;
+  homebrew.enable = lib.mkForce false;
 }
