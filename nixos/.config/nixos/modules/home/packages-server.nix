@@ -27,7 +27,7 @@
     yazi
     yt-dlp-light
     xxd
-    inputs.alejandra.defaultPackage.${system}
+    alejandra # nixpkgs build; the pinned alejandra/3.0.0 input 403s on crates.io
 
     # C / C++
     gcc

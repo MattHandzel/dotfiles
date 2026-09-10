@@ -207,7 +207,10 @@
       } "deadnix ${self} && touch $out";
 
       format = pkgs.runCommand "alejandra-check" {
-        nativeBuildInputs = [inputs.alejandra.packages.${system}.default];
+        # nixpkgs alejandra (4.0.0), not the pinned alejandra/3.0.0 flake input:
+        # that 2022 input fetches its crates from the old
+        # crates.io/api/v1/crates/<c>/<v>/download URL, which now answers 403.
+        nativeBuildInputs = [pkgs.alejandra];
       } "alejandra --check ${self} && touch $out";
     };
   in {

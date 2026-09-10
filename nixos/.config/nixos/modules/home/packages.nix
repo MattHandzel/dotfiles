@@ -162,7 +162,7 @@
     luarocks-nix
     nix-prefetch-github
     nix-index
-    inputs.alejandra.defaultPackage.${pkgs.stdenv.hostPlatform.system}
+    alejandra # nixpkgs build; the pinned alejandra/3.0.0 input 403s on crates.io
 
     # ── AI CLIs ──
     gemini-cli
