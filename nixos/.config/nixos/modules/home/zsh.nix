@@ -1,11 +1,11 @@
 {
-  hostname,
   config,
   pkgs,
   host,
   lib,
   ...
 }: let
+  inherit (pkgs.stdenv.hostPlatform) isDarwin isLinux;
   sharedVariables = import ../../shared_variables.nix;
   transcribe_file_script = pkgs.writeShellScript "transcribe_file.sh" ''
     #!/usr/bin/env bash
@@ -25,7 +25,10 @@ in {
     tldr
   ];
 
-  programs.command-not-found.enable = true;
+  # `command-not-found` is the NixOS programs database (it reads the nixos
+  # channel's programs.sqlite, which nix-darwin does not have). Enabling it on
+  # the Mac produces a handler that errors on every typo.
+  programs.command-not-found.enable = isLinux;
 
   home.file.".config/cliphist/config".text = ''
     -max-items 100000
@@ -119,24 +122,30 @@ in {
         # Missing binary -> NixOS suggests `nix-shell -p <pkg>`. Parse the package
         # out of the hint rather than assuming it equals the command: `nvim`
         # resolves to `nix-shell -p neovim`, not `-p nvim`.
-        if (( $+commands[command-not-found] )); then
-          command_not_found_handler() {
-            local out pkg orig
-            out="$(command-not-found "$@" 2>&1)"
-            print -u2 -r -- "$out"
-            if [[ -o interactive ]]; then
-              pkg="$(print -r -- "$out" | grep -oE 'nix-shell -p [A-Za-z0-9_.+-]+' | head -n1)"
-              pkg="''${pkg##* }"
-              if [[ -n $pkg ]]; then
-                orig="''${(j: :)''${(q)@}}"   # original argv, safely requoted
-                print -r -- "nix-shell -p $pkg --run ''${(q)orig}" > "$__suggest_file"
+        # NixOS-only: nix-darwin ships no programs.sqlite, so there is nothing
+        # for `command-not-found` to look the missing binary up in.
+        ${lib.optionalString isLinux ''
+          if (( $+commands[command-not-found] )); then
+            command_not_found_handler() {
+              local out pkg orig
+              out="$(command-not-found "$@" 2>&1)"
+              print -u2 -r -- "$out"
+              if [[ -o interactive ]]; then
+                pkg="$(print -r -- "$out" | grep -oE 'nix-shell -p [A-Za-z0-9_.+-]+' | head -n1)"
+                pkg="''${pkg##* }"
+                if [[ -n $pkg ]]; then
+                  orig="''${(j: :)''${(q)@}}"   # original argv, safely requoted
+                  print -r -- "nix-shell -p $pkg --run ''${(q)orig}" > "$__suggest_file"
+                fi
               fi
-            fi
-            return 127
-          }
-        fi
+              return 127
+            }
+          fi
+        ''}
 
-        # Mirror vi-mode yanks into the Wayland system clipboard.
+        # Mirror vi-mode yanks into the system clipboard. On macOS the shim in
+        # modules/home/darwin/compat-shims.nix provides `wl-copy` (backed by
+        # pbcopy), so this block is correct on both platforms unchanged.
         if (( $+commands[wl-copy] )); then
           function _yank-to-clipboard() {
             printf '%s' "$CUTBUFFER" | wl-copy 2>/dev/null &!
@@ -228,109 +237,129 @@ in {
       '')
     ];
 
-    shellAliases = {
-      record = "wf-recorder --audio=alsa_output.pci-0000_08_00.6.analog-stereo.monitor -f $HOME/Videos/$(date +'%Y%m%d%H%M%S_1.mp4')";
+    shellAliases =
+      {
+        # Utils
+        c = "clear";
+        # NOTE: `cd` is intentionally NOT aliased to `z` here. A static alias is
+        # captured by every spawned shell — including Claude Code / AI-agent
+        # shells — where aliasing `cd` to zoxide is a footgun: `cd /not/yet/created
+        # && mkdir foo` makes `z` jump to some other frecent dir and create `foo`
+        # in the wrong place, and it prints zoxide's "configuration issue" warning.
+        # Defined instead as an interactive-only, non-agent alias in initContent.
+        tt = "gtrash put";
+        cat = "bat";
+        code = "codium";
+        py = "python";
+        dsize = "du -hs";
+        findw = "grep -rl";
+        pdf = "tdf";
+        ls = "eza";
+        lst = "eza --tree --level=";
 
-      # Utils
-      c = "clear";
-      # NOTE: `cd` is intentionally NOT aliased to `z` here. A static alias is
-      # captured by every spawned shell — including Claude Code / AI-agent
-      # shells — where aliasing `cd` to zoxide is a footgun: `cd /not/yet/created
-      # && mkdir foo` makes `z` jump to some other frecent dir and create `foo`
-      # in the wrong place, and it prints zoxide's "configuration issue" warning.
-      # Defined instead as an interactive-only, non-agent alias in initContent.
-      tt = "gtrash put";
-      cat = "bat";
-      code = "codium";
-      py = "python";
-      icat = "kitten icat";
-      dsize = "du -hs";
-      findw = "grep -rl";
-      pdf = "tdf";
-      open = "xdg-open";
-      ls = "eza";
-      lst = "eza --tree --level=";
+        ps = "procs";
+        glo = "tig";
+        df = "duf";
+        ping = "gping";
 
-      ps = "procs";
-      glo = "tig";
-      df = "duf";
-      ping = "gping";
+        rm = "trash";
 
-      rm = "trash";
+        n = "nvim";
 
-      n = "nvim";
+        ns = "nix-shell --run zsh";
+        nd = "nix develop";
+        nix-shell = "nix-shell --run zsh";
 
-      word-count = "wl-paste | wc";
-      paste-image = "wl-paste -t image/png >";
+        # notetaker = "kitty sh -c \"cd ~/notes ; neovim .\" --title notetaker --name notetaker --start-as=fullscreen";
 
-      # Nixos
-      ns = "nix-shell --run zsh";
-      nd = "nix develop";
-      nix-shell = "nix-shell --run zsh";
+        # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
+        # The only switch that survives a reboot: it is what writes the Home
+        # Manager generation into the system generation, which is what
+        # home-manager-${user}.service re-activates at every boot. Clearing the
+        # stamp is therefore correct here — after this, nothing is pending.
+        link-agent-md = "ln -sfn AGENTS.md GEMINI.md && ln -sfn AGENTS.md CLAUDE.md";
+        # testing = "echo \"sudo nixos-rebuild switch --flake .#${host}\"";
+        # rebuild = "git add . && sudo nixos-rebuild switch --flake .#${host}";
+        # rebuildu = "git add . && sudo nixos-rebuild switch --upgrade --flake .#${host}";
+        ga = "git add";
+        gaa = "git add --all";
+        gst = "git stash";
+        gs = "git status";
+        gb = "git branch";
+        gm = "git merge";
+        gpl = "git pull";
+        gplo = "git pull origin";
+        gps = "git push";
+        gpst = "git push --follow-tags";
+        gpso = "git push origin";
+        gc = "git commit";
+        gcm = "git commit -m";
+        gcma = "git add --all && git commit -m";
+        gtag = "git tag -ma";
+        gch = "git checkout";
+        gchb = "git checkout -b";
+        gcoe = "git config user.email";
+        gcon = "git config user.name";
+        glazy = "git add --all ; git commit -am \"This is an automated commit by $USER because they were too lazy\" ; git pull && git push";
+        server = "ssh -p 22 matth@server.matthandzel.com";
+        serverfs = "sshfs matth@ssh.matthandzel.com:/home/matth/";
+        # make transcribe available as a command
+        transcribe = "${transcribe_file_script}";
+        claude = "claude --permission-mode auto --chrome";
 
-      # notetaker = "kitty sh -c \"cd ~/notes ; neovim .\" --title notetaker --name notetaker --start-as=fullscreen";
+        # move folder to archive with the same name as the folder
+        second-brain-archive = "${second-brain-archive-script}";
 
-      # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
-      # The only switch that survives a reboot: it is what writes the Home
-      # Manager generation into the system generation, which is what
-      # home-manager-${user}.service re-activates at every boot. Clearing the
-      # stamp is therefore correct here — after this, nothing is pending.
-      rebuild = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && sudo nixos-rebuild switch --flake .#${host} && rm -f ~/.local/state/hm-switch-pending && popd";
-      # Home-only switch: builds the SAME Home Manager generation the NixOS
-      # config defines (no sudo, no bootloader) and activates it in the LIVE
-      # session. It does NOT persist: home-manager-${user}.service re-activates
-      # the generation baked into the current *system* generation at boot, so
-      # anything applied here is thrown away on reboot until `rebuild` runs.
-      # The stamp records what was activated so hm-drift-guard.nix can report
-      # the revert instead of letting it pass silently.
-      # Backup env vars mirror home-manager.backupFileExtension/overwriteBackup,
-      # which otherwise only apply when activation runs via home-manager-<user>.service.
-      hm-switch = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && nix build .#nixosConfigurations.${host}.config.home-manager.users.matth.home.activationPackage -o /tmp/hm-activation-result && HOME_MANAGER_BACKUP_EXT=hm-backup HOME_MANAGER_BACKUP_OVERWRITE=1 /tmp/hm-activation-result/activate && mkdir -p ~/.local/state && { readlink -f /tmp/hm-activation-result; cat /proc/sys/kernel/random/boot_id; } > ~/.local/state/hm-switch-pending && print -P '%F{yellow}hm-switch applied to the LIVE session only — reverted at next boot until you run: rebuild%f' && popd";
-      rebuildu = "pushd ~/dotfiles/nixos/.config/nixos && cp flake.lock flake.$(date +%Y-%m-%d).lock && git add --all . && sudo nix flake update --flake ./flake.nix ; sudo nixos-rebuild switch --upgrade --flake .#${host} && popd";
-      link-agent-md = "ln -sfn AGENTS.md GEMINI.md && ln -sfn AGENTS.md CLAUDE.md";
-      # testing = "echo \"sudo nixos-rebuild switch --flake .#${host}\"";
-      # rebuild = "git add . && sudo nixos-rebuild switch --flake .#${host}";
-      # rebuildu = "git add . && sudo nixos-rebuild switch --upgrade --flake .#${host}";
-      nix-flake-update = "sudo nix flake update ~/dotfiles/nixos/.config/nixos#";
-      nix-clean = "sudo nix-collect-garbage && sudo nix-collect-garbage -d && sudo rm /nix/var/nix/gcroots/auto/* && nix-collect-garbage && nix-collect-garbage -d";
+        # python
+        piv = "python -m venv .venv";
+        psv = "source .venv/bin/activate";
+        transcribe-meeting = "nix run /home/matth/Projects/KnowledgeOperatingSystem/MeetingTranscribe/ -- --diarize --noise-filter";
+      }
+      // lib.optionalAttrs isLinux {
+        record = "wf-recorder --audio=alsa_output.pci-0000_08_00.6.analog-stereo.monitor -f $HOME/Videos/$(date +'%Y%m%d%H%M%S_1.mp4')";
+        icat = "kitten icat";
+        open = "xdg-open";
+        word-count = "wl-paste | wc";
+        paste-image = "wl-paste -t image/png >";
 
-      # Git
+        # Nixos
+        rebuild = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && sudo nixos-rebuild switch --flake .#${host} && rm -f ~/.local/state/hm-switch-pending && popd";
+        # Home-only switch: builds the SAME Home Manager generation the NixOS
+        # config defines (no sudo, no bootloader) and activates it in the LIVE
+        # session. It does NOT persist: home-manager-${user}.service re-activates
+        # the generation baked into the current *system* generation at boot, so
+        # anything applied here is thrown away on reboot until `rebuild` runs.
+        # The stamp records what was activated so hm-drift-guard.nix can report
+        # the revert instead of letting it pass silently.
+        # Backup env vars mirror home-manager.backupFileExtension/overwriteBackup,
+        # which otherwise only apply when activation runs via home-manager-<user>.service.
+        hm-switch = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && nix build .#nixosConfigurations.${host}.config.home-manager.users.matth.home.activationPackage -o /tmp/hm-activation-result && HOME_MANAGER_BACKUP_EXT=hm-backup HOME_MANAGER_BACKUP_OVERWRITE=1 /tmp/hm-activation-result/activate && mkdir -p ~/.local/state && { readlink -f /tmp/hm-activation-result; cat /proc/sys/kernel/random/boot_id; } > ~/.local/state/hm-switch-pending && print -P '%F{yellow}hm-switch applied to the LIVE session only — reverted at next boot until you run: rebuild%f' && popd";
+        rebuildu = "pushd ~/dotfiles/nixos/.config/nixos && cp flake.lock flake.$(date +%Y-%m-%d).lock && git add --all . && sudo nix flake update --flake ./flake.nix ; sudo nixos-rebuild switch --upgrade --flake .#${host} && popd";
+        nix-flake-update = "sudo nix flake update ~/dotfiles/nixos/.config/nixos#";
+        nix-clean = "sudo nix-collect-garbage && sudo nix-collect-garbage -d && sudo rm /nix/var/nix/gcroots/auto/* && nix-collect-garbage && nix-collect-garbage -d";
 
-      ga = "git add";
-      gaa = "git add --all";
-      gst = "git stash";
-      gs = "git status";
-      gb = "git branch";
-      gm = "git merge";
-      gpl = "git pull";
-      gplo = "git pull origin";
-      gps = "git push";
-      gpst = "git push --follow-tags";
-      gpso = "git push origin";
-      gc = "git commit";
-      gcm = "git commit -m";
-      gcma = "git add --all && git commit -m";
-      gtag = "git tag -ma";
-      gch = "git checkout";
-      gchb = "git checkout -b";
-      gcoe = "git config user.email";
-      gcon = "git config user.name";
-      glazy = "git add --all ; git commit -am \"This is an automated commit by $USER because they were too lazy\" ; git pull && git push";
-      md2substack = "pandoc -f markdown -t html | wl-copy -t text/html";
-      server = "ssh -p 22 matth@server.matthandzel.com";
-      serverfs = "sshfs matth@ssh.matthandzel.com:/home/matth/";
-      # make transcribe available as a command
-      transcribe = "${transcribe_file_script}";
-      claude = "claude --permission-mode auto --chrome";
+        md2substack = "pandoc -f markdown -t html | wl-copy -t text/html";
+      }
+      // lib.optionalAttrs isDarwin {
+        # macOS already HAS `open`; aliasing it to xdg-open would break it.
+        # `record`/`icat` are dropped: wf-recorder is Wayland-only and screen
+        # recording on the Mac is `screencapture -v`.
 
-      # move folder to archive with the same name as the folder
-      second-brain-archive = "${second-brain-archive-script}";
-
-      # python
-      piv = "python -m venv .venv";
-      psv = "source .venv/bin/activate";
-      transcribe-meeting = "nix run /home/matth/Projects/KnowledgeOperatingSystem/MeetingTranscribe/ -- --diarize --noise-filter";
-    };
+        # NO sudo: nix-darwin elevates itself, and `sudo darwin-rebuild` writes
+        # root-owned files into ~/.local/state that break every later switch.
+        rebuild = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && darwin-rebuild switch --flake .#matts-mac && popd";
+        rebuildu = "pushd ~/dotfiles/nixos/.config/nixos && cp flake.lock flake.$(date +%Y-%m-%d).lock && git add --all . && nix flake update && darwin-rebuild switch --flake .#matts-mac && popd";
+        # Home-only switch, same shape as the NixOS one: builds the Home Manager
+        # generation this config defines and activates it in the live session
+        # without touching the system generation.
+        hm-switch = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && nix build .#darwinConfigurations.matts-mac.config.home-manager.users.matth.home.activationPackage -o /tmp/hm-activation-result && HOME_MANAGER_BACKUP_EXT=hm-backup HOME_MANAGER_BACKUP_OVERWRITE=1 /tmp/hm-activation-result/activate && popd";
+        nix-flake-update = "nix flake update --flake ~/dotfiles/nixos/.config/nixos";
+        nix-clean = "nix-collect-garbage -d && nix store optimise";
+        darwin-gens = "darwin-rebuild --list-generations";
+        word-count = "clip-paste | wc";
+        paste-image = "clip-paste -t image/png >";
+        md2substack = "pandoc -f markdown -t html | clip-copy";
+      };
   };
 
   programs.zoxide = {

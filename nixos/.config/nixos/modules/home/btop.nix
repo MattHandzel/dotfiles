@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  lib,
+  pkgs,
+  ...
+}: {
   programs.btop = {
     enable = true;
 
@@ -9,5 +13,7 @@
     };
   };
 
-  home.packages = with pkgs; [nvtopPackages.intel];
+  # nvtop's Intel backend reads /sys/class/drm — Linux-only by construction, and
+  # the Mac's GPU is Apple silicon anyway (btop itself reports it there).
+  home.packages = lib.optionals pkgs.stdenv.hostPlatform.isLinux [pkgs.nvtopPackages.intel];
 }

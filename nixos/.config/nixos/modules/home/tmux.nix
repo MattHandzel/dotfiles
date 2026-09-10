@@ -18,7 +18,9 @@ in {
     keyMode = "vi";
     mouse = true;
     terminal = "tmux-256color";
-    shell = "/run/current-system/sw/bin/zsh";
+    # Was /run/current-system/sw/bin/zsh, which is a NixOS-only path (nix-darwin
+    # has no /run/current-system/sw). The store path is the same zsh on both.
+    shell = "${pkgs.zsh}/bin/zsh";
     prefix = tmuxPrefix;
     extraConfig = ''
         set-option -sa terminal-overrides ",xterm*:Tc"

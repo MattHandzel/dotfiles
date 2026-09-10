@@ -1,8 +1,11 @@
 {
   inputs,
+  lib,
   pkgs,
   ...
 }: let
+  inherit (pkgs.stdenv.hostPlatform) isDarwin isLinux;
+
   # _2048 = pkgs.callPackage ../../pkgs/2048/default.nix {};
   project-asset-generator = pkgs.callPackage ../../pkgs/project-asset-generator/default.nix {
     src = inputs.project-asset-generator-src;
@@ -75,256 +78,204 @@
         }
       ];
     };
-in {
-  home.packages = with pkgs; [
-    # _2048
 
-    audacity
+  sharedPkgs = with pkgs; [
+    # ── shell / files ──
     bitwise # cli tool for bit / hex manipulation
     cbonsai # terminal screensaver
-    sioyek # research-focused pdf viewer
+    cmatrix
     eza # ls replacement
     entr # perform action when file change
     fd # find replacement
     file # Show file information
     fzf # fuzzy finder
-    # gtt # google translate TUI
+    gdu # disk space (fast, SSD-optimized)
+    gtrash # rm replacement, put deleted files in system trash
+    trash-cli
+    duf # better df
+    procs # process viewer
+    tig # git repository browser
+    gping
+    fastfetch
+    hexdump
+    xxd
+    stow
+    unzip
+    zip
+    wget
+    openssh
+    openssl
+    yazi # terminal file manager
+    lazygit
+    ripgrep # grep replacement
+    rclone # cloud storage sync/mount
+    sshfs
+
+    # ── writing / documents ──
+    pandoc # markdown to pdf, norg to pdf
+    texliveFull
+    harper # grammar checker (harper-ls LSP) — nvim prose, see nvim.nix
+    languagetool # offline grammar engine for grammar-check (Super+C)
+    tdf # cli pdf viewer
+    neomutt
+    calcurse # Calendar in the terminal
+    mermaid-cli # for mermaid diagrams
+    keymap-drawer # render ZMK/QMK keymaps to SVG (the TOTEM's zmk-config)
+    helvetica-neue-lt-std
+
+    # ── media ──
+    ffmpeg
+    yt-dlp-light
     gifsicle # gif optimization (project-asset-generator)
     vhs # terminal GIF recording (project-asset-generator)
     marp-cli # markdown slides (project-asset-generator)
     tesseract # OCR for asset verification (project-asset-generator)
-    project-asset-generator # generate-assets CLI (~/Projects/project-asset-generator)
-    gdoc-sync # markdown ↔ Google Docs sync CLI (~/Projects/gdoc-sync)
 
-    gimp
-    gtrash # rm replacement, put deleted files in system trash
-    harper # grammar checker (harper-ls LSP) — nvim prose, see nvim.nix
-    hexdump
-    jdk17 # java
-    languagetool # offline grammar engine for grammar-check (Super+C); CLI only, no resident JVM
-    lazygit
-    libreoffice
-    kdePackages.dolphin # file manager
-    # nitch # systhem fetch util
-    nix-prefetch-github
-    # pipes # terminal screensaver
-    rclone # cloud storage sync/mount (Google Drive at ~/gdrive)
-    ripgrep # grep replacement
-    soundwireserver # pass audio to android phone
-    tdf # cli pdf viewer
-    todo # cli todo list
-    toipe # typing test in the terminal
-    valgrind # c memory analyzer
-    yazi # terminal file manager
-    yt-dlp-light
-    zenity
-    winetricks
-    wineWow64Packages.wayland
-
-    # C / C++
-    gcc
-    gnumake
-
-    # Python
-    python3
-    conda
-
-    bleachbit # cache cleaner
-    cmatrix
-    gparted # partition manager
-    ffmpeg
-    swayimg # wayland-native image viewer
-    killall
-    libnotify
-    man-pages # extra man pages
-    mpv # video player
-    gdu # disk space (fast, SSD-optimized)
-    openssl
-    pwvucontrol # pipewire-native volume control (GUI)
-    playerctl # controller for media players
-    wl-clipboard # clipboard utils for wayland (wl-copy, wl-paste)
-    cliphist # clipboard manager
-    keymap-drawer # render ZMK/QMK keymaps to SVG (the TOTEM's zmk-config)
-    poweralertd
-    qalculate-gtk # calculator
-    unzip
-    zip
-    wget
-    xdg-utils
-    xxd
-    inputs.alejandra.defaultPackage.${pkgs.stdenv.hostPlatform.system}
-
-    brave #
-    slack
-    wofi-emoji
-
-    gammastep
-
-    # nodePackages.npm
-    nodejs_22
-
-    ddcutil # for talking with external monitors
-    wlr-randr # for wayland monitor management
-
-    pandoc # markdown to pdf, norg to pdf
-
-    ntfs3g
-    pika-backup
-    helvetica-neue-lt-std
-    # terminal stuff
-    stow
-    yazi
-    # hyprshade
-    # grimblast
-    grim
-    slurp
-    ### data collection stuff
-    aw-watcher-afk
-    aw-watcher-window
-    activitywatch
-    nix-index
-
-    zoom-us
-    # cura
-    obs-studio
-    libreoffice
-    slack
-    anki
-    obsidian
-    neomutt
-    satty # screenshot annotation tool
-    texliveFull
-
-    # morgen
-
-    wlroots
-    wl-gammactl
-    # mako
-
-    #  gcc
-    #  clang
-    #  glib
-    #  glibc
-    #  gdb
-    #  valgrind
-    #  cmake
-    # libxcrypt
-    # clang-tools
-    # nss
-    # postgresql
-    # libpqxx
-    #
-    #
-    #
-    stylua
-    luarocks-nix
-
-    # prusa-slicer # prusa-slicer
-
-    openssh
-
-    zathura
-    calcurse # Calendar in the terminal
-
-    sshfs
-    fastfetch
-    wasistlos
-    dialect # GNOME translator — floating popup via SUPER+G submap
-    crow-translate # Alt translator — floating popup via SUPER+SHIFT+G submap
-
-    zenWithExtensions # zen-browser + declarative extensions (MAT-572; see let-block)
-    tigervnc
-    espanso-wayland
-
-    ntfy-sh
-
-    kdePackages.xdg-desktop-portal-kde # xdg-desktop-portal
-    firefox
-
-    # xdg-desktop-port-kde
-    # zulu # thinkorswim
-
-    #
-    #
-    # gnumake42
-    # glibcLocales
-    #
-    # cargo
-    pkg-config
-    # openconnect_openssl
-    # ninja
-    # gh
-
-    # inputs.notion-repackaged.packages.x86_64-linux.notion-repackaged
-    kdePackages.kdenlive
-    qbittorrent-enhanced
-    platformio
-    prusa-slicer
-
-    docker
-
-    go
-    gopls
-    delve
-    gcc
-    sc-im
-
-    logkeys # keylogger
-    # inputs.lifelog.packages.x86_64-linux.lifelog-logger
-    # inputs.kms-capture.packages.x86_64-linux.kms-capture
-    # inputs.lifelog.packages.x86_64-linux.lifelog-server
-    v4l-utils
-    # rustup
-
-    rust-analyzer
-    rustfmt
-    rustc
-
-    xdg-desktop-portal
-    kdePackages.xdg-desktop-portal-kde #    xdg-desktop-portal-kde
-
-    trash-cli
-    mermaid-cli # for mermaid diagrams
-    # busybox # common utils
-    # primary ebook reader — default for epub/mobi/azw3/fb2/cbz.
-    # See modules/home/readest.nix (desktop-entry fix) and the mimeapps block
-    # in modules/home/default.nix. PDFs stay with zathura.
-    readest
-    foliate # ebook reader
-    # other ebook readers:
-    calibre
-    nwg-look
-
-    crow-translate
-    ollama
-
-    windsurf
-    electron
-    portaudio
-    wtype # type virtual things on the computer
+    # ── tasks / notes ──
     taskwarrior3
     vit
+    todo # cli todo list
+    toipe # typing test in the terminal
+    sc-im
+    ntfy-sh
+    gdoc-sync # markdown ↔ Google Docs sync CLI (~/Projects/gdoc-sync)
 
+    # ── toolchains ──
+    gcc
+    gnumake
+    pkg-config
+    python3
     python313Packages.debugpy
-
-    procps # needed for pidof, otherwise grimblast breaks
-
     python312Packages.webrtcvad
     python312Packages.requests
     python312Packages.setuptools # for stt-rrecord
+    portaudio
+    nodejs_22
+    go
+    gopls
+    delve
+    rustc
+    rustfmt
+    rust-analyzer
+    jdk17 # java
+    stylua
+    luarocks-nix
+    nix-prefetch-github
+    nix-index
+    inputs.alejandra.defaultPackage.${pkgs.stdenv.hostPlatform.system}
 
+    # ── AI CLIs ──
     gemini-cli
-    duf # better df
-    procs # process viewer
-    tig # git repository browser
-
-    beeper
-    gping
-    code-cursor
-    # claude-code # installing with npm is better
-    chromium
-    google-chrome
-    bitwarden-desktop # password manager (GUI)
     bitwarden-cli # `bw` — scriptable vault access + `rbw`-style automation
   ];
+
+  # Wayland/Hyprland/systemd-bound, Linux-only builds, and every GUI app that
+  # is a Homebrew cask on the Mac.
+  linuxPkgs = with pkgs; [
+    # ── Wayland / Hyprland ──
+    wl-clipboard # clipboard utils for wayland (wl-copy, wl-paste)
+    cliphist # clipboard manager
+    grim
+    slurp
+    satty # screenshot annotation tool
+    swayimg # wayland-native image viewer
+    wtype # type virtual things on the computer
+    wlr-randr # for wayland monitor management
+    wlroots
+    wl-gammactl
+    gammastep
+    pwvucontrol # pipewire-native volume control (GUI)
+    playerctl # controller for media players
+    poweralertd
+    libnotify
+    zenity
+    wofi-emoji
+    espanso-wayland
+    nwg-look
+    xdg-utils
+    xdg-desktop-portal
+    kdePackages.xdg-desktop-portal-kde
+    kdePackages.dolphin # file manager
+    kdePackages.kdenlive
+
+    # ── Linux-only builds ──
+    valgrind # c memory analyzer
+    conda
+    killall
+    procps # needed for pidof, otherwise grimblast breaks
+    man-pages # extra man pages
+    logkeys # keylogger
+    v4l-utils
+    ddcutil # for talking with external monitors
+    ntfs3g
+    gparted # partition manager
+    pika-backup
+    bleachbit # cache cleaner
+    soundwireserver # pass audio to android phone
+    tigervnc
+    electron
+    docker # OrbStack replaces this on the Mac
+    winetricks
+    wineWow64Packages.wayland
+    platformio
+    ollama
+
+    # ── data collection (systemd user services on Linux) ──
+    aw-watcher-afk
+    aw-watcher-window
+    activitywatch
+
+    # ── GUI apps that become casks on the Mac ──
+    audacity
+    sioyek # research-focused pdf viewer
+    zathura
+    qalculate-gtk # calculator
+    mpv # video player (IINA on the Mac)
+    gimp
+    libreoffice
+    obs-studio
+    anki
+    obsidian
+    calibre
+    readest
+    foliate # ebook reader
+    slack
+    beeper
+    zoom-us
+    brave
+    chromium
+    google-chrome
+    firefox
+    bitwarden-desktop # password manager (GUI)
+    code-cursor
+    windsurf
+    prusa-slicer
+    qbittorrent-enhanced
+    dialect # GNOME translator — floating popup via SUPER+G submap
+    crow-translate # Alt translator — floating popup via SUPER+SHIFT+G submap
+    wasistlos
+
+    # ── needs Hyprland/Wayland at runtime, so must never be referenced on darwin ──
+    zenWithExtensions # zen-browser + declarative extensions (MAT-572; see let-block)
+    project-asset-generator # generate-assets CLI (needs grim/wtype/hyprland)
+  ];
+
+  # Nix-built GUI apps must go in environment.systemPackages (the
+  # /Applications/Nix Apps trampoline), so they live in
+  # modules/darwin/packages.nix. What is left for the user profile is nothing
+  # yet — kept as an explicit empty list so the split is visible.
+  darwinPkgs = [];
+in {
+  # sharedPkgs are the CLI/dev tools that build and behave the same on NixOS and
+  # macOS. linuxPkgs are Wayland/Hyprland/systemd-bound tools, Linux-only
+  # builds (valgrind, conda, psmisc), and every GUI app that becomes a Homebrew
+  # cask on the Mac (see modules/darwin/homebrew.nix — a cask is used there
+  # because those apps need Apple notarization for the permissions they ask
+  # for). darwinPkgs is deliberately near-empty: Nix-built GUI apps must live in
+  # `environment.systemPackages` for the /Applications/Nix Apps trampoline, so
+  # they are declared in modules/darwin/packages.nix instead.
+  home.packages =
+    sharedPkgs
+    ++ lib.optionals isLinux linuxPkgs
+    ++ lib.optionals isDarwin darwinPkgs;
 }

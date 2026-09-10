@@ -1,6 +1,9 @@
+# Fonts are wanted on both platforms (kitty/nvim/waybar all name JetBrainsMono
+# Nerd Font, and Inter is the UI face). Everything below `gtk.*` is a GTK theme
+# and a Wayland cursor theme, which have no meaning on macOS — nix-darwin
+# installs fonts through `fonts.packages` instead, see modules/darwin.
 {
   pkgs,
-  config,
   lib,
   ...
 }: {
@@ -16,7 +19,7 @@
   #   pkgs.noto-fonts
   # ];
 
-  gtk = {
+  gtk = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
     enable = true;
     font = {
       name = "JetBrainsMono Nerd Font";
@@ -44,7 +47,7 @@
     };
   };
 
-  home.pointerCursor = {
+  home.pointerCursor = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
     name = "Nordzy-cursors";
     package = pkgs.nordzy-cursor-theme;
     size = 22;
