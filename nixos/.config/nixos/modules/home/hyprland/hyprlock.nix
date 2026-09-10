@@ -1,21 +1,28 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  config,
+  ...
+}: let
+  p = config.theme.palette;
+  font = config.theme.font;
+in {
   home.packages = [pkgs.hyprlock];
   xdg.configFile."hypr/hyprlock.conf".text = ''
-    $red = rgb(f38ba8)
-    $yellow = rgb(f9e2af)
-    $lavender = rgb(b4befe)
+    $red = rgb(${p.red})
+    $yellow = rgb(${p.yellow})
+    $lavender = rgb(${p.lavender})
 
-    $mauve = rgb(cba6f7)
-    $mauveAlpha = cba6f7
+    $mauve = rgb(${p.mauve})
+    $mauveAlpha = ${p.mauve}
 
-    $base = rgb(1e1e2e)
-    $surface0 = rgb(313244)
-    $text = rgb(cdd6f4)
-    $textAlpha = cdd6f4
+    $base = rgb(${p.base})
+    $surface0 = rgb(${p.surface0})
+    $text = rgb(${p.text})
+    $textAlpha = ${p.text}
 
     $accent = $lavender
     $accentAlpha = $mauveAlpha
-    $font = JetBrainsMono Nerd Font
+    $font = ${font.mono}
 
     # GENERAL
     general {
@@ -36,7 +43,7 @@
       monitor =
       text = cmd[update:30000] echo "<b><big> $(date +"%R") </big></b>"
       color = $text
-      font_size = 110
+      font_size = ${toString font.sizes.huge}
       font_family = $font
       shadow_passes = 3
       shadow_size = 3
@@ -51,7 +58,7 @@
       monitor =
       text = cmd[update:43200000] echo "$(date +"%A, %d %B %Y")"
       color = $text
-      font_size = 18
+      font_size = ${toString font.sizes.xl}
       font_family = $font
       position = 0, -300
       halign = center

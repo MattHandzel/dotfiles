@@ -59,13 +59,20 @@ process_dir() {
         
         echo "[transcribe] Processing $filename..."
         
-        # Run the transcription tool via nix run
+        # Run the transcription tool via nix run.
+        # stt-tune D1 consolidation 2026-05-10: same model + temperature as v2 live
+        # pipeline (multilingual large-v3 + temp=0). Single server config across
+        # live (KP_1 → stt_record_v2.py) and batch (this script). Matches AC-5.
+        # If transcribe_file.py doesn't forward --whisper-arg model through to the
+        # server form field, this is a no-op (server-side default still applies).
         nix run "$TRANSCRIBE_TOOL" -- \
             "$audio_file" \
             --transcript-path "$transcript_file" \
             --timestamps \
             --silence-ms 1000 \
-            --no-noise-filter
+            --no-noise-filter \
+            --whisper-arg model=Systran/faster-whisper-large-v3 \
+            --whisper-arg temperature=0.0
             
         if [ $? -eq 0 ]; then
             echo "[transcribe] Successfully transcribed $filename to $(basename "$transcript_file")"

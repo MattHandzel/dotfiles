@@ -1,6 +1,9 @@
-{ config, lib, pkgs, ... }:
-
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   cfg = config.services.obsidian-mcp;
   stateDir = "/var/lib/obsidian-mcp";
   port = 22360;
@@ -20,8 +23,8 @@ in {
     # start, then bridges the stdio MCP server to HTTP/SSE on port 22360.
     systemd.services.obsidian-mcp = {
       description = "Obsidian Vault MCP Server";
-      after = [ "network.target" "syncthing.service" ];
-      wantedBy = [ "multi-user.target" ];
+      after = ["network.target" "syncthing.service"];
+      wantedBy = ["multi-user.target"];
 
       serviceConfig = {
         User = "matth";
@@ -36,7 +39,7 @@ in {
         ];
       };
 
-      path = [ pkgs.nodejs_22 ];
+      path = [pkgs.nodejs_22];
 
       # Install npm packages on first boot (or if they've been wiped).
       preStart = ''
@@ -72,6 +75,6 @@ in {
     };
 
     # Allow access over Tailscale without going through the public internet.
-    networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ port ];
+    networking.firewall.interfaces.tailscale0.allowedTCPPorts = [port];
   };
 }

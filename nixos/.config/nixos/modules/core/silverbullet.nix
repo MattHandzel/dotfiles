@@ -9,5 +9,5 @@
   };
 
   # Open port for Tailscale access
-  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 47000 ];
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [47000];
 }

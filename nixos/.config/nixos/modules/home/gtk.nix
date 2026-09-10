@@ -30,8 +30,12 @@
       });
     };
     theme = {
-      name = "Dracula";
-      package = pkgs.dracula-theme;
+      name = "catppuccin-mocha-mauve-standard";
+      package = pkgs.catppuccin-gtk.override {
+        accents = ["mauve"];
+        size = "standard";
+        variant = "mocha";
+      };
     };
     cursorTheme = {
       name = "Nordzy-cursors";

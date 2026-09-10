@@ -1,13 +1,12 @@
-{...}: let
+{config, ...}: let
+  p = config.theme.palette;
+  font = config.theme.font;
   custom = {
-    font = "JetBrainsMono Nerd Font";
-    font_size = "15px";
+    font = font.mono;
+    font_size = "${toString font.sizes.lg}px";
     font_weight = "bold";
-    text_color = "#cdd6f4";
-    secondary_accent = "89b4fa";
-    tertiary_accent = "f5f5f5";
-    background = "11111B";
-    opacity = "0.98";
+    text_color = "#${p.text}";
+    opacity = toString config.theme.opacity;
   };
 in {
   programs.waybar.style = ''
@@ -28,7 +27,7 @@ in {
     }
 
     #workspaces {
-        font-size: 18px;
+        font-size: ${toString font.sizes.xl}px;
         padding-left: 15px;
 
     }
@@ -38,13 +37,13 @@ in {
         padding-right: 6px;
     }
     #workspaces button.empty {
-        color: #6c7086;
+        color: #${p.overlay0};
     }
     #workspaces button.active {
-        color: #b4befe;
+        color: #${p.lavender};
     }
 
-    #tray, #pulseaudio, #network, #cpu, #memory, #disk, #clock, #battery, #custom-notification, #custom-stt-mic {
+    #tray, #pulseaudio, #network, #cpu, #memory, #disk, #clock, #battery, #custom-notification, #custom-stt-mic, #custom-kb-lang {
         font-size: ${custom.font_size};
         color: ${custom.text_color};
     }
@@ -88,7 +87,53 @@ in {
         color: ${custom.text_color};
     }
     #custom-stt-mic.speaking {
-        color: #a6e3a1;
+        color: #${p.green};
+    }
+    #custom-writing {
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+    /* Under Chapin's 500 words/hour floor — the state worth noticing, so it is
+       the only one that gets a warm colour. Green once you clear the bar. */
+    #custom-writing.under-target {
+        color: #${p.peach};
+    }
+    #custom-writing.on-target {
+        color: #${p.green};
+    }
+    /* First 30s: too little signal to show a rate. */
+    #custom-writing.warming {
+        color: rgba(205, 214, 244, 0.4);
+    }
+    #custom-wispr {
+        font-size: ${custom.font_size};
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+    #custom-wispr.idle {
+        color: #${p.mauve};
+    }
+    #custom-wispr.listening {
+        color: #${p.green};
+    }
+    #custom-wispr.silent {
+        color: #${p.base};
+        background-color: #${p.red};
+        border-radius: 8px;
+    }
+    #custom-kb-lang {
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+    #custom-kb-lang.pl {
+        color: #${p.red};
+    }
+    #custom-kb-lang.en {
+        color: #${p.blue};
+    }
+    #custom-kb-lang.unknown,
+    #custom-kb-lang.other {
+        color: rgba(205, 214, 244, 0.6);
     }
     #custom-focus-mode {
         padding-left: 9px;
@@ -98,14 +143,41 @@ in {
         color: rgba(205, 214, 244, 0.4);
     }
     #custom-focus-mode.on {
-        color: #fab387; /* Peach/Orange */
-        font-size: 18px;
-        /* Subtle pulse effect for active focus mode */
+        color: #${p.peach};
+        font-size: ${toString font.sizes.xl}px;
         animation-name: blink;
         animation-duration: 2s;
         animation-timing-function: linear;
         animation-iteration-count: infinite;
         animation-direction: alternate;
+    }
+    /* now/next calendar slot, left of the clock. Colour encodes urgency so the
+       state is readable without parsing the text. */
+    #custom-agenda {
+        padding-left: 9px;
+        padding-right: 9px;
+        color: #${p.text};
+    }
+    #custom-agenda.free {
+        color: rgba(205, 214, 244, 0.4);
+    }
+    #custom-agenda.soon {
+        color: #${p.yellow};
+    }
+    #custom-agenda.imminent {
+        color: #${p.peach};
+        animation-name: blink;
+        animation-duration: 2s;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+        animation-direction: alternate;
+    }
+    #custom-agenda.conflict {
+        color: #${p.red};
+    }
+    /* the fetcher stopped updating — surface it rather than showing stale times */
+    #custom-agenda.stale, #custom-agenda.error {
+        color: #${p.overlay0};
     }
     #network {
         padding-left: 9px;
@@ -123,26 +195,26 @@ in {
     }
 
     #custom-launcher {
-        font-size: 20px;
-        color: #b4befe;
+        font-size: ${toString font.sizes.xl}px;
+        color: #${p.lavender};
         font-weight: ${custom.font_weight};
         padding-left: 10px;
         padding-right: 15px;
     }
 
     #custom-lifelog.running {
-       color: #a6e3a1; /* Green */
+       color: #${p.green};
     }
     #custom-lifelog.stopped {
-       color: #f38ba8; /* Red */
+       color: #${p.red};
     }
     #custom-lifelog.warning {
-       color: #f9e2af; /* Yellow/Orange - for partial failures */
+       color: #${p.yellow};
     }
 
     @keyframes blink {
         to {
-            color: #f38ba8; /* Red */
+            color: #${p.red};
         }
     }
   '';

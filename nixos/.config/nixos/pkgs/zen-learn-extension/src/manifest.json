@@ -1,0 +1,48 @@
+{
+  "manifest_version": 2,
+  "name": "Learn This",
+  "version": "2.0.0",
+  "description": "Browser-native learning: capture, learn, and generate flashcards without leaving the page.",
+  "permissions": [
+    "contextMenus",
+    "activeTab",
+    "storage",
+    "tabs",
+    "clipboardRead",
+    "notifications",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["panel.css", "capture.css", "tts.css"]
+    },
+    {
+      "matches": ["*://*.youtube.com/*", "*://*.youtu.be/*"],
+      "js": ["youtube.js"]
+    }
+  ],
+  "commands": {
+    "quick-capture": {
+      "suggested_key": { "default": "Ctrl+Shift+L" },
+      "description": "Quick capture selection"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "icons": {
+    "48": "icons/learn-48.svg",
+    "96": "icons/learn-96.svg"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "learn-this@matthandzel.com"
+    }
+  }
+}

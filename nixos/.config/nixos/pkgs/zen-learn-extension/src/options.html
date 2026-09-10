@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 20px; max-width: 500px; background: #1a1a2e; color: #e0e0e0; }
+    h2 { color: #a0a0ff; margin-bottom: 20px; }
+    label { display: block; margin: 12px 0 4px; font-weight: 600; font-size: 13px; color: #b0b0d0; }
+    input, select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #e0e0e0; font-size: 14px; box-sizing: border-box; }
+    input:focus, select:focus { outline: none; border-color: #6366f1; }
+    .note { font-size: 12px; color: #888; margin-top: 4px; }
+    .saved { color: #4ade80; font-size: 13px; opacity: 0; transition: opacity 0.3s; }
+    .saved.show { opacity: 1; }
+    .section { margin: 20px 0; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h2>Learn This — Settings</h2>
+
+  <div class="section">
+    <label>Default action for context menu</label>
+    <select id="defaultAction">
+      <option value="claude">Open in Claude.ai (recommended)</option>
+      <option value="inline">Show inline (requires Ollama)</option>
+    </select>
+    <p class="note">Inline mode uses your local Ollama server. Falls back to Claude.ai if unavailable.</p>
+  </div>
+
+  <div class="section">
+    <label>Ollama server (for inline mode)</label>
+    <input type="text" id="ollamaHost" placeholder="http://server.matthandzel.com:11434">
+    <p class="note">Leave empty to always use Claude.ai</p>
+
+    <label>Ollama model</label>
+    <input type="text" id="ollamaModel" placeholder="gemma3:12b-it-qat">
+  </div>
+
+  <div class="section">
+    <label>
+      <input type="checkbox" id="kmsCapture" style="width:auto;margin-right:8px">
+      Auto-save to KMS capture (tags with #learn)
+    </label>
+    <p class="note">Saves every interaction to your knowledge management system for review card generation.</p>
+
+    <label>KMS server</label>
+    <input type="text" id="kmsHost" placeholder="http://localhost:5391">
+  </div>
+
+  <div class="section">
+    <label>Text-to-Speech server</label>
+    <input type="text" id="ttsHost" placeholder="http://100.118.206.104:47773">
+    <p class="note">Your TextToSpeechService API endpoint for read-aloud.</p>
+
+    <label>Voice</label>
+    <input type="text" id="ttsVoice" placeholder="en_US-lessac-high">
+
+    <label>Default speed (0.7 – 1.4)</label>
+    <input type="number" id="ttsSpeed" min="0.7" max="1.4" step="0.05" placeholder="0.95">
+
+    <label>
+      <input type="checkbox" id="ttsHighlight" style="width:auto;margin-right:8px" checked>
+      Read-along highlight (highlight selected text while reading)
+    </label>
+  </div>
+
+  <p class="saved" id="savedMsg">Settings saved</p>
+
+  <script src="options.js"></script>
+</body>
+</html>

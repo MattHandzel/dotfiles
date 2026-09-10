@@ -1,0 +1,273 @@
+# Curated half of the README. The generator supplies every fact that drifts
+# (module lists, summaries, hosts, flake inputs, counts); this file supplies the
+# framing and the highlights.
+#
+# Each [[highlight]] names the modules it describes. If one of those paths stops
+# existing, `showcase.sh readme` fails instead of publishing a claim about code
+# that was deleted. Add a highlight when something here becomes worth pointing
+# at; leave the long tail to the generated inventory.
+
+[meta]
+title = "Matt's NixOS"
+tagline = "One flake, four hosts, and a lot of services whose job is to make the machine disagree with me when I'm wrong."
+readme = "README.md"
+hero = "desktop"
+primary_host = "laptop"
+
+intro = """
+This is the whole of my computing environment as a single Nix flake — the laptop
+I work on, the server that runs the always-on half, and the desktop and VM that
+share their modules with both. Hyprland, Neovim, Zsh and Catppuccin are the
+surface. Most of the actual code underneath is background services: focus
+enforcement, capture and transcription pipelines, backups, and watchdogs whose
+entire purpose is to notice when one of the others has quietly stopped working.
+
+The modules carry unusually long comments on purpose. Nearly every one of them
+exists because something broke on a specific day, and the comment records what
+broke and why the fix is shaped the way it is. The tables further down are
+generated from those comments, so the README says exactly what the code says.
+"""
+
+outro = """
+## Repo layout
+
+```
+flake.nix              inputs + the four nixosConfigurations
+hosts/<name>/          per-host manifests and hardware config
+modules/core/          system-level NixOS modules
+modules/home/          Home Manager modules (apps, desktop, user services)
+modules/home/scripts/  the personal script suite
+pkgs/                  packages not in nixpkgs
+docs/showcase/         the tooling that generates this README
+```
+
+## Regenerating this README
+
+```sh
+docs/showcase/showcase.sh capture     # screenshots, on an offscreen virtual output
+docs/showcase/showcase.sh readme      # re-read the modules, rewrite the tables
+docs/showcase/showcase.sh readme --check   # CI: fail if it drifted
+```
+
+Screenshots are taken on a headless Hyprland output parked off-canvas, so
+capturing never switches workspace, moves focus, or shows up on the real screen.
+See [`docs/showcase/`](docs/showcase/) for the details.
+"""
+
+[meta.hosts]
+laptop = "Primary machine — Acer Swift SF16-51T. Everything interactive lives here."
+server = "Always-on host: DNS-level focus enforcement, self-hosted services, GPU speech models."
+desktop = "Shares the core module set; adds gaming and the heavier creative tooling."
+vm = "Throwaway target for testing the flake without touching real hardware."
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[highlight]]
+id = "focus"
+title = "Focus enforcement I can't talk myself out of"
+shot = "services"
+body = """
+The distraction blocker doesn't run on the machine being blocked. A [blocky][]
+resolver on the home server holds two deny-lists — a calendar-driven one that
+fills up only during a Deep Work or Comms block, and a permanent one synced from
+a plain Markdown file in my notes — and every device reaches it over Tailscale.
+The off-switch is on the other side of the network from the impulse, which is
+the entire design: *the kill-switch must cost more than the impulse.*
+
+The obvious failure mode of that design is that a dead server takes the internet
+with it. So each device runs its own local watchdog that pings blocky and flips
+`tailscale set --accept-dns` off when it can't be reached, with a two-strike
+debounce so one lost packet doesn't flap it. It runs locally precisely so that
+it still works when the server is the thing that's down. There's also a
+sanctioned, auto-expiring pause — if the only way past the block is to defeat
+it, you learn to defeat it.
+
+[blocky]: https://github.com/0xERR0R/blocky
+"""
+modules = [
+  "modules/core/focus-dns.nix",
+  "modules/core/focus-failopen-watchdog.nix",
+  "modules/core/focus-nameserver-watchdog.nix",
+  "modules/core/focus-mode-resolver.nix",
+  "modules/core/focus-pause.nix",
+  "modules/core/focus-state-agent.nix",
+]
+
+[[highlight]]
+id = "self-healing"
+title = "A config that notices when it has broken itself"
+body = """
+Home Manager runs here as a NixOS module, which means the generation that
+activates at boot is the one baked into the *system* generation. `hm-switch` and
+`nixos-rebuild test` both apply immediately and are then silently reverted at the
+next boot — and a reverted fix is indistinguishable from a fix that never worked.
+That cost me a service that was "verified working" and arrived broken after every
+reboot, so there is now a guard that detects the revert and says so.
+
+A second guard handles the other half: Home Manager refuses to activate when a
+path it manages is occupied by a foreign *symlink*, because `backupFileExtension`
+only rescues regular files. It clears those before the check runs.
+
+And when a unit or script does fail, the journal watcher hands the failure to a
+headless Claude instance that diagnoses it, fixes it declaratively in this flake,
+rebuilds, and reports back over ntfy. It follows the journal rather than relying
+on `OnFailure=` alone, because plenty of things that fail here aren't systemd
+units at all.
+"""
+modules = [
+  "modules/home/hm-drift-guard.nix",
+  "modules/home/hm-clobber-guard.nix",
+  "modules/home/claude-autofix.nix",
+]
+
+[[highlight]]
+id = "durability"
+title = "Losing data once was enough"
+body = """
+On 2026-05-05 a `git filter-repo` run destroyed ~1.9 GB of irreplaceable personal
+media. The files existed only locally, pushes had been failing, and Syncthing
+versioning was off, so the deletion propagated cleanly to the server with nothing
+preserved anywhere.
+
+`/home` now takes hourly btrfs snapshots into its own subvolume with 24-hour
+retention. Filesystem-level snapshots survive any mistake made at the git or
+Syncthing layer, because they sit underneath both, and copy-on-write makes them
+almost free until something actually churns. A separate timer watches free space
+on `/` and `/home` and pushes an ntfy alert on threshold crossings — the same
+disk filling up silently has killed Syncthing here before. Secrets live in a
+gocryptfs vault rather than in the tree.
+"""
+modules = [
+  "modules/core/btrfs-snapshots.nix",
+  "modules/core/disk-space-alert.nix",
+  "modules/core/gocryptfs-vault.nix",
+  "modules/core/sops.nix",
+]
+
+[[highlight]]
+id = "speech"
+title = "Speech in and out, on my own hardware"
+body = """
+Dictation is the primary input method for anything longer than a command. The
+server runs the heavy models on its GPU — faster-whisper and NVIDIA Canary for
+transcription, Kokoro-82M for speech — while the laptop keeps a lighter realtime
+path for push-to-talk.
+
+Two of the fiddlier problems here got their own modules. Hyprland can't tell the
+left and right Alt keys apart, so kanata runs over the laptop keyboard for the
+sole purpose of making "both Alts together" a detectable chord to trigger
+dictation. And Wispr Flow enumerates evdev keyboards once at startup and never
+watches udev, so a Bluetooth keyboard connected afterwards is invisible to it —
+a relay re-presents the keyboard so it's seen without restarting the app.
+"""
+modules = [
+  "modules/core/canary-stt-server.nix",
+  "modules/core/faster-whisper-server.nix",
+  "modules/core/kokoro-tts.nix",
+  "modules/core/text-to-speech-service.nix",
+  "modules/home/realtime-stt.nix",
+  "modules/home/wispr-flow.nix",
+  "modules/home/kbd-relay.nix",
+  "modules/core/kanata-homerow.nix",
+]
+
+[[highlight]]
+id = "exocortex"
+title = "The notes are part of the operating system"
+body = """
+My Obsidian vault isn't a separate app I open — it's plumbed into the machine.
+A semantic search service indexes it, MCP servers expose it to agents, meeting
+audio is transcribed on capture, upcoming meetings get a Google Doc created for
+them automatically, and Markdown files reconcile two-way with Google Docs on a
+timer. Screen and window activity are logged locally by the lifelog collector and
+ActivityWatch, with a Hyprland-native window watcher so the titles are real.
+
+Capture is deliberately low-friction: an ntfy topic doubles as an inbox, so
+anything sent from my phone lands in the vault without opening a laptop.
+"""
+modules = [
+  "modules/core/second-brain-search.nix",
+  "modules/core/obsidian-mcp.nix",
+  "modules/core/mcp-server.nix",
+  "modules/core/ntfy-capture-listener.nix",
+  "modules/home/lifelog-collector.nix",
+  "modules/home/activitywatch.nix",
+  "modules/home/meeting-note-docs.nix",
+  "modules/home/gdoc-sync.nix",
+  "modules/home/transcribe-captures.nix",
+]
+
+[[highlight]]
+id = "hardware"
+title = "Hardware that fought back, and the modules that won"
+shot = "editor"
+body = """
+A running list of things this laptop does wrong, each pinned down with
+measurements rather than guesses.
+
+Captive portals were the best one. Airplane and hotel Wi-Fi consistently refused
+to work, and the cause turned out to be that `tailscaled` runs `resolvconf -x`
+and erases the DHCP resolver the portal needs — while NetworkManager's own portal
+detection ships disabled in nixpkgs, so the connectivity check cheerfully
+reported "full" the whole time.
+
+The rest: this machine has no working S3 sleep and a non-compliant ACPI lid
+switch that fires millisecond-long pulses, so it used to wake the instant it was
+closed. Bluetooth keyboards lose their evdev binding across resume, and BlueZ
+burns the radio paging powered-off trusted devices every 44 seconds. Bluetooth
+headphones need classic A2DP forced, because the LE-Audio half-negotiation leaves
+them "connected" with no PipeWire sink at all.
+"""
+modules = [
+  "modules/core/captive-portal.nix",
+  "modules/core/laptop-sleep.nix",
+  "modules/core/bluetooth.nix",
+  "modules/core/pipewire.nix",
+  "modules/home/stuck-key-guard.nix",
+]
+
+[[highlight]]
+id = "selfhosted"
+title = "Self-hosted, on the box in the other room"
+body = """
+Finance tracking (Firefly III plus the Pico mobile UI), RSS, a wiki, web
+analytics, and Prometheus + Grafana watching all of it, including a custom
+exporter that turns the finance data into metrics. Notifications for everything
+fan out through a single ntfy topic that reaches both the desktop and my phone,
+which also makes it the one notification path that works from a systemd unit
+with no session bus.
+"""
+modules = [
+  "modules/core/firefly-iii.nix",
+  "modules/core/firefly-pico.nix",
+  "modules/core/freshrss.nix",
+  "modules/core/silverbullet.nix",
+  "modules/core/rybbit.nix",
+  "modules/core/monitoring.nix",
+  "modules/core/ntfy-scheduler.nix",
+]
+
+[[highlight]]
+id = "desktop"
+title = "The desktop itself"
+shot = "shell"
+body = """
+Hyprland with Waybar, Catppuccin Mocha end to end, Vicinae as the command
+palette, fuzzel for quick launching, and Neovim as the editor. Around a hundred
+personal scripts sit on `PATH` through Home Manager — including `kbshot`, which
+takes a screenshot of a labelled on-screen region entirely from the keyboard, no
+mouse involved.
+
+Every new user-facing tool gets an `xdg.desktopEntry` in the same module that
+defines it, on the theory that a feature you can't find in the launcher isn't
+finished.
+"""
+modules = [
+  "modules/home/vicinae.nix",
+  "modules/home/fuzzel.nix",
+  "modules/home/nvim.nix",
+  "modules/home/kitty.nix",
+  "modules/home/theme.nix",
+  "modules/home/waybar/waybar.nix",
+]

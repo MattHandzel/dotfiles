@@ -1,10 +1,23 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  host,
+  ...
+}: {
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.systemd-boot.configurationLimit = 10;
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
-  boot.kernelParams = ["usbcore.autosuspend=-1" "mem_sleep_default=deep" "button.lid_init_state=open" "acpi_sleep=nonvs"];
+  boot.kernelParams = [
+    "usbcore.autosuspend=-1"
+    (
+      if host == "laptop"
+      then "mem_sleep_default=s2idle"
+      else "mem_sleep_default=deep"
+    )
+    "button.lid_init_state=open"
+    "acpi_sleep=nonvs"
+  ];
 
   boot.kernelModules = ["uvcvideo" "video"];
 }

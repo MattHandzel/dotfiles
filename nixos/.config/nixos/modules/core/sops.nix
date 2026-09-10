@@ -18,6 +18,12 @@
       owner = username;
     };
 
+    # Linear personal API key (lin_api_…) for the desktop notification poller.
+    # Materialized at /run/secrets/linear_api_key; consumed by modules/home/linear-notify.nix.
+    secrets.linear_api_key = {
+      owner = username;
+    };
+
     # secrets.todoist_api_key = {
     #   owner = username;
     # };

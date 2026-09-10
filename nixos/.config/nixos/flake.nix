@@ -7,12 +7,32 @@
 
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
 
+    # Readest only. The main pin (nixos-unstable-small) sits at readest 0.9.100
+    # from Feb 2026, and "actively developed" is the entire reason readest beats
+    # foliate (foliate's last release is 3.3.0, Apr 2025). Taking just this one
+    # package from a newer tree keeps the main pin — and every other package —
+    # untouched. See modules/core/overlays/readest.nix.
+    #
+    # This pulls a second ~250MB nixpkgs, kept as its own input so the main
+    # pin — and every other package — stays untouched.
+    nixpkgs-readest.url = "github:NixOS/nixpkgs/f13ff45afd1bb73e640eaa08a7066dbed07e3238";
+
     nur.url = "github:nix-community/NUR";
 
     hypr-contrib.url = "github:hyprwm/contrib";
     hyprpicker.url = "github:hyprwm/hyprpicker";
 
     alejandra.url = "github:kamadorueda/alejandra/3.0.0";
+
+    # Pinned ahead of nixpkgs deliberately. nixpkgs ships 0.19.7, but every
+    # Vicinae store extension except silverbullet declares "@vicinae/api":
+    # "^0.22.2", so extensions simply will not load on the nixpkgs version.
+    # Upstream also exposes an overlay + home-manager module + an extension
+    # builder lib, which is what makes declaring extensions possible at all.
+    vicinae = {
+      url = "github:vicinaehq/vicinae/v0.23.2";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     nix-gaming.url = "github:fufexan/nix-gaming";
     # notion-repackaged = {
@@ -54,11 +74,11 @@
 
     catppuccin.url = "github:catppuccin/nix";
 
-    lifelog = {
-      url = "github:MattHandzel/lifelog";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # lifelog = {
+    #   url = "github:MattHandzel/lifelog";
+    #   flake = true;
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
 
     claude-desktop = {
       url = "github:aaddrick/claude-desktop-debian";
@@ -72,6 +92,30 @@
 
     text-to-speech-service = {
       url = "path:/home/matth/Projects/SecondBrainSpeech";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    project-asset-generator-src = {
+      url = "path:/home/matth/Projects/project-asset-generator";
+      flake = false;
+    };
+
+    gdoc-sync-src = {
+      url = "path:/home/matth/Projects/gdoc-sync";
+      flake = false;
+    };
+
+    betterbird = {
+      url = "github:Heehaaw/betterbird-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Hyprland-native ActivityWatch window watcher — reports real window titles
+    # via the Hyprland IPC socket. The generic aw-watcher-window logs "unknown"
+    # on Hyprland (no wlr-foreign-toplevel title). Not in nixpkgs; upstream
+    # ships a clean Rust flake. Consumed by modules/home/activitywatch.nix.
+    aw-watcher-window-hyprland = {
+      url = "github:bobvanderlinden/aw-watcher-window-hyprland";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

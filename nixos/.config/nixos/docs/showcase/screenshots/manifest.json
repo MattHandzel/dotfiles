@@ -1,0 +1,38 @@
+[
+  {
+    "id": "desktop",
+    "title": "The desktop",
+    "caption": "Hyprland with Waybar, Catppuccin Mocha throughout — Neovim on a system module, btop, and the shell.",
+    "file": "screenshots/desktop.png",
+    "width": 1800,
+    "height": 1100,
+    "captured_at": "2026-08-21T22:02:17-07:00"
+  },
+  {
+    "id": "editor",
+    "title": "Neovim",
+    "caption": "The editor config, opened on the captive-portal module — one of the many places this repo writes down *why* rather than just *what*.",
+    "file": "screenshots/editor.png",
+    "width": 1800,
+    "height": 1100,
+    "captured_at": "2026-08-21T22:02:29-07:00"
+  },
+  {
+    "id": "services",
+    "title": "The service fleet",
+    "caption": "Focus enforcement, capture pipelines, transcription and watchdogs — declared in the flake, supervised by systemd.",
+    "file": "screenshots/services.png",
+    "width": 1800,
+    "height": 1100,
+    "captured_at": "2026-08-21T22:05:33-07:00"
+  },
+  {
+    "id": "shell",
+    "title": "The shell",
+    "caption": "Zsh + Starship + Atuin, with eza, bat, duf and procs standing in for the coreutils.",
+    "file": "screenshots/shell.png",
+    "width": 1800,
+    "height": 1100,
+    "captured_at": "2026-08-21T22:02:41-07:00"
+  }
+]

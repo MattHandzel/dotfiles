@@ -37,5 +37,10 @@ in {
     NIXOS_ROOT_DIR = "${self}";
     SERVER_IP_ADDRESS = sharedVariables.serverIpAddress;
     BROWSER = "zen-beta";
+    # Claude Desktop (claude-desktop-debian launcher): Chromium's os_crypt
+    # autodetection finds no GNOME/KDE on Hyprland and falls back to "basic",
+    # so sign-in isn't persisted ("install and unlock a system keyring").
+    # Force the libsecret backend; gnome-keyring provides it (services.nix).
+    CLAUDE_PASSWORD_STORE = "gnome-libsecret";
   };
 }

@@ -34,17 +34,75 @@ lspconfig.ts_ls.setup({
 	},
 })
 
+-- Markdown/prose grammar+spell now runs on harper-ls (Rust, ~20MB RSS, no JVM)
+-- instead of ltex-ls. ltex spawned one 512MB+ LanguageTool JVM PER GIT ROOT — the
+-- Obsidian vault (a git repo) plus every project repo you edit markdown in — which
+-- left ~1.3GB of idle JVMs parked in zram on this 16GB machine. harper's footprint
+-- is negligible. Dictionary lives in spell/harper-dict.txt (one word per line).
+lspconfig.harper_ls.setup({
+	filetypes = { "markdown", "gitcommit" },
+	settings = {
+		["harper-ls"] = {
+			userDictPath = vim.fn.expand("~/dotfiles/nvim/.config/nvim/spell/harper-dict.txt"),
+			-- The vault is fast, informal, first-person writing; Harper's default
+			-- rule set is tuned for polished prose and buried every real typo
+			-- under thousands of style hints. Everything below is style/typography
+			-- pedantry, not correctness — SpellCheck, RepeatedWords, AnA, MissingTo
+			-- etc. stay on. A rule's name is the diagnostic's `code` field (shown
+			-- in virtual text / :lua vim.diagnostic.open_float()); to silence a
+			-- new one, add it here.
+			linters = {
+				SentenceCapitalization = false,
+				CapitalizePersonalPronouns = false,
+				UseTitleCase = false,
+				LongSentences = false,
+				OxfordComma = false,
+				Dashes = false,
+				NumericRangeEnDash = false,
+				UseEllipsisCharacter = false,
+				AvoidCurses = false,
+				UnclosedQuotes = false,
+				MultipleSequentialPronouns = false,
+				-- word-choice nits
+				Excellent = false,
+				ExpandMinimum = false,
+				ExpandTimeShorthands = false,
+				OrthographicConsistency = false,
+				AvoidAndAlso = false,
+				SomewhatSomething = false,
+				-- constantly wrong on tech vocab (lifelog, waybar, writeup, ...)
+				CompoundNouns = false,
+				SplitWords = false,
+				DisjointPrefixes = false,
+				PhrasalVerbAsCompoundNoun = false,
+			},
+		},
+	},
+})
+
+-- ltex-ls kept for LaTeX ONLY. tex is rare, so its heavy JVM now spawns rarely
+-- instead of once per markdown git root. Markdown moved to harper_ls above.
 lspconfig.ltex.setup({
 	cmd = {
 		"env",
 		"JAVA_TOOL_OPTIONS=-Xms128m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Dorg.bsplines.ltexls.logLevel=WARNING",
 		"ltex-ls",
 	},
-	filetypes = { "markdown", "tex" },
+	filetypes = { "tex" },
 	flags = { debounce_text_changes = 1000 },
 	settings = {
 		ltex = {
 			checkFrequency = "save",
+			dictionary = {
+				["en-US"] = {
+					"LMNT",
+					"malate",
+					"Malate",
+					"erythritol",
+					"BulkSupplements",
+					"Zvi",
+				},
+			},
 		},
 	},
 })
@@ -104,9 +162,24 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		vim.keymap.set("n", "gD", run_zz_after_running_the_argument(vim.lsp.buf.declaration), opts)
 
 		vim.keymap.set("n", "gd", run_zz_after_running_the_argument(vim.lsp.buf.definition), opts)
-		vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+
+		-- Map K/<M-K> ONLY when the attaching client actually implements the
+		-- method. Both clients that attach to a markdown buffer -- copilot and
+		-- harper-ls -- attach without implementing textDocument/hover, so an
+		-- unconditional map turned every K in a note into
+		--   "method textDocument/hover is not supported by any of the servers
+		--    registered for the current buffer"
+		-- Leaving it unmapped falls back to Vim's builtin K (keywordprg), which
+		-- is the more useful behaviour in prose anyway.
+		local client = vim.lsp.get_client_by_id(ev.data.client_id)
+		if client and client:supports_method("textDocument/hover") then
+			vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+		end
+		if client and client:supports_method("textDocument/signatureHelp") then
+			vim.keymap.set("n", "<M-K>", vim.lsp.buf.signature_help, opts)
+		end
+
 		vim.keymap.set("n", "gi", run_zz_after_running_the_argument(vim.lsp.buf.implementation), opts)
-		vim.keymap.set("n", "<M-K>", vim.lsp.buf.signature_help, opts)
 		vim.keymap.set("n", "<leader>wa", vim.lsp.buf.add_workspace_folder, opts)
 		vim.keymap.set("n", "<leader>wr", vim.lsp.buf.remove_workspace_folder, opts)
 		vim.keymap.set("n", "<leader>wl", function()

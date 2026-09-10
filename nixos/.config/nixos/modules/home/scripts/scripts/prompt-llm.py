@@ -11,11 +11,13 @@ Usage:
 """
 from dataclasses import dataclass, field
 from string import Formatter
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 import sys
 import subprocess
 import json
 import datetime
+import pathlib
+import re
 
 
 # IMPRPOVEMENTS
@@ -23,27 +25,46 @@ import datetime
 
 # === CONFIG ===
 OLLAMA_HOST = "http://server.matthandzel.com:11434"
-MODEL = "gemma3:4b-it-qat"
+MODEL = "gemma4:e2b"
+CAPTURE_DIR = pathlib.Path.home() / "notes" / "capture" / "raw_capture"
 
 
 # === PROMPTS ===
+@dataclass
+class CaptureConfig:
+    tags: List[str]
+    context: Optional[str] = None
+    json_format: bool = False
+    primary_field: str = "output"
+    original_heading: str = "Original"
+    transformed_heading: str = "Transformed"
+    note_field: Optional[str] = None
+    extra_meta_fields: List[str] = field(default_factory=list)
+
+
 @dataclass
 class Prompt:
     header: str
     task: str
     rules: List[str] = field(default_factory=list)
+    capture_config: Optional[CaptureConfig] = None
 
     def build(self, input_text: str, vars: Dict[str, str]) -> str:
         task_text = self.task.format(**vars)
         rules_text = "\n".join(f"- {r}" for r in self.rules)
+        if self.capture_config and self.capture_config.json_format:
+            postamble = "- Output ONLY the JSON object specified in the rules — no prose, no code fences, no commentary.\n"
+        else:
+            postamble = (
+                "- Do not include commentary, explanations, or prefatory text.\n"
+                "- Output ONLY the transformed text, exactly as required.\n"
+            )
         return (
             f"{self.header}\n\n"
             f"<TASK>:\n{task_text}<\\TASK>\n\n"
             f"<RULES>:\n{rules_text}<\\RULES>\n"
-            f"- Do not include commentary, explanations, or prefatory text.\n"
-            f"- Output ONLY the transformed text, exactly as required.\n\n"
+            f"{postamble}\n"
             f'<INPUT>:\n"""{input_text}"""<\\INPUT>\n\n'
-            # f"OUTPUT (transformed text only):"
         )
 
 
@@ -124,6 +145,30 @@ PROMPTS: Dict[str, Prompt] = {
     #         "Output should sound natural, but remain faithful to the original wording.",
     #     ],
     # ),
+    "🇵🇱 polish_polisher": Prompt(
+        header="You are a Polish-language editor for a heritage speaker who code-switches with English.",
+        task="Produce correct, natural Polish that preserves the author's voice and tone. Save both the original and the polished Polish so the user can study them.",
+        rules=[
+            "Detect whether the input is English, Polish, or mixed.",
+            "Default register: informal (ty-form, no pan/pani) unless the input clearly signals formality (addressing a stranger, business letter, etc.).",
+            "Fix case endings, verb aspect (dokonany/niedokonany), agreement, reflexive pronouns, and word order.",
+            "Do NOT literal-translate English idioms. Use the Polish expression a native speaker would use in that context.",
+            "Preserve proper nouns, brand names, and technical English terms unless they have an established Polish form.",
+            "If the input is already grammatical Polish, make the minimum changes needed — do not rewrite for style.",
+            "Do not invent words. Only real Polish.",
+            'Output ONLY this JSON object (no prose, no code fences): {"polish": "<corrected or translated Polish>", "detected_input": "en" | "pl" | "mixed", "brief_note": "<12 words max describing what changed, or null>"}',
+        ],
+        capture_config=CaptureConfig(
+            tags=["translated-from-polish", "to-anki"],
+            context="clipboard-transform",
+            json_format=True,
+            primary_field="polish",
+            original_heading="Original",
+            transformed_heading="Polish",
+            note_field="brief_note",
+            extra_meta_fields=["detected_input"],
+        ),
+    ),
     "🔍 ocr_cleanup": Prompt(
         header="You are an OCR cleanup assistant.",
         task="Correct OCR recognition errors while leaving all other text unchanged.",
@@ -173,6 +218,87 @@ def run_subproc(
 def choose_with_fuzzel(choices: Optional[str]) -> str:
     cmd = ["fuzzel", "--dmenu"]
     return run_subproc(cmd, input_text=choices, tty_stdin=(choices is None))
+
+
+def _extract_json_object(raw_output: str) -> Optional[dict]:
+    """Best-effort parse: accept bare JSON, code-fenced JSON, or embedded JSON."""
+    stripped = raw_output.strip()
+    try:
+        parsed = json.loads(stripped)
+        return parsed if isinstance(parsed, dict) else None
+    except json.JSONDecodeError:
+        pass
+    m = re.search(r"\{.*\}", raw_output, re.DOTALL)
+    if m:
+        try:
+            parsed = json.loads(m.group(0))
+            return parsed if isinstance(parsed, dict) else None
+        except json.JSONDecodeError:
+            return None
+    return None
+
+
+def write_capture_and_extract(
+    raw_output: str, original_input: str, cfg: CaptureConfig
+) -> Tuple[str, Optional[str]]:
+    """Write a capture file and return (clipboard_text, warning_or_None).
+
+    If JSON parse fails, clipboard gets the raw LLM output and the capture
+    includes a warning comment so the user can catch it later.
+    """
+    warn: Optional[str] = None
+    clipboard_text = raw_output.strip()
+    note: Optional[str] = None
+    extra_meta: Dict[str, str] = {}
+
+    if cfg.json_format:
+        parsed = _extract_json_object(raw_output)
+        if parsed and cfg.primary_field in parsed and parsed[cfg.primary_field]:
+            clipboard_text = str(parsed[cfg.primary_field]).strip()
+            if cfg.note_field and parsed.get(cfg.note_field):
+                note = str(parsed[cfg.note_field]).strip()
+            for k in cfg.extra_meta_fields:
+                if k in parsed and parsed[k] is not None:
+                    extra_meta[k] = str(parsed[k])
+        else:
+            warn = "structured parse failed"
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    iso = now.isoformat(timespec="microseconds")
+    tags_yaml = "\n".join(f"  - {t}" for t in cfg.tags)
+    context_yaml = f"context:\n  - {cfg.context}\n" if cfg.context else ""
+
+    meta_bits = [f"{k}: {v}" for k, v in extra_meta.items()]
+    if note:
+        meta_bits.append(f"note: {note}")
+    if warn:
+        meta_bits.append(f"WARN: {warn}")
+    meta_html = f"\n\n<!-- {'; '.join(meta_bits)} -->\n" if meta_bits else "\n"
+
+    body = (
+        f"---\n"
+        f"timestamp: '{iso}'\n"
+        f"id: '{iso}'\n"
+        f"capture_id: '{iso}'\n"
+        f"aliases:\n  - '{iso}'\n"
+        f"modalities:\n  - text\n"
+        f"sources:\n  - me\n"
+        f"tags:\n{tags_yaml}\n"
+        f"{context_yaml}"
+        f"created_date: '{now.date().isoformat()}'\n"
+        f"---\n\n"
+        f"## {cfg.original_heading}\n\n{original_input}\n\n"
+        f"## {cfg.transformed_heading}\n\n{clipboard_text}"
+        f"{meta_html}"
+    )
+
+    try:
+        CAPTURE_DIR.mkdir(parents=True, exist_ok=True)
+        (CAPTURE_DIR / f"{iso}.md").write_text(body)
+    except Exception as e:
+        print(f"[prompt-llm] capture write failed: {e}", file=sys.stderr)
+
+    return clipboard_text, warn
 
 
 def process_llm_output(raw_output: str, input_text: str) -> str:
@@ -266,16 +392,17 @@ def main():
         sys.exit(0)
 
     # call Ollama
-    req_json = json.dumps(
-        {
-            "model": MODEL,
-            "prompt": final_prompt,
-            "temperature": 0,
-            "top_p": 1,
-            "top_k": 0,
-            "stream": False,
-        }
-    )
+    ollama_payload: Dict = {
+        "model": MODEL,
+        "prompt": final_prompt,
+        "temperature": 0,
+        "top_p": 1,
+        "top_k": 0,
+        "stream": False,
+    }
+    if prompt_obj.capture_config and prompt_obj.capture_config.json_format:
+        ollama_payload["format"] = "json"
+    req_json = json.dumps(ollama_payload)
     try:
         resp = run_subproc(
             [
@@ -299,9 +426,13 @@ def main():
     except json.JSONDecodeError:
         output = resp
 
-    processed_output = process_llm_output(output, input_text)
-
-    print(processed_output)
+    cfg = prompt_obj.capture_config
+    if cfg is not None:
+        clipboard_text, _warn = write_capture_and_extract(output, input_text, cfg)
+        print(clipboard_text)
+    else:
+        processed_output = process_llm_output(output, input_text)
+        print(processed_output)
 
 
 if __name__ == "__main__":

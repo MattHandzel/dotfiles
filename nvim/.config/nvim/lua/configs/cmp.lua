@@ -80,7 +80,11 @@ local options = {
 		["<Down>"] = cmp.mapping(function(fallback)
 			if cmp.visible() then
 				cmp.select_next_item()
-			elseif require("luasnip").expand_or_jumpable() then
+			-- locally_: only expand/jump when the cursor is actually inside the
+			-- snippet region — plain expand_or_jumpable() stays true for stale
+			-- sessions and made <Down> teleport into dead snippets (and throw
+			-- "'start' is higher than 'end'"). See LuaSnip spec in plugins/init.lua.
+			elseif require("luasnip").expand_or_locally_jumpable() then
 				vim.fn.feedkeys(vim.api.nvim_replace_termcodes("<Plug>luasnip-expand-or-jump", true, true, true), "")
 			else
 				fallback()
@@ -90,7 +94,7 @@ local options = {
 		["<Up>"] = cmp.mapping(function(fallback)
 			if cmp.visible() then
 				cmp.select_prev_item()
-			elseif require("luasnip").jumpable(-1) then
+			elseif require("luasnip").locally_jumpable(-1) then
 				vim.fn.feedkeys(vim.api.nvim_replace_termcodes("<Plug>luasnip-jump-prev", true, true, true), "")
 			else
 				fallback()
@@ -98,6 +102,7 @@ local options = {
 		end, { "i", "s" }),
 	},
 	sources = {
+		{ name = "filemention" },
 		{ name = "nvim_lsp" },
 		{ name = "luasnip" },
 		{ name = "buffer" },

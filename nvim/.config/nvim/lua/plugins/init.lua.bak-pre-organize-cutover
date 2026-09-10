@@ -1,0 +1,2706 @@
+return {
+	{
+		"stevearc/conform.nvim",
+		config = function()
+			require("configs.conform")
+		end,
+		lazy = false,
+	},
+
+	{
+		"ActivityWatch/aw-watcher-vim",
+		cmd = { "AWStart", "AWStop", "AWStatus", "AWHeartbeat" },
+	},
+	-- {
+	-- 	"vhyrro/luarocks.nvim",
+	-- 	priority = 1001, -- this plugin needs to run before anything else
+	-- 	opts = {
+	-- 		rocks = { "magick" },
+	-- 	},
+	-- },
+	{
+		"3rd/image.nvim",
+		event = "VeryLazy",
+		config = function()
+			require("image").setup({
+				backend = "kitty",
+				processor = "magick_rock", -- or "magick_cli"
+				integrations = {
+					markdown = {
+						enabled = true,
+						clear_in_insert_mode = false,
+						download_remote_images = true,
+						only_render_image_at_cursor = false,
+						filetypes = { "markdown", "vimwiki" },
+					},
+					neorg = {
+						enabled = true,
+						filetypes = { "norg" },
+					},
+					typst = {
+						enabled = true,
+						filetypes = { "typst" },
+					},
+					html = {
+						enabled = false,
+					},
+					css = {
+						enabled = false,
+					},
+				},
+				max_width = nil,
+				max_height = nil,
+				max_width_window_percentage = nil,
+				max_height_window_percentage = 50,
+				window_overlap_clear_enabled = false, -- toggles images when windows are overlapped
+				window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
+				editor_only_render_when_focused = false, -- auto show/hide images when the editor gains/looses focus
+				tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
+				hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" }, -- render image files as images when opened
+			})
+
+			-- Patch for image.nvim issue with tmux creating files named after error messages
+			local ok, tmux = pcall(require, "image.utils.tmux")
+			if ok and tmux.get_pane_tty then
+				local original_get_pane_tty = tmux.get_pane_tty
+				tmux.get_pane_tty = function()
+					local tty = original_get_pane_tty()
+					if tty and not tty:match("^/dev/") then
+						return nil
+					end
+					return tty
+				end
+			end
+		end,
+	},
+	{
+		"nvim-treesitter/nvim-treesitter",
+		config = function()
+			require("nvim-treesitter.configs").setup({
+				-- Languages worth highlighting INSIDE ```fences``` in markdown.
+				-- markdown/markdown_inline are omitted deliberately: Neovim
+				-- bundles those parsers, and listing them here would compile a
+				-- redundant second copy.
+				ensure_installed = {
+					"norg",
+					"python",
+					"bash",
+					"json",
+					"yaml",
+					"nix",
+					"javascript",
+					"typescript",
+					"c",
+					"cpp",
+					"toml",
+					"diff",
+					-- Required by nabla.nvim, NOT for fence highlighting.
+					-- plugins/latex.lua auto-enables nabla on every markdown
+					-- FileType; nabla's mathzone check calls
+					-- vim.treesitter.get_parser(buf, "latex") and, when that
+					-- parser is missing, nvim_echo's "Latex parser not found..."
+					-- on every note open. It echoes rather than errors, so the
+					-- pcall around enable() cannot suppress it -- the parser has
+					-- to actually exist.
+					"latex",
+				},
+				highlight = { enable = true },
+			})
+
+			-- nvim-treesitter only starts its highlighter for parsers IT
+			-- installed. markdown's parser ships inside Neovim itself, so
+			-- nvim-treesitter never counts it as installed and never starts —
+			-- which is why fenced blocks had no colour and `**bold**` did not
+			-- render. Start it explicitly for markdown; that also activates the
+			-- injections query, which is what highlights ```python as python.
+			-- Colours come from the capture groups (@keyword, @markup.strong…),
+			-- so the active base46/NvChad theme controls them.
+			vim.api.nvim_create_autocmd("FileType", {
+				group = vim.api.nvim_create_augroup("MarkdownTreesitter", { clear = true }),
+				pattern = { "markdown" },
+				callback = function(args)
+					pcall(vim.treesitter.start, args.buf, "markdown")
+				end,
+				desc = "Treesitter highlighting + fence injections for markdown",
+			})
+		end,
+	},
+	-- config = function()
+	-- 	require("image").setup({
+	-- 		backend = "kitty",
+	-- 		processor = "magick_rock", -- or "magick_cli"
+	-- 		integrations = {
+	-- 			markdown = {
+	-- 				enabled = true,
+	-- 				clear_in_insert_mode = false,
+	-- 				download_remote_images = true,
+	-- 				only_render_image_at_cursor = false,
+	-- 				filetypes = { "markdown", "vimwiki" }, -- markdown extensions (ie. quarto) can go here
+	-- 			},
+	-- 			neorg = {
+	-- 				enabled = true,
+	-- 				filetypes = { "norg" },
+	-- 			},
+	-- 			typst = {
+	-- 				enabled = true,
+	-- 				filetypes = { "typst" },
+	-- 			},
+	-- 			html = {
+	-- 				enabled = false,
+	-- 			},
+	-- 			css = {
+	-- 				enabled = false,
+	-- 			},
+	-- 		},
+	-- 		max_width = nil,
+	-- 		max_height = nil,
+	-- 		max_width_window_percentage = nil,
+	-- 		max_height_window_percentage = 50,
+	-- 		window_overlap_clear_enabled = false, -- toggles images when windows are overlapped
+	-- 		window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
+	-- 		editor_only_render_when_focused = false, -- auto show/hide images when the editor gains/looses focus
+	-- 		tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
+	-- 		hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" }, -- render image files as images when opened
+	-- 	})
+	-- end,
+	-- },
+
+	{
+		"iamcco/markdown-preview.nvim",
+		cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
+		build = "cd app && yarn install",
+		lazy = false,
+		init = function()
+			vim.g.mkdp_filetypes = { "markdown" }
+		end,
+		config = function()
+			-- require("markdown-preview").setup({
+			-- 	open_browser = {
+			-- 		app = "brave",
+			-- 	},
+			-- })
+			-- require("markdown-preview").setup({
+			-- 	open_browser = {
+			-- 		app = "brave",
+			-- 	},
+			-- })
+		end,
+		ft = { "markdown" },
+	},
+
+	{
+		"MeanderingProgrammer/render-markdown.nvim",
+		opts = {},
+		config = function()
+			require("render-markdown").setup({
+				heading = {
+					-- Turn on / off heading icon & background rendering
+					enabled = true,
+					-- Turn on / off any sign column related rendering
+					sign = true,
+					-- Determines how icons fill the available space:
+					--  right:   '#'s are concealed and icon is appended to right side
+					--  inline:  '#'s are concealed and icon is inlined on left side
+					--  overlay: icon is left padded with spaces and inserted on left hiding any additional '#'
+					position = "inline",
+					-- Replaces '#+' of 'atx_h._marker'
+					-- The number of '#' in the heading determines the 'level'
+					-- The 'level' is used to index into the list using a cycle
+					icons = { "󰲡 ", "󰲣 ", "󰲥 ", "󰲧 ", "󰲩 ", "󰲫 " },
+					-- Added to the sign column if enabled
+					-- The 'level' is used to index into the list using a cycle
+					signs = { "󰫎 " },
+					-- Width of the heading background:
+					--  block: width of the heading text
+					--  full:  full width of the window
+					-- Can also be a list of the above values in which case the 'level' is used
+					-- to index into the list using a clamp
+					width = "block",
+					-- Amount of margin to add to the left of headings
+					-- If a floating point value < 1 is provided it is treated as a percentage of the available window space
+					-- Margin available space is computed after accounting for padding
+					-- Can also be a list of numbers in which case the 'level' is used to index into the list using a clamp
+					left_margin = 0.00,
+					-- Amount of padding to add to the left of headings
+					-- If a floating point value < 1 is provided it is treated as a percentage of the available window space
+					-- Can also be a list of numbers in which case the 'level' is used to index into the list using a clamp
+					left_pad = 0,
+					-- Amount of padding to add to the right of headings when width is 'block'
+					-- If a floating point value < 1 is provided it is treated as a percentage of the available window space
+					-- Can also be a list of numbers in which case the 'level' is used to index into the list using a clamp
+					right_pad = 0,
+					-- Minimum width to use for headings when width is 'block'
+					-- Can also be a list of integers in which case the 'level' is used to index into the list using a clamp
+					min_width = 0,
+					-- Determines if a border is added above and below headings
+					-- Can also be a list of booleans in which case the 'level' is used to index into the list using a clamp
+					border = false,
+					-- Always use virtual lines for heading borders instead of attempting to use empty lines
+					border_virtual = true,
+					-- Highlight the start of the border using the foreground highlight
+					border_prefix = true,
+					-- Used above heading for border
+					above = "▄",
+					-- Used below heading for border
+					below = "▀",
+					-- The 'level' is used to index into the list using a clamp
+					-- Highlight for the heading icon and extends through the entire line
+					backgrounds = {
+						"RenderMarkdownH1Bg",
+						"RenderMarkdownH2Bg",
+						"RenderMarkdownH3Bg",
+						"RenderMarkdownH4Bg",
+						"RenderMarkdownH5Bg",
+						"RenderMarkdownH6Bg",
+					},
+					-- The 'level' is used to index into the list using a clamp
+					-- Highlight for the heading and sign icons
+					foregrounds = {
+						"RenderMarkdownH1",
+						"RenderMarkdownH2",
+						"RenderMarkdownH3",
+						"RenderMarkdownH4",
+						"RenderMarkdownH5",
+						"RenderMarkdownH6",
+					},
+				},
+				checkbox = {
+					enabled = true,
+					position = "inline",
+					unchecked = {
+						icon = "󰄱 ",
+						highlight = "rendermarkdownunchecked",
+						scope_highlight = nil,
+					},
+					checked = {
+						icon = "󰱒 ",
+						highlight = "rendermarkdownchecked",
+						scope_highlight = nil,
+					},
+					custom = {
+						important = {
+							raw = "[!]",
+							rendered = " ",
+							highlight = "DiagnosticError",
+							scope_highlight = nil,
+						},
+						pending = {
+							raw = "[>]",
+							rendered = "󰥔 ",
+							highlight = "rendermarkdowntodo",
+							scope_highlight = nil,
+						},
+					},
+				},
+				-- Options go here
+			})
+		end,
+		event = "VeryLazy",
+		-- dependencies = { "nvim-treesitter/nvim-treesitter", "echasnovski/mini.nvim" }, -- if you use the mini.nvim suite
+		dependencies = { "nvim-treesitter/nvim-treesitter", "echasnovski/mini.icons" }, -- if you use standalone mini plugins
+		-- dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" }, -- if you prefer nvim-web-devicons
+	},
+
+	{
+		"chrisgrieser/cmp_yanky",
+		opts = {
+			name = "cmp_yanky",
+			option = {
+				-- only suggest items which match the current filetype
+				onlyCurrentFiletype = false,
+				-- only suggest items with a minimum length
+				minLength = 3,
+			},
+		},
+	},
+	{
+		"benlubas/molten-nvim",
+		version = "^1.0.0", -- use version <2.0.0 if you write yours in python
+		build = ":UpdateRemotePlugins",
+		ft = { "python", "quarto", "markdown" },
+		cmd = {
+			"MoltenInit",
+			"MoltenEvaluateLine",
+			"MoltenEvaluateVisual",
+			"MoltenEvaluateOperator",
+			"MoltenDelete",
+			"MoltenHideOutput",
+			"MoltenEnterOutput",
+		},
+		init = function()
+			require("configs.molten").init()
+		end,
+		config = function()
+			require("configs.molten").setup()
+		end,
+	},
+	{
+		"hkupty/iron.nvim",
+		ft = { "python" },
+		config = function()
+			require("configs.iron")
+		end,
+	},
+	{
+		-- Per-directory sessions, auto-saved on exit. Auto-restored in notes
+		-- dirs via the VimEnter autocmd in autocommands.lua; manual restore
+		-- with <leader>qs / <leader>ql (mappings.lua).
+		"folke/persistence.nvim",
+		event = "BufReadPre",
+		opts = {},
+	},
+	{ "dccsillag/magma-nvim", event = "VeryLazy", enabled = false },
+	{
+		"lervag/vimtex",
+		init = function() end,
+		event = "VeryLazy",
+	},
+	{
+		"rareitems/anki.nvim",
+		-- lazy -- don't lazy it, it tries to be as lazy possible and it needs to add a filetype association
+		event = "VeryLazy",
+		opts = {
+			{
+				-- this function will add support for associating '.anki' extension with both 'anki' and 'tex' filetype.
+				tex_support = true,
+				models = {
+					-- Here you specify which notetype should be associated with which deck
+					NoteType = "PathToDeck",
+					["Basic"] = "Deck",
+					["Super Basic"] = "Deck::ChildDeck",
+				},
+			},
+		},
+	},
+
+	{
+
+		"obsidian-nvim/obsidian.nvim",
+		event = "VeryLazy",
+		-- config = function()
+		-- 	require("obsidian").setup({
+		-- 		-- your configuration comes here
+		-- 	})
+		-- end,
+
+		ft = { "markdown" },
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+			"nvim-telescope/telescope.nvim",
+			"nvim-treesitter/nvim-treesitter",
+			"hrsh7th/nvim-cmp",
+		},
+		opts = {
+			ui = {
+				enable = false, -- set to false to disable all additional syntax features
+				checkboxes = {
+					-- NOTE: the 'char' value has to be a single character, and the highlight groups are defined below.
+					[" "] = { char = "󰄱", hl_group = "ObsidianTodo" },
+					["x"] = { char = "", hl_group = "ObsidianDone" },
+					[">"] = { char = "", hl_group = "ObsidianRightArrow" },
+					["!"] = { char = "", hl_group = "ObsidianImportant" },
+
+					["~"] = { char = "󰰱", hl_group = "ObsidianTilde" },
+
+					-- You can also add more custom ones...
+				},
+			},
+			workspaces = {
+				{
+					name = "main",
+					path = "~/Obsidian/Main",
+				},
+			},
+			daily_notes = {
+				-- Optional, if you keep daily notes in a separate directory.
+				folder = "dailies",
+				-- Optional, if you want to change the date format for the ID of daily notes.
+				date_format = "%Y-%m-%d",
+				-- Optional, if you want to change the date format of the default alias of daily notes.
+				alias_format = "%B %-d, %Y",
+				-- Optional, default tags to add to each new daily note created.
+				default_tags = { "daily-notes" },
+				-- Optional, if you want to automatically insert a template from your template directory like 'daily.md'
+				template = "daily note",
+			},
+			templates = {
+				folder = "templates",
+				date_format = "%Y-%m-%d",
+				time_format = "%H:%M",
+				-- A map for custom variables, the key should be the variable and the value a function
+				substitutions = {
+					weekly_note_link = function()
+						return "[[" .. os.date("%Y-W%V") .. "#Belief Experiment]]"
+					end,
+					-- ISO week vars for templates/weekly-review.md
+					week = function()
+						return os.date("%G-W%V")
+					end,
+					next_week = function()
+						local u = tonumber(os.date("%u"))
+						return os.date("%G-W%V", os.time() + (8 - u) * 86400)
+					end,
+					week_monday = function()
+						local u = tonumber(os.date("%u"))
+						return os.date("%Y-%m-%d", os.time() - (u - 1) * 86400)
+					end,
+					week_sunday = function()
+						local u = tonumber(os.date("%u"))
+						return os.date("%Y-%m-%d", os.time() + (7 - u) * 86400)
+					end,
+					-- Quarter vars for templates/quarterly-goals.md + quarterly-review.md
+					quarter = function()
+						local t = os.date("*t")
+						return string.format("%d-Q%d", t.year, math.ceil(t.month / 3))
+					end,
+					next_quarter = function()
+						local t = os.date("*t")
+						local q = math.ceil(t.month / 3) + 1
+						local y = t.year
+						if q > 4 then
+							q, y = 1, y + 1
+						end
+						return string.format("%d-Q%d", y, q)
+					end,
+					quarter_start = function()
+						local t = os.date("*t")
+						local q = math.ceil(t.month / 3)
+						return os.date("%Y-%m-%d", os.time({ year = t.year, month = (q - 1) * 3 + 1, day = 1 }))
+					end,
+					quarter_end = function()
+						local t = os.date("*t")
+						local q = math.ceil(t.month / 3)
+						local y, m = t.year, q * 3 + 1
+						if m > 12 then
+							y, m = y + 1, 1
+						end
+						return os.date("%Y-%m-%d", os.time({ year = y, month = m, day = 1 }) - 86400)
+					end,
+					year = function()
+						return os.date("%Y")
+					end,
+					-- Basename of the current quarter's goals note in areas/goals/
+					-- (e.g. "2026-q3"; falls back to the -vision note if the plan
+					-- file doesn't exist yet). Used by the daily-note template.
+					quarter_goals_note = function()
+						local t = os.date("*t")
+						local base = string.format("%d-q%d", t.year, math.ceil(t.month / 3))
+						local dir = vim.fn.expand("~/Obsidian/Main/areas/goals/")
+						if vim.fn.filereadable(dir .. base .. ".md") == 0
+							and vim.fn.filereadable(dir .. base .. "-vision.md") == 1 then
+							return base .. "-vision"
+						end
+						return base
+					end,
+				},
+			},
+
+			-- Optional, by default when you use `:ObsidianFollowLink` on a link to an external
+			-- URL it will be ignored but you can customize this behavior here.
+			---@param url string
+			follow_url_func = function(url)
+				-- Open the URL in the default web browser.
+				vim.fn.jobstart({ "xdg-open", url }) -- linux
+				-- vim.cmd(':silent exec "!start ' .. url .. '"') -- Windows
+				-- vim.ui.open(url) -- need Neovim 0.10.0+
+			end,
+
+			-- Optional, by default when you use `:ObsidianFollowLink` on a link to an image
+			-- file it will be ignored but you can customize this behavior here.
+			---@param img string
+			follow_img_func = function(img)
+				vim.fn.jobstart({ "xdg-open", img }) -- linux
+				-- vim.cmd(':silent exec "!start ' .. url .. '"') -- Windows
+			end,
+
+			--     -- your configuration comes here
+			completion = {
+				-- Set to false to disable completion.
+				nvim_cmp = true,
+				-- Trigger completion at 2 chars.
+				min_chars = 2,
+			},
+			note_frontmatter_func = function(note)
+				-- List of articles to exclude from capitalization
+				local articles = {
+					["a"] = true,
+					["an"] = true,
+					["the"] = true,
+					["and"] = true,
+					["or"] = true,
+					["but"] = true,
+					["of"] = true,
+					["in"] = true,
+					["on"] = true,
+					["with"] = true,
+					["to"] = true,
+					["for"] = true,
+				}
+
+				-- Helper function to capitalize words, excluding articles
+				local function capitalize_title_simple(title)
+					local words = {}
+					local first_word = true
+
+					for _, word in ipairs(vim.split(title, " ", { plain = true })) do
+						word = word:lower()
+						if first_word or not articles[word] then
+							table.insert(words, word:sub(1, 1):upper() .. word:sub(2)) -- Capitalize first letter
+						else
+							table.insert(words, word) -- Keep articles lowercase
+						end
+						first_word = false
+					end
+
+					return table.concat(words, " ")
+				end
+
+				-- Add the title of the note as an alias
+				if note.title == nil and note.id then
+					note.title = capitalize_title_simple(note.id:gsub("%-", " "))
+					print("We are setting the title to", note.id)
+				end
+
+				if note.title then
+					note:add_alias(note.title)
+					local formatted_name = note.title:lower():gsub("%s", "-")
+					if formatted_name ~= note.title:lower() then
+						note:add_alias(formatted_name)
+					end
+					-- formatted_name = capitalize_title_simple(note.title:gsub("%-", " "))
+					-- if formatted_name ~= note.title then
+					-- 	note:add_alias(formatted_name)
+					-- end
+				end
+
+				-- Add current date to metadata
+				local current_date = os.date("%Y-%m-%d") -- Format: YYYY-MM-DD
+				if note.metadata == nil then
+					note.metadata = {}
+				end
+
+				if note.metadata.created_date == nil then
+					note.metadata.created_date = current_date
+				end
+				note.metadata.last_edited_date = current_date
+
+				local out = { id = note.id, aliases = note.aliases, tags = note.tags }
+
+				-- Ensure manually added fields in the frontmatter are kept
+				if note.metadata ~= nil and not vim.tbl_isempty(note.metadata) then
+					for k, v in pairs(note.metadata) do
+						out[k] = v
+					end
+				end
+
+				return out
+			end,
+		},
+	},
+	{
+		default_keymappings_enabled = false,
+		"johmsalas/text-case.nvim",
+		dependencies = { "nvim-telescope/telescope.nvim" },
+		config = function()
+			require("textcase").setup({})
+			require("telescope").load_extension("textcase")
+		end,
+		prefix = "ga",
+		keys = {
+			"ga", -- Default invocation prefix
+			{ "ga?", "<cmd>TextCaseOpenTelescope<CR>", mode = { "n", "x" }, desc = "Telescope" },
+		},
+		cmd = {
+			-- NOTE: The Subs command name can be customized via the option "substitude_command_name"
+			"Subs",
+			"TextCaseOpenTelescope",
+			"TextCaseOpenTelescopeQuickChange",
+			"TextCaseOpenTelescopeLSPChange",
+			"TextCaseStartReplacingCommand",
+		},
+		-- If you want to use the interactive feature of the `Subs` command right away, text-case.nvim
+		-- has to be loaded on startup. Otherwise, the interactive feature of the `Subs` will only be
+		-- available after the first executing of it or after a keymap of text-case.nvim has been used.
+		lazy = false,
+	},
+
+	{
+		"s1n7ax/nvim-window-picker",
+		name = "window-picker",
+		event = "VeryLazy",
+		version = "2.*",
+		config = function()
+			require("window-picker").setup({
+				-- type of hints you want to get
+				-- following types are supported
+				-- 'statusline-winbar' | 'floating-big-letter' | 'floating-letter'
+				-- 'statusline-winbar' draw on 'statusline' if possible, if not 'winbar' will be
+				-- 'floating-big-letter' draw big letter on a floating window
+				-- 'floating-letter' draw letter on a floating window
+				-- used
+				hint = "statusline-winbar",
+
+				-- when you go to window selection mode, status bar will show one of
+				-- following letters on them so you can use that letter to select the window
+				selection_chars = "AOEIHTNSUD",
+
+				-- This section contains picker specific configurations
+				picker_config = {
+					statusline_winbar_picker = {
+						-- You can change the display string in status bar.
+						-- It supports '%' printf style. Such as `return char .. ': %f'` to display
+						-- buffer file path. See :h 'stl' for details.
+						selection_display = function(char, windowid)
+							return "%=" .. char .. "%="
+						end,
+
+						-- whether you want to use winbar instead of the statusline
+						-- "always" means to always use winbar,
+						-- "never" means to never use winbar
+						-- "smart" means to use winbar if cmdheight=0 and statusline if cmdheight > 0
+						use_winbar = "never", -- "always" | "never" | "smart"
+					},
+
+					floating_big_letter = {
+						-- window picker plugin provides bunch of big letter fonts
+						-- fonts will be lazy loaded as they are being requested
+						-- additionally, user can pass in a table of fonts in to font
+						-- property to use instead
+
+						font = "ansi-shadow", -- ansi-shadow |
+					},
+				},
+
+				-- whether to show 'Pick window:' prompt
+				show_prompt = true,
+
+				-- prompt message to show to get the user input
+				prompt_message = "Pick window: ",
+
+				-- if you want to manually filter out the windows, pass in a function that
+				-- takes two parameters. You should return window ids that should be
+				-- included in the selection
+				-- EX:-
+				-- function(window_ids, filters)
+				--    -- folder the window_ids
+				--    -- return only the ones you want to include
+				--    return {1000, 1001}
+				-- end
+				filter_func = nil,
+
+				-- following filters are only applied when you are using the default filter
+				-- defined by this plugin. If you pass in a function to "filter_func"
+				-- property, you are on your own
+				filter_rules = {
+					-- when there is only one window available to pick from, use that window
+					-- without prompting the user to select
+					autoselect_one = true,
+
+					-- whether you want to include the window you are currently on to window
+					-- selection or not
+					include_current_win = false,
+
+					-- whether to include windows marked as unfocusable
+					include_unfocusable_windows = false,
+
+					-- filter using buffer options
+					bo = {
+						-- if the file type is one of following, the window will be ignored
+						filetype = { "NvimTree", "neo-tree", "notify", "snacks_notif" },
+
+						-- if the file type is one of following, the window will be ignored
+						buftype = { "terminal" },
+					},
+
+					-- filter using window options
+					wo = {},
+
+					-- if the file path contains one of following names, the window
+					-- will be ignored
+					file_path_contains = {},
+
+					-- if the file name contains one of following names, the window will be
+					-- ignored
+					file_name_contains = {},
+				},
+
+				-- You can pass in the highlight name or a table of content to set as
+				-- highlight
+				highlights = {
+					enabled = true,
+					statusline = {
+						focused = {
+							fg = "#ededed",
+							bg = "#e35e4f",
+							bold = true,
+						},
+						unfocused = {
+							fg = "#ededed",
+							bg = "#44cc41",
+							bold = true,
+						},
+					},
+					winbar = {
+						focused = {
+							fg = "#ededed",
+							bg = "#e35e4f",
+							bold = true,
+						},
+						unfocused = {
+							fg = "#ededed",
+							bg = "#44cc41",
+							bold = true,
+						},
+					},
+				},
+			})
+		end,
+	},
+
+	-- {
+	-- 	"filipdutescu/renamer.nvim",
+	-- 	dependencies = { "nvim-lua/plenary.nvim" },
+	-- },
+	{
+		"folke/noice.nvim",
+		event = "VeryLazy",
+
+		opts = {
+			lsp = {
+				override = {
+					["vim.lsp.util.convert_input_to_markdown_lines"] = true,
+					["vim.lsp.util.stylize_markdown"] = true,
+					["cmp.entry.get_documentation"] = true,
+				},
+				signature = {
+					enable = false,
+				},
+			},
+			routes = {
+				{
+					filter = {
+						event = "msg_show",
+						kind = "",
+						find = "line", -- filter out the filename/path notification on exiting insert mode
+					},
+					opts = { skip = true },
+				},
+				{
+					filter = {
+						event = "msg_show",
+						any = {
+							{ find = "%d+L, %d+B" },
+							{ find = "; after #%d+" },
+							{ find = "; before #%d+" },
+						},
+					},
+					view = "mini",
+				},
+				-- routes = {
+				-- 	{
+				-- 		filter = {
+				-- 			event = "msg_showmode",
+				-- 			-- find = "line %d+ of %d+",
+				-- 		},
+				-- 		opts = { skip = true },
+				-- 	},
+				-- },
+			},
+			presets = {
+				bottom_search = true,
+				command_palette = true,
+				long_message_to_split = true,
+				inc_rename = true,
+			},
+		},
+    -- stylua: ignore
+    keys = {
+      { "<S-Enter>",   function() require("noice").redirect(vim.fn.getcmdline()) end,                 mode = "c",                 desc = "Redirect Cmdline" },
+      { "<leader>snl", function() require("noice").cmd("last") end,                                   desc = "Noice Last Message" },
+      { "<leader>snh", function() require("noice").cmd("history") end,                                desc = "Noice History" },
+      { "<leader>sna", function() require("noice").cmd("all") end,                                    desc = "Noice All" },
+      { "<leader>snd", function() require("noice").cmd("dismiss") end,                                desc = "Dismiss All" },
+      { "<c-f>",       function() if not require("noice.lsp").scroll(4) then return "<c-f>" end end,  silent = true,              expr = true,              desc = "Scroll forward",  mode = { "i", "n", "s" } },
+      { "<c-b>",       function() if not require("noice.lsp").scroll(-4) then return "<c-b>" end end, silent = true,              expr = true,              desc = "Scroll backward", mode = { "i", "n", "s" } },
+    },
+	},
+
+	{
+		"stevearc/dressing.nvim",
+		opts = {},
+	},
+
+	{
+
+		event = "VeryLazy",
+		"TobinPalmer/pastify.nvim",
+		cmd = { "Pastify", "PastifyAfter" },
+		config = function()
+			-- require("pastify").setup({
+			-- 	opts = {
+			-- 		absolute_path = false, -- use absolute or relative path to the working directory
+			-- 		apikey = "", -- Api key, required for online saving
+			-- 		local_path = "/assets/imgs/", -- The path to put local files in, ex <cwd>/assets/images/<filename>.png
+			-- 		save = "local", -- Either 'local' or 'online' or 'local_file'
+			-- 		filename = "", -- The file name to save the image as, if empty pastify will ask for a name
+			-- 		-- Example function for the file name that I like to use:
+			-- 		-- filename = function() return vim.fn.expand("%:t:r") .. '_' .. os.date("%Y-%m-%d_%H-%M-%S") end,
+			-- 		-- Example result: 'file_2021-08-01_12-00-00'
+			-- 		default_ft = "markdown", -- Default filetype to use
+			-- 	},
+			-- 	ft = { -- Custom snippets for different filetypes, will replace $IMG$ with the image url
+			-- 		html = '<img src="$IMG$" alt="">',
+			-- 		markdown = "![]($IMG$)",
+			-- 		tex = [[\includegraphics[width=\linewidth]{$IMG$}]],
+			-- 		css = 'background-image: url("$IMG$");',
+			-- 		js = 'const img = new Image(); img.src = "$IMG$";',
+			-- 		xml = '<image src="$IMG$" />',
+			-- 		php = '<?php echo "<img src="$IMG$" alt="">"; ?>',
+			-- 		python = "# $IMG$",
+			-- 		java = "// $IMG$",
+			-- 		c = "// $IMG$",
+			-- 		cpp = "// $IMG$",
+			-- 		swift = "// $IMG$",
+			-- 		kotlin = "// $IMG$",
+			-- 		go = "// $IMG$",
+			-- 		typescript = "// $IMG$",
+			-- 		ruby = "# $IMG$",
+			-- 		vhdl = "-- $IMG$",
+			-- 		verilog = "// $IMG$",
+			-- 		systemverilog = "// $IMG$",
+			-- 		lua = "-- $IMG$",
+			-- 	},
+			-- })
+		end,
+	},
+
+	{
+		"gbprod/yanky.nvim",
+		opts = function()
+			return require("configs.yanky")
+		end,
+	},
+	{
+		"debugloop/telescope-undo.nvim",
+		dependencies = { -- note how they're inverted to above example
+			{
+				"nvim-telescope/telescope.nvim",
+				dependencies = { "nvim-lua/plenary.nvim" },
+			},
+		},
+		keys = {
+			{ -- lazy style key map
+				"<leader>fu",
+				"<cmd>Telescope undo<cr>",
+				desc = "undo history",
+			},
+		},
+		opts = {
+			-- don't use `defaults = { }` here, do this in the main telescope spec
+			extensions = {
+				undo = {
+					-- telescope-undo.nvim config, see below
+				},
+				-- no other extensions here, they can have their own spec too
+			},
+		},
+		config = function(_, opts)
+			-- Calling telescope's setup from multiple specs does not hurt, it will happily merge the
+			-- configs for us. We won't use data, as everything is in it's own namespace (telescope
+			-- defaults, as well as each extension).
+			require("telescope").setup(opts)
+			require("telescope").load_extension("undo")
+		end,
+	},
+	{
+		"folke/flash.nvim",
+		event = "VeryLazy",
+		opts = {},
+		keys = {
+			{
+				"s",
+				mode = { "n", "x", "o" },
+				function()
+					require("flash").jump()
+				end,
+				desc = "Flash",
+			},
+			{
+				"S",
+				mode = { "n", "x", "o" },
+				function()
+					require("flash").treesitter()
+				end,
+				desc = "Flash Treesitter",
+			},
+			{
+				"r",
+				mode = "o",
+				function()
+					require("flash").remote()
+				end,
+				desc = "Remote Flash",
+			},
+			{
+				"R",
+				mode = { "o", "x" },
+				function()
+					require("flash").treesitter_search()
+				end,
+				desc = "Treesitter Search",
+			},
+			{
+				"<c-s>",
+				mode = { "c" },
+				function()
+					require("flash").toggle()
+				end,
+				desc = "Toggle Flash Search",
+			},
+		},
+	},
+	{
+		"nvim-tree/nvim-tree.lua",
+		opts = {
+			git = { enable = true },
+		},
+	},
+	-- {
+	-- 	"jose-elias-alvarez/null-ls.nvim",
+	-- 	opt = function()
+	-- 		return require("configs.null-ls")
+	-- 	end,
+	-- },
+	-- {
+	-- 	"nvim-neo-tree/neo-tree.nvim",
+	-- 	branch = "v3.x",
+	-- 	dependencies = {
+	-- 		"nvim-lua/plenary.nvim",
+	-- 		"nvim-tree/nvim-web-devicons", -- not strictly required, but recommended
+	-- 		"MunifTanjim/nui.nvim",
+	-- 		-- "3rd/image.nvim", -- Optional image support in preview window: See `# Preview Mode` for more information
+	-- 	},
+	-- },
+	{
+		"zbirenbaum/copilot.lua",
+		cmd = "Copilot",
+		build = ":Copilot auth",
+		opts = {
+
+			suggestion = { enabled = false },
+			debug = false,
+			panel = { enabled = false },
+			filetypes = {
+				markdown = true,
+				help = true,
+			},
+		},
+	},
+
+	{
+		"zbirenbaum/copilot-cmp",
+		dependencies = "copilot.lua",
+		opts = {},
+		config = function(_, opts)
+			local copilot_cmp = require("copilot_cmp")
+			copilot_cmp.setup(opts)
+
+			-- attach cmp source whenever copilot attaches
+			-- fixes lazy-loading issues with the copilot cmp source
+			-- require("lazyvim.util").lsp.on_attach(function(client)
+			-- 	if client.name == "copilot" then
+			-- 		copilot_cmp._on_insert_enter({})
+			-- 	end
+			-- end)
+		end,
+	},
+	{
+		"nvim-cmp",
+		dependencies = {
+			{
+				"zbirenbaum/copilot-cmp",
+				dependencies = "copilot.lua",
+				opts = {},
+				config = function(_, opts)
+					local copilot_cmp = require("copilot_cmp")
+					copilot_cmp.setup(opts)
+
+					-- attach cmp source whenever copilot attaches
+					-- fixes lazy-loading issues with the copilot cmp source
+					-- require("lazyvim.util").lsp.on_attach(function(client)
+					-- 	if client.name == "copilot" then
+					-- 		copilot_cmp._on_insert_enter({})
+					-- 	end
+					-- end)
+				end,
+			},
+		},
+	},
+
+	{
+		"neovim/nvim-lspconfig",
+		config = function()
+			require("nvchad.configs.lspconfig").defaults()
+			require("configs.lspconfig")
+		end,
+	},
+
+	{
+		"williamboman/mason.nvim",
+		opts = {
+			-- setup = {
+			--   rust_analyzer = function()
+			--     return true
+			--   end,
+			-- },
+			ensure_installed = {
+				"lua-language-server",
+				"html-lsp",
+				"prettier",
+				"stylua",
+				"clangd",
+				"clang-format",
+				"markdown",
+				"markdown_inline",
+				"rust-analyzer",
+				"gopls",
+			},
+		},
+	},
+
+	{
+		"rcarriga/nvim-notify",
+		config = function()
+			require("configs.notify")
+		end,
+	},
+	{
+		"folke/snacks.nvim",
+		priority = 1000,
+		lazy = false,
+		---@type snacks.Config
+		opts = {
+			bigfile = { enabled = true },
+			dashboard = { enabled = true },
+			explorer = { enabled = false }, -- use oil.nvim for file/dir browsing instead
+			indent = { enabled = true },
+			input = { enabled = true },
+			notifier = {
+				enabled = true,
+				timeout = 3000,
+			},
+			quickfile = { enabled = true },
+			scope = { enabled = true },
+			scroll = { enabled = false },
+			statuscolumn = { enabled = true },
+			win = { enabled = true },
+			words = { enabled = true },
+			styles = {
+				notification = {
+					-- wo = { wrap = true } -- Wrap notifications
+				},
+			},
+		},
+		keys = {
+			-- Top Pickers & Explorer
+			{
+				"<leader><space>",
+				function()
+					Snacks.picker.smart()
+				end,
+				desc = "Smart Find Files",
+			},
+			{
+				"<leader>,",
+				function()
+					Snacks.picker.buffers()
+				end,
+				desc = "Buffers",
+			},
+			{
+				"<leader>/",
+				function()
+					Snacks.picker.grep()
+				end,
+				desc = "Grep",
+			},
+			{
+				"<leader>:",
+				function()
+					Snacks.picker.command_history()
+				end,
+				desc = "Command History",
+			},
+			{
+				"<leader>n",
+				function()
+					Snacks.picker.notifications()
+				end,
+				desc = "Notification History",
+			},
+			-- find
+			{
+				"<leader>fb",
+				function()
+					Snacks.picker.buffers()
+				end,
+				desc = "Buffers",
+			},
+			{
+				"<leader>fc",
+				function()
+					Snacks.picker.files({ cwd = vim.fn.stdpath("config") })
+				end,
+				desc = "Find Config File",
+			},
+			{
+				"<leader>ff",
+				function()
+					Snacks.picker.files()
+				end,
+				desc = "Find Files",
+			},
+			{
+				"<leader>fg",
+				function()
+					Snacks.picker.git_files()
+				end,
+				desc = "Find Git Files",
+			},
+			{
+				"<leader>fC",
+				function()
+					require("configs.recent-created").picker()
+				end,
+				desc = "Recently Created Files",
+			},
+			{
+				"<leader>fp",
+				function()
+					Snacks.picker.projects()
+				end,
+				desc = "Projects",
+			},
+			{
+				"<leader>fr",
+				function()
+					Snacks.picker.recent()
+				end,
+				desc = "Recent",
+			},
+			{
+				"<leader>fR",
+				function()
+					Snacks.picker.recent({ filter = { cwd = true } })
+				end,
+				desc = "Recent (cwd)",
+			},
+			-- git
+			{
+				"<leader>gb",
+				function()
+					Snacks.picker.git_branches()
+				end,
+				desc = "Git Branches",
+			},
+			{
+				"<leader>gl",
+				function()
+					Snacks.picker.git_log()
+				end,
+				desc = "Git Log",
+			},
+			{
+				"<leader>gL",
+				function()
+					Snacks.picker.git_log_line()
+				end,
+				desc = "Git Log Line",
+			},
+			{
+				"<leader>gs",
+				function()
+					Snacks.picker.git_status()
+				end,
+				desc = "Git Status",
+			},
+			{
+				"<leader>gS",
+				function()
+					Snacks.picker.git_stash()
+				end,
+				desc = "Git Stash",
+			},
+			{
+				"<leader>gd",
+				function()
+					Snacks.picker.git_diff()
+				end,
+				desc = "Git Diff (Hunks)",
+			},
+			{
+				"<leader>gf",
+				function()
+					Snacks.picker.git_log_file()
+				end,
+				desc = "Git Log File",
+			},
+			-- Grep
+			{
+				"<leader>sb",
+				function()
+					Snacks.picker.lines()
+				end,
+				desc = "Buffer Lines",
+			},
+			{
+				"<leader>sB",
+				function()
+					Snacks.picker.grep_buffers()
+				end,
+				desc = "Grep Open Buffers",
+			},
+			{
+				"<leader>sg",
+				function()
+					Snacks.picker.grep()
+				end,
+				desc = "Grep",
+			},
+			{
+				"<leader>sw",
+				function()
+					Snacks.picker.grep_word()
+				end,
+				desc = "Visual selection or word",
+				mode = { "n", "x" },
+			},
+			-- search
+			{
+				'<leader>s"',
+				function()
+					Snacks.picker.registers()
+				end,
+				desc = "Registers",
+			},
+			{
+				"<leader>s/",
+				function()
+					Snacks.picker.search_history()
+				end,
+				desc = "Search History",
+			},
+			{
+				"<leader>sa",
+				function()
+					Snacks.picker.autocmds()
+				end,
+				desc = "Autocmds",
+			},
+			{
+				"<leader>sb",
+				function()
+					Snacks.picker.lines()
+				end,
+				desc = "Buffer Lines",
+			},
+			{
+				"<leader>sc",
+				function()
+					Snacks.picker.command_history()
+				end,
+				desc = "Command History",
+			},
+			{
+				"<leader>sC",
+				function()
+					Snacks.picker.commands()
+				end,
+				desc = "Commands",
+			},
+			{
+				"<leader>sd",
+				function()
+					Snacks.picker.diagnostics()
+				end,
+				desc = "Diagnostics",
+			},
+			{
+				"<leader>sD",
+				function()
+					Snacks.picker.diagnostics_buffer()
+				end,
+				desc = "Buffer Diagnostics",
+			},
+			{
+				"<leader>sh",
+				function()
+					Snacks.picker.help()
+				end,
+				desc = "Help Pages",
+			},
+			{
+				"<leader>sH",
+				function()
+					Snacks.picker.highlights()
+				end,
+				desc = "Highlights",
+			},
+			{
+				"<leader>si",
+				function()
+					Snacks.picker.icons()
+				end,
+				desc = "Icons",
+			},
+			{
+				"<leader>sj",
+				function()
+					Snacks.picker.jumps()
+				end,
+				desc = "Jumps",
+			},
+			{
+				"<leader>sk",
+				function()
+					Snacks.picker.keymaps()
+				end,
+				desc = "Keymaps",
+			},
+			{
+				"<leader>sl",
+				function()
+					Snacks.picker.loclist()
+				end,
+				desc = "Location List",
+			},
+			{
+				"<leader>sm",
+				function()
+					Snacks.picker.marks()
+				end,
+				desc = "Marks",
+			},
+			{
+				"<leader>sM",
+				function()
+					Snacks.picker.man()
+				end,
+				desc = "Man Pages",
+			},
+			{
+				"<leader>sp",
+				function()
+					Snacks.picker.lazy()
+				end,
+				desc = "Search for Plugin Spec",
+			},
+			{
+				"<leader>sq",
+				function()
+					Snacks.picker.qflist()
+				end,
+				desc = "Quickfix List",
+			},
+			{
+				"<leader>sR",
+				function()
+					Snacks.picker.resume()
+				end,
+				desc = "Resume",
+			},
+			{
+				"<leader>su",
+				function()
+					Snacks.picker.undo()
+				end,
+				desc = "Undo History",
+			},
+			{
+				"<leader>uC",
+				function()
+					Snacks.picker.colorschemes()
+				end,
+				desc = "Colorschemes",
+			},
+			-- LSP
+			{
+				"gd",
+				function()
+					Snacks.picker.lsp_definitions()
+				end,
+				desc = "Goto Definition",
+			},
+			{
+				"gD",
+				function()
+					Snacks.picker.lsp_declarations()
+				end,
+				desc = "Goto Declaration",
+			},
+			{
+				"gr",
+				function()
+					Snacks.picker.lsp_references()
+				end,
+				nowait = true,
+				desc = "References",
+			},
+			{
+				"gI",
+				function()
+					Snacks.picker.lsp_implementations()
+				end,
+				desc = "Goto Implementation",
+			},
+			{
+				"gy",
+				function()
+					Snacks.picker.lsp_type_definitions()
+				end,
+				desc = "Goto T[y]pe Definition",
+			},
+			{
+				"<leader>ss",
+				function()
+					Snacks.picker.lsp_symbols()
+				end,
+				desc = "LSP Symbols",
+			},
+			{
+				"<leader>sS",
+				function()
+					Snacks.picker.lsp_workspace_symbols()
+				end,
+				desc = "LSP Workspace Symbols",
+			},
+			-- Other
+			{
+				"<leader>z",
+				function()
+					Snacks.zen()
+				end,
+				desc = "Toggle Zen Mode",
+			},
+			{
+				"<leader>Z",
+				function()
+					Snacks.zen.zoom()
+				end,
+				desc = "Toggle Zoom",
+			},
+			{
+				"<leader>.",
+				function()
+					Snacks.scratch()
+				end,
+				desc = "Toggle Scratch Buffer",
+			},
+			{
+				"<leader>S",
+				function()
+					Snacks.scratch.select()
+				end,
+				desc = "Select Scratch Buffer",
+			},
+			{
+				"<leader>n",
+				function()
+					Snacks.notifier.show_history()
+				end,
+				desc = "Notification History",
+			},
+			{
+				"<leader>bd",
+				function()
+					Snacks.bufdelete()
+				end,
+				desc = "Delete Buffer",
+			},
+			{
+				"<leader>cR",
+				function()
+					Snacks.rename.rename_file()
+				end,
+				desc = "Rename File",
+			},
+			{
+				"<leader>gB",
+				function()
+					Snacks.gitbrowse()
+				end,
+				desc = "Git Browse",
+				mode = { "n", "v" },
+			},
+			{
+				"<leader>gg",
+				function()
+					Snacks.lazygit()
+				end,
+				desc = "Lazygit",
+			},
+			{
+				"<leader>un",
+				function()
+					Snacks.notifier.hide()
+				end,
+				desc = "Dismiss All Notifications",
+			},
+			{
+				"<c-/>",
+				function()
+					Snacks.terminal()
+				end,
+				desc = "Toggle Terminal",
+			},
+
+			-- { "<c-_>",      function() Snacks.terminal() end, desc = "which_key_ignore" },
+			{
+				"]]",
+				function()
+					Snacks.words.jump(vim.v.count1)
+				end,
+				desc = "Next Reference",
+				mode = { "n", "t" },
+			},
+			{
+				"[[",
+				function()
+					Snacks.words.jump(-vim.v.count1)
+				end,
+				desc = "Prev Reference",
+				mode = { "n", "t" },
+			},
+			{
+				"<leader>N",
+				desc = "Neovim News",
+				function()
+					Snacks.win({
+						file = vim.api.nvim_get_runtime_file("doc/news.txt", false)[1],
+						width = 0.6,
+						height = 0.6,
+						wo = {
+							spell = false,
+							wrap = false,
+							signcolumn = "yes",
+							statuscolumn = " ",
+							conceallevel = 3,
+						},
+					})
+				end,
+			},
+		},
+		init = function()
+			vim.api.nvim_create_autocmd("User", {
+				pattern = "VeryLazy",
+				callback = function()
+					-- Setup some globals for debugging (lazy-loaded)
+					_G.dd = function(...)
+						Snacks.debug.inspect(...)
+					end
+					_G.bt = function()
+						Snacks.debug.backtrace()
+					end
+					vim.print = _G.dd -- Override print to use snacks for `:=` command
+
+					-- Create some toggle mappings
+					Snacks.toggle.option("spell", { name = "Spelling" }):map("<leader>us")
+					Snacks.toggle.option("wrap", { name = "Wrap" }):map("<leader>uw")
+					Snacks.toggle.option("relativenumber", { name = "Relative Number" }):map("<leader>uL")
+					Snacks.toggle.diagnostics():map("<leader>ud")
+					Snacks.toggle.line_number():map("<leader>ul")
+					Snacks.toggle
+						.option("conceallevel", { off = 0, on = vim.o.conceallevel > 0 and vim.o.conceallevel or 2 })
+						:map("<leader>uc")
+					Snacks.toggle.treesitter():map("<leader>uT")
+					Snacks.toggle
+						.option("background", { off = "light", on = "dark", name = "Dark Background" })
+						:map("<leader>ub")
+					Snacks.toggle.inlay_hints():map("<leader>uh")
+					Snacks.toggle.indent():map("<leader>ug")
+					Snacks.toggle.dim():map("<leader>uM")
+				end,
+			})
+		end,
+	},
+	-- {
+	--   "folke/snacks.nvim",
+	--   priority = 1000,
+	--   lazy = false,
+	--   ---@type snacks.Config
+	--   opts = {
+	--     -- your configuration comes here
+	--     -- or leave it empty to use the default settings
+	--     -- refer to the configuration section below
+	--     bigfile = { enabled = true },
+	--     dashboard = { enabled = true },
+	--     explorer = { enabled = true },
+	--     indent = { enabled = true },
+	--     input = { enabled = true },
+	--     picker = { enabled = true },
+	--     notifier = { enabled = true },
+	--     quickfile = { enabled = true },
+	--     scope = { enabled = true },
+	--     scroll = { enabled = false },
+	--     statuscolumn = { enabled = true },
+	--     words = { enabled = true },
+	--   },
+	-- },
+	{
+		"lewis6991/gitsigns.nvim",
+		event = "VeryLazy",
+		config = function()
+			require("gitsigns").setup({
+				signs = {
+					add = { text = "┃" },
+					change = { text = "┃" },
+					delete = { text = "_" },
+					topdelete = { text = "‾" },
+					changedelete = { text = "~" },
+					untracked = { text = "┆" },
+				},
+				signs_staged = {
+					add = { text = "┃" },
+					change = { text = "┃" },
+					delete = { text = "_" },
+					topdelete = { text = "‾" },
+					changedelete = { text = "~" },
+					untracked = { text = "┆" },
+				},
+				signs_staged_enable = true,
+				signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
+				numhl = false, -- Toggle with `:Gitsigns toggle_numhl`
+				linehl = false, -- Toggle with `:Gitsigns toggle_linehl`
+				word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
+				watch_gitdir = {
+					follow_files = true,
+				},
+				auto_attach = true,
+				attach_to_untracked = false,
+				current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
+				current_line_blame_opts = {
+					virt_text = true,
+					virt_text_pos = "eol", -- 'eol' | 'overlay' | 'right_align'
+					delay = 1000,
+					ignore_whitespace = false,
+					virt_text_priority = 100,
+					use_focus = true,
+				},
+				current_line_blame_formatter = "<author>, <author_time:%R> - <summary>",
+				sign_priority = 6,
+				update_debounce = 100,
+				status_formatter = nil, -- Use default
+				max_file_length = 40000, -- Disable if file is longer than this (in lines)
+				preview_config = {
+					-- Options passed to nvim_open_win
+					border = "single",
+					style = "minimal",
+					relative = "cursor",
+					row = 0,
+					col = 1,
+				},
+			})
+		end,
+	},
+
+	{
+		"sindrets/diffview.nvim",
+		dependencies = { "nvim-lua/plenary.nvim" },
+		cmd = {
+			"DiffviewOpen",
+			"DiffviewClose",
+			"DiffviewToggleFiles",
+			"DiffviewFocusFiles",
+			"DiffviewRefresh",
+			"DiffviewFileHistory",
+		},
+		keys = {
+			{ "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Diffview: open" },
+			{ "<leader>gD", "<cmd>DiffviewClose<cr>", desc = "Diffview: close" },
+			{ "<leader>gh", "<cmd>DiffviewFileHistory<cr>", desc = "Diffview: repo history" },
+			{ "<leader>gf", "<cmd>DiffviewFileHistory --follow %<cr>", desc = "Diffview: file history" },
+		},
+		opts = {
+			enhanced_diff_hl = true,
+			view = {
+				default = { winbar_info = true },
+				merge_tool = {
+					layout = "diff3_mixed",
+					disable_diagnostics = true,
+				},
+			},
+		},
+	},
+
+	{
+
+		"CRAG666/code_runner.nvim",
+		config = function()
+			require("code_runner").setup({
+				filetype_path = vim.fn.expand("~/.config/nvim/code_runner_filetypes.json"),
+				project_path = vim.fn.expand("~/.config/nvim/code_runner_projects.json"),
+				mode = "toggleterm",
+			})
+		end,
+	},
+
+	{
+		event = "VeryLazy",
+		"CopilotC-Nvim/CopilotChat.nvim",
+		branch = "main",
+		dependencies = {
+			{ "zbirenbaum/copilot.lua" }, -- or github/copilot.vim
+			{ "nvim-lua/plenary.nvim" }, -- for curl, log wrapper
+		},
+		build = "make tiktoken", -- Only on MacOS or Linux
+		opts = {
+			debug = false, -- Keep CopilotChat logging minimal to avoid noisy LSP logs
+			model = "claude-opus-4.8", -- Valid Copilot model id (was "copilot:claude-4.6-opus", which doesn't exist -- see `:CopilotChatModels` for the live list)
+		},
+	},
+	{
+
+		"CRAG666/betterTerm.nvim",
+		"mateuszwieloch/automkdir.nvim",
+		"jghauser/mkdir.nvim",
+		"GCBallesteros/jupytext.nvim",
+
+		"theprimeagen/harpoon",
+		"lukas-reineke/indent-blankline.nvim", -- add indentation guides even on blank lines "mg979/vim-visual-multi",
+		"nvim-lua/plenary.nvim",
+		"tpope/vim-fugitive",
+		"kazhala/close-buffers.nvim",
+		"xiyaowong/link-visitor.nvim",
+		"ragnarok22/whereami.nvim",
+		"terryma/vim-multiple-cursors",
+		"gaborvecsei/usage-tracker.nvim",
+
+		"monaqa/dial.nvim",
+		-- neotest
+		"nvim-neotest/neotest-python",
+		"alfaix/neotest-gtest",
+	},
+
+	{
+		"yorickpeterse/nvim-pqf",
+		event = "VeryLazy",
+	},
+
+	{
+		"christoomey/vim-tmux-navigator",
+		lazy = false,
+		cmd = {
+			"Tmuxnavigateleft",
+			"Tmuxnavigatedown",
+			"Tmuxnavigateup",
+			"Tmuxnavigateright",
+			"Tmuxnavigateprevious",
+		},
+		keys = {
+			{ "<c-h>", "<cmd><c-u>Tmuxnavigateleft<cr>" },
+			{ "<c-j>", "<cmd><c-u>Tmuxnavigatedown<cr>" },
+			{ "<c-k>", "<cmd><c-u>Tmuxnavigateup<cr>" },
+			{ "<c-l>", "<cmd><c-u>Tmuxnavigateright<cr>" },
+			{ "<c-\\>", "<cmd><c-u>Tmuxnavigateprevious<cr>" },
+		},
+	},
+	{
+		"chomosuke/term-edit.nvim",
+		lazy = false, -- or ft = 'toggleterm' if you use toggleterm.nvim
+		version = "1.*",
+	},
+	{
+		event = "VeryLazy",
+		"pocco81/auto-save.nvim",
+		config = function()
+			require("auto-save").setup({
+				enabled = true, -- start auto-save when the plugin is loaded (i.e. when your package manager loads it)
+				execution_message = {
+					message = function() -- message to print on save
+						return ("AutoSave: saved at " .. vim.fn.strftime("%H:%M:%S"))
+					end,
+					dim = 0.18, -- dim the color of `message`
+					cleaning_interval = 1250, -- (milliseconds) automatically clean MsgArea after displaying `message`. See :h MsgArea
+				},
+				trigger_events = {}, -- vim events that trigger auto-save. See :h events
+				condition = function(buf)
+					local fn = vim.fn
+					local utils = require("auto-save.utils.data")
+
+					if fn.getbufvar(buf, "&modifiable") == 1 and utils.not_in(fn.getbufvar(buf, "&filetype"), {}) then
+						return true -- met condition(s), can save
+					end
+					return false -- can't save
+				end,
+				write_all_buffers = true, -- write all buffers when the current one meets `condition`
+				debounce_delay = 300000, -- saves the file at most every `debounce_delay` milliseconds
+				callbacks = { -- functions to be executed at different intervals
+					enabling = nil, -- ran when enabling auto-save
+					disabling = nil, -- ran when disabling auto-save
+					before_asserting_save = nil, -- ran before checking `condition`
+					before_saving = nil, -- ran before doing the actual save
+					after_saving = nil, -- ran after doing the actual save
+				},
+			})
+		end,
+	},
+
+	{
+		"nvim-pack/nvim-spectre",
+		build = false,
+		cmd = "Spectre",
+		opts = {
+			open_cmd = "noswapfile vnew",
+
+			["multiline"] = {
+				desc = "search multiline",
+				icon = "[M]",
+				value = "--multiline",
+			},
+		},
+    -- stylua: ignore
+    keys = {
+      { "<leader>sr", function() require("spectre").open() end, desc = "Replace in files (Spectre)" },
+    },
+	},
+	-- {
+	-- 	"nvim-telescope/telescope.nvim",
+	-- 	cmd = "Telescope",
+	-- 	version = false, -- telescope did only one release, so use HEAD for now
+	-- 	dependencies = {
+	-- 		{
+	-- 			"nvim-telescope/telescope-fzf-native.nvim",
+	-- 			build = "make",
+	-- 			enabled = vim.fn.executable("make") == 1,
+	-- 			config = function()
+	-- 				on_load("telescope.nvim", function()
+	-- 					require("telescope").load_extension("fzf")
+	-- 				end)
+	-- 			end,
+	-- 		},
+	-- 	},
+	-- 	keys = {
+	-- 		{
+	-- 			"<leader>,",
+	-- 			"<cmd>Telescope buffers sort_mru=true sort_lastused=true<cr>",
+	-- 			desc = "Switch Buffer",
+	-- 		},
+	-- 		{ "<leader>/", telescope("live_grep"), desc = "Grep (root dir)" },
+	-- 		{ "<leader>:", "<cmd>Telescope command_history<cr>", desc = "Command History" },
+	-- 		{ "<leader><space>", telescope("files"), desc = "Find Files (root dir)" },
+	-- 		-- find
+	-- 		{ "<leader>fb", "<cmd>Telescope buffers sort_mru=true sort_lastused=true<cr>", desc = "Buffers" },
+	-- 		{ "<leader>fc", telescope.config_files(), desc = "Find Config File" },
+	-- 		{ "<leader>ff", telescope("files"), desc = "Find Files (root dir)" },
+	-- 		{ "<leader>fF", telescope("files", { cwd = false }), desc = "Find Files (cwd)" },
+	-- 		{ "<leader>fg", "<cmd>Telescope git_files<cr>", desc = "Find Files (git-files)" },
+	-- 		{ "<leader>fr", "<cmd>Telescope oldfiles<cr>", desc = "Recent" },
+	-- 		{ "<leader>fR", telescope("oldfiles", { cwd = vim.loop.cwd() }), desc = "Recent (cwd)" },
+	-- 		-- git
+	-- 		{ "<leader>gc", "<cmd>Telescope git_commits<CR>", desc = "commits" },
+	-- 		{ "<leader>gs", "<cmd>Telescope git_status<CR>", desc = "status" },
+	-- 		-- search
+	-- 		{ '<leader>s"', "<cmd>Telescope registers<cr>", desc = "Registers" },
+	-- 		{ "<leader>sa", "<cmd>Telescope autocommands<cr>", desc = "Auto Commands" },
+	-- 		{ "<leader>sb", "<cmd>Telescope current_buffer_fuzzy_find<cr>", desc = "Buffer" },
+	-- 		{ "<leader>sc", "<cmd>Telescope command_history<cr>", desc = "Command History" },
+	-- 		{ "<leader>sC", "<cmd>Telescope commands<cr>", desc = "Commands" },
+	-- 		{ "<leader>sd", "<cmd>Telescope diagnostics bufnr=0<cr>", desc = "Document diagnostics" },
+	-- 		{ "<leader>sD", "<cmd>Telescope diagnostics<cr>", desc = "Workspace diagnostics" },
+	-- 		{ "<leader>sg", telescope("live_grep"), desc = "Grep (root dir)" },
+	-- 		{ "<leader>sG", telescope("live_grep", { cwd = false }), desc = "Grep (cwd)" },
+	-- 		{ "<leader>sh", "<cmd>Telescope help_tags<cr>", desc = "Help Pages" },
+	-- 		{ "<leader>sH", "<cmd>Telescope highlights<cr>", desc = "Search Highlight Groups" },
+	-- 		{ "<leader>sk", "<cmd>Telescope keymaps<cr>", desc = "Key Maps" },
+	-- 		{ "<leader>sM", "<cmd>Telescope man_pages<cr>", desc = "Man Pages" },
+	-- 		{ "<leader>sm", "<cmd>Telescope marks<cr>", desc = "Jump to Mark" },
+	-- 		{ "<leader>so", "<cmd>Telescope vim_options<cr>", desc = "Options" },
+	-- 		{ "<leader>sR", "<cmd>Telescope resume<cr>", desc = "Resume" },
+	-- 		{ "<leader>sw", telescope("grep_string", { word_match = "-w" }), desc = "Word (root dir)" },
+	-- 		{ "<leader>sW", telescope("grep_string", { cwd = false, word_match = "-w" }), desc = "Word (cwd)" },
+	-- 		{ "<leader>sw", telescope("grep_string"), mode = "v", desc = "Selection (root dir)" },
+	-- 		{ "<leader>sW", telescope("grep_string", { cwd = false }), mode = "v", desc = "Selection (cwd)" },
+	-- 		{
+	-- 			"<leader>uC",
+	-- 			telescope("colorscheme", { enable_preview = true }),
+	-- 			desc = "Colorscheme with preview",
+	-- 		},
+	-- 		{
+	-- 			"<leader>ss",
+	-- 			function()
+	-- 				require("telescope.builtin").lsp_document_symbols({
+	-- 					symbols = require("lazyvim.config").get_kind_filter(),
+	-- 				})
+	-- 			end,
+	-- 			desc = "Goto Symbol",
+	-- 		},
+	-- 		{
+	-- 			"<leader>sS",
+	-- 			function()
+	-- 				require("telescope.builtin").lsp_dynamic_workspace_symbols({
+	-- 					symbols = require("lazyvim.config").get_kind_filter(),
+	-- 				})
+	-- 			end,
+	-- 			desc = "Goto Symbol (Workspace)",
+	-- 		},
+	-- 	},
+	-- 	opts = function()
+	-- 		local actions = require("telescope.actions")
+	--
+	-- 		local open_with_trouble = function(...)
+	-- 			return require("trouble.providers.telescope").open_with_trouble(...)
+	-- 		end
+	-- 		local open_selected_with_trouble = function(...)
+	-- 			return require("trouble.providers.telescope").open_selected_with_trouble(...)
+	-- 		end
+	-- 		local find_files_no_ignore = function()
+	-- 			local action_state = require("telescope.actions.state")
+	-- 			local line = action_state.get_current_line()
+	-- 			telescope("find_files", { no_ignore = true, default_text = line })()
+	-- 		end
+	-- 		local find_files_with_hidden = function()
+	-- 			local action_state = require("telescope.actions.state")
+	-- 			local line = action_state.get_current_line()
+	-- 			telescope("find_files", { hidden = true, default_text = line })()
+	-- 		end
+	--
+	-- 		return {
+	-- 			defaults = {
+	-- 				prompt_prefix = " ",
+	-- 				selection_caret = " ",
+	-- 				-- open files in the first window that is an actual file.
+	-- 				-- use the current window if no other window is available.
+	-- 				get_selection_window = function()
+	-- 					local wins = vim.api.nvim_list_wins()
+	-- 					table.insert(wins, 1, vim.api.nvim_get_current_win())
+	-- 					for _, win in ipairs(wins) do
+	-- 						local buf = vim.api.nvim_win_get_buf(win)
+	-- 						if vim.bo[buf].buftype == "" then
+	-- 							return win
+	-- 						end
+	-- 					end
+	-- 					return 0
+	-- 				end,
+	-- 				mappings = {
+	-- 					i = {
+	-- 						["<c-t>"] = open_with_trouble,
+	-- 						["<a-t>"] = open_selected_with_trouble,
+	-- 						["<a-i>"] = find_files_no_ignore,
+	-- 						["<a-h>"] = find_files_with_hidden,
+	-- 						["<C-Down>"] = actions.cycle_history_next,
+	-- 						["<C-Up>"] = actions.cycle_history_prev,
+	-- 						["<C-f>"] = actions.preview_scrolling_down,
+	-- 						["<C-b>"] = actions.preview_scrolling_up,
+	-- 					},
+	-- 					n = {
+	-- 						["q"] = actions.close,
+	-- 					},
+	-- 				},
+	-- 			},
+	-- 		}
+	-- 	end,
+	-- },
+	{
+		"folke/trouble.nvim",
+		opts = {}, -- for default options, refer to the configuration section for custom setup.
+		cmd = "Trouble",
+		keys = {
+			{
+				"<leader>xx",
+				"<cmd>Trouble diagnostics toggle<cr>",
+				desc = "Diagnostics (Trouble)",
+			},
+			{
+				"<leader>xX",
+				"<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
+				desc = "Buffer Diagnostics (Trouble)",
+			},
+			{
+				"<leader>cs",
+				"<cmd>Trouble symbols toggle focus=false<cr>",
+				desc = "Symbols (Trouble)",
+			},
+			{
+				"<leader>cl",
+				"<cmd>Trouble lsp toggle focus=false win.position=right<cr>",
+				desc = "LSP Definitions / references / ... (Trouble)",
+			},
+			{
+				"<leader>xL",
+				"<cmd>Trouble loclist toggle<cr>",
+				desc = "Location List (Trouble)",
+			},
+			{
+				"<leader>xQ",
+				"<cmd>Trouble qflist toggle<cr>",
+				desc = "Quickfix List (Trouble)",
+			},
+		},
+	},
+	{
+		"folke/flash.nvim",
+		event = "VeryLazy",
+		vscode = true,
+		opts = {},
+    -- stylua: ignore
+    keys = {
+      { "s",     mode = { "n", "x", "o" }, function() require("flash").jump() end,              desc = "Flash" },
+      { "S",     mode = { "n", "o", "x" }, function() require("flash").treesitter() end,        desc = "Flash Treesitter" },
+      { "r",     mode = "o",               function() require("flash").remote() end,            desc = "Remote Flash" },
+      { "R",     mode = { "o", "x" },      function() require("flash").treesitter_search() end, desc = "Treesitter Search" },
+      { "<c-s>", mode = { "c" },           function() require("flash").toggle() end,            desc = "Toggle Flash Search" },
+    },
+		{
+			"nvim-telescope/telescope.nvim",
+			optional = true,
+			opts = function(_, opts)
+				local function flash(prompt_bufnr)
+					require("flash").jump({
+						pattern = "^",
+						label = { after = { 0, 0 } },
+						search = {
+							mode = "search",
+							exclude = {
+								function(win)
+									return vim.bo[vim.api.nvim_win_get_buf(win)].filetype ~= "TelescopeResults"
+								end,
+							},
+						},
+						action = function(match)
+							local picker = require("telescope.actions.state").get_current_picker(prompt_bufnr)
+							picker:set_selection(match.pos[1] - 1)
+						end,
+					})
+				end
+				opts.defaults = vim.tbl_deep_extend("force", opts.defaults or {}, {
+					mappings = { n = { s = flash }, i = { ["<c-s>"] = flash } },
+				})
+			end,
+		},
+	},
+	{
+		"RRethy/vim-illuminate",
+		event = "VeryLazy",
+		opts = {
+			delay = 200,
+			large_file_cutoff = 2000,
+			large_file_overrides = {
+				providers = { "lsp" },
+			},
+		},
+		config = function(_, opts)
+			require("illuminate").configure(opts)
+
+			local function map(key, dir, buffer)
+				vim.keymap.set("n", key, function()
+					require("illuminate")["goto_" .. dir .. "_reference"](false)
+				end, { desc = dir:sub(1, 1):upper() .. dir:sub(2) .. " Reference", buffer = buffer })
+			end
+
+			map("]]", "next")
+			map("[[", "prev")
+
+			-- also set it after loading ftplugins, since a lot overwrite [[ and ]]
+			vim.api.nvim_create_autocmd("FileType", {
+				callback = function()
+					local buffer = vim.api.nvim_get_current_buf()
+					map("]]", "next", buffer)
+					map("[[", "prev", buffer)
+				end,
+			})
+		end,
+		keys = {
+			{ "]]", desc = "Next Reference" },
+			{ "[[", desc = "Prev Reference" },
+		},
+	},
+	{
+		"folke/todo-comments.nvim",
+		cmd = { "TodoTrouble", "TodoTelescope" },
+		event = "VeryLazy",
+		config = true,
+    -- stylua: ignore
+    keys = {
+      { "]t",         function() require("todo-comments").jump_next() end, desc = "Next todo comment" },
+      { "[t",         function() require("todo-comments").jump_prev() end, desc = "Previous todo comment" },
+      { "<leader>xt", "<cmd>TodoTrouble<cr>",                              desc = "Todo (Trouble)" },
+      { "<leader>xT", "<cmd>TodoTrouble keywords=TODO,FIX,FIXME<cr>",      desc = "Todo/Fix/Fixme (Trouble)" },
+      { "<leader>st", "<cmd>TodoTelescope<cr>",                            desc = "Todo" },
+      { "<leader>sT", "<cmd>TodoTelescope keywords=TODO,FIX,FIXME<cr>",    desc = "Todo/Fix/Fixme" },
+    },
+	},
+
+	-- Plug 'romgrk/todoist.nvim', { 'do': ':TodoistInstall' }
+	{
+		"romgrk/todoist.nvim",
+		run = ":TodoistInstall",
+		event = "VeryLazy",
+	},
+	{ -- required by autolink my plan
+		"MunifTanjim/nui.nvim",
+		requires = { "nvim-lua/plenary.nvim" },
+	},
+
+	{
+		"MattHandzel/para-organize",
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+			"nvim-telescope/telescope.nvim",
+			"MunifTanjim/nui.nvim",
+			-- Optional dependencies
+			"folke/which-key.nvim",
+			"nvim-tree/nvim-web-devicons",
+		},
+		event = "VeryLazy",
+		config = function()
+			require("para-organize").setup({
+				-- Path configuration
+				paths = {
+					-- Base directory for your notes vault
+					vault_dir = "~/Obsidian/Main/notes",
+
+					-- Relative path from vault_dir where captured notes are stored
+					capture_folder = "capture/raw_capture",
+
+					-- PARA folder structure (relative to vault_dir)
+					para_folders = {
+						projects = "projects",
+						areas = "areas",
+						resources = "resources",
+						archives = "archives",
+					},
+
+					-- Where to archive processed captures (relative to archives folder)
+					archive_capture_path = "capture/raw_capture",
+				},
+
+				-- File patterns and parsing
+				patterns = {
+					-- Glob pattern for note files
+					file_glob = "**/*.md",
+
+					-- Frontmatter delimiters
+					frontmatter_delimiters = { "---", "---" },
+
+					-- How to extract aliases from frontmatter
+					alias_extraction = "aliases",
+
+					-- Tag normalization rules
+					tag_normalization = {
+						["project"] = "projects",
+						["area"] = "areas",
+						["resource"] = "resources",
+					},
+
+					-- Case sensitivity for matching
+					case_sensitive = false,
+				},
+
+				-- Indexing configuration
+				indexing = {
+					-- Patterns to ignore when scanning
+					ignore_patterns = {
+						"*.tmp",
+						".git",
+						"node_modules",
+						".obsidian",
+					},
+
+					-- Maximum file size to index (in bytes)
+					max_file_size = 1048576, -- 1MB
+
+					-- Debounce time for incremental updates (milliseconds)
+					incremental_debounce = 500,
+
+					-- Backend for storing index
+					backend = "json", -- "json" or "sqlite"
+
+					-- Auto-reindex on BufWritePost
+					auto_reindex = true,
+				},
+
+				-- Suggestion engine configuration
+				suggestions = {
+					-- Weight multipliers for different matching types
+					weights = {
+						exact_tag_match = 2.0, -- Tag exactly matches folder name
+						normalized_tag_match = 1.5, -- Tag matches after normalization
+						learned_association = 1.8, -- Previously successful pattern
+						source_match = 1.3, -- Source matches folder
+						alias_similarity = 1.1, -- Alias similar to folder name
+						context_match = 1.0, -- Context matches folder
+					},
+
+					-- Learning system parameters
+					learning = {
+						recency_decay = 0.9, -- How quickly old patterns lose weight
+						frequency_boost = 1.2, -- Boost for frequently used patterns
+						min_confidence = 0.3, -- Minimum confidence to show suggestion
+						max_history = 1000, -- Maximum learning records to keep
+					},
+
+					-- Maximum number of suggestions to show
+					max_suggestions = 10,
+
+					-- Always show archive option
+					always_show_archive = true,
+				},
+
+				-- UI configuration
+				ui = {
+					-- Layout type: "float" or "split"
+					layout = "float",
+
+					-- Window dimensions (for float layout)
+					float_opts = {
+						width = 0.9, -- Percentage of editor width
+						height = 0.8, -- Percentage of editor height
+						border = "rounded",
+						position = "center",
+					},
+
+					-- Split configuration
+					split_opts = {
+						direction = "vertical",
+						size = 0.5, -- 50% split
+					},
+
+					-- Visual options
+					icons = {
+						enabled = true,
+						project = "",
+						area = "",
+						resource = "",
+						archive = "🗑",
+						folder = "",
+						file = "",
+						tag = "",
+					},
+
+					-- Display options
+					display = {
+						show_scores = true, -- Show confidence scores
+						show_counts = true, -- Show file counts in folders
+						show_timestamps = true, -- Show note timestamps
+						timestamp_format = "%b %d, %I:%M %p", -- Sep 10, 11:57 AM
+						hide_capture_id = true, -- Hide capture_id in aliases
+						hide_modalities = true, -- Hide modalities field
+						hide_location = true, -- Hide location field
+					},
+
+					-- Colors and highlights
+					highlights = {
+						selected = "Visual",
+						project = "Function",
+						area = "Keyword",
+						resource = "String",
+						archive = "Comment",
+						tag = "Label",
+						score_high = "DiagnosticOk",
+						score_medium = "DiagnosticWarn",
+						score_low = "DiagnosticHint",
+					},
+
+					-- Auto-move to newly created folders
+					auto_move_to_new_folder = true,
+				},
+
+				-- Telescope configuration
+				telescope = {
+					-- Theme: "dropdown", "ivy", "cursor", or custom
+					theme = "dropdown",
+
+					-- Layout strategy
+					layout_strategy = "horizontal",
+					layout_config = {
+						horizontal = {
+							preview_width = 0.5,
+						},
+					},
+
+					-- Enable multi-select for batch operations
+					multi_select = true,
+
+					-- Show preview by default
+					previewer = true,
+
+					-- Custom picker options
+					picker_opts = {
+						-- Options for folder picker
+						folders = {
+							show_files_count = true,
+							include_empty = false,
+						},
+						-- Options for notes picker
+						notes = {
+							show_tags = true,
+							show_modified = true,
+						},
+					},
+				},
+
+				-- File operations configuration
+				file_ops = {
+					-- Use atomic writes (write to temp, then rename)
+					atomic_writes = true,
+
+					-- Create backups before operations
+					create_backups = true,
+
+					-- Backup directory (relative to vault)
+					backup_dir = ".backups",
+
+					-- Operation log file
+					log_operations = true,
+					log_file = vim.fn.stdpath("data") .. "/para-organize/operations.log",
+
+					-- Auto-create destination folders if they don't exist
+					auto_create_folders = true,
+
+					-- Confirm before destructive operations
+					confirm_operations = false, -- We never delete, so this is safe
+				},
+
+				-- Keymaps (set to false to disable default mappings)
+				keymaps = {
+					-- Global mappings (disabled by default, use <Plug> mappings)
+					global = false,
+
+					-- Buffer-local mappings in organize UI
+					buffer = {
+						accept = "<CR>", -- Accept selected suggestion
+						cancel = "<Esc>", -- Cancel and close
+						next = "<Tab>", -- Next capture
+						prev = "<S-Tab>", -- Previous capture
+						skip = "s", -- Skip current capture
+						archive = "a", -- Archive immediately
+						merge = "m", -- Enter merge mode
+						search = "/", -- Open search
+						new_project = "<leader>np", -- Create new project
+						new_area = "<leader>na", -- Create new area
+						new_resource = "<leader>nr", -- Create new resource
+						refresh = "r", -- Refresh suggestions
+						toggle_preview = "p", -- Toggle preview pane
+						help = "?", -- Show help
+					},
+				},
+
+				-- Development and debugging
+				debug = {
+					-- Enable debug logging
+					enabled = true,
+
+					-- Log level: "trace", "debug", "info", "warn", "error"
+					log_level = "trace",
+
+					-- Log file location
+					log_file = vim.fn.stdpath("cache") .. "/para-organize.log",
+
+					-- Performance profiling
+					profile = true,
+				},
+			})
+		end,
+	},
+	{
+		"MattHandzel/semantic-search-nvim",
+
+		event = "VeryLazy",
+
+		config = function()
+			-- require("semantic-search-nvim").setup({
+			-- 	threshold = 0.6,
+			-- }) -- custom command
+		end,
+	},
+
+	{
+		"3rd/diagram.nvim",
+		event = "VeryLazy",
+		dependencies = { "3rd/image.nvim" },
+		config = function()
+			require("diagram").setup({
+				default_engine = "mermaid",
+				filetypes = {
+					markdown = "mermaid",
+					plantuml = "plantuml",
+					norg = "mermaid",
+				},
+			})
+		end,
+	},
+	{
+		"Groveer/plantuml.nvim",
+		event = "VeryLazy",
+		config = function()
+			require("plantuml").setup({ renderer = "text" })
+		end,
+	},
+
+	{
+		"mfussenegger/nvim-dap",
+		event = "VeryLazy",
+		requires = {
+			"rcarriga/nvim-dap-ui",
+			"jay-babu/mason-nvim-dap.nvim",
+		},
+	},
+	-- {
+	-- 	"olexsmir/gopher.nvim",
+	-- 	ft = "go",
+	-- 	config = function()
+	-- 		require("gopher").setup({
+	-- 			commands = {
+	-- 				go = "go",
+	-- 				gomodifytags = "gomodifytags",
+	-- 				gotests = "gotests",
+	-- 				impl = "impl",
+	-- 				iferr = "iferr",
+	-- 				dlv = "dlv",
+	-- 			},
+	-- 			gotests = {
+	-- 				-- gotests doesn't have template named "default" so this plugin uses "default" to set the default template
+	-- 				template = "default",
+	-- 				-- path to a directory containing custom test code templates
+	-- 				template_dir = nil,
+	-- 				-- switch table tests from using slice to map (with test name for the key)
+	-- 				-- works only with gotests installed from develop branch
+	-- 				named = false,
+	-- 			},
+	-- 			gotag = {
+	-- 				transform = "snakecase",
+	-- 			},
+	-- 		})
+	-- 	end,
+	-- 	-- branch = "develop", -- if you want develop branch
+	-- 	-- keep in mind, it might break everything
+	-- 	dependencies = {
+	-- 		"nvim-lua/plenary.nvim",
+	-- 		"nvim-treesitter/nvim-treesitter",
+	-- 		"mfussenegger/nvim-dap", -- (optional) only if you use `gopher.dap`
+	-- 	},
+	-- 	-- (optional) will update plugin's deps on every update
+	-- 	build = function()
+	-- 		vim.cmd.GoInstallDeps()
+	-- 	end,
+	-- 	---@type gopher.Config
+	-- 	opts = {},
+	-- },
+	{ "hat0uma/csvview.nvim", opts = { ... }, event = "VeryLazy" },
+	{
+		"DAmesberger/sc-im.nvim",
+		event = "VeryLazy",
+		-- opts = {
+		-- 	ft = "scim",
+		-- 	include_sc_file = true,
+		-- 	update_sc_from_md = true,
+		-- 	link_fmt = 1,
+		-- 	split = "floating",
+		-- 	float_config = {
+		-- 		height = 0.9,
+		-- 		width = 0.9,
+		-- 		style = "minimal",
+		-- 		border = "single",
+		-- 		hl = "Normal",
+		-- 		blend = 0,
+		-- 	},
+		-- },
+	},
+	{
+		"rmanocha/linear-nvim",
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+			"nvim-telescope/telescope.nvim",
+			"stevearc/dressing.nvim",
+		},
+		config = function()
+			require("linear-nvim").setup()
+		end,
+	},
+	-- {
+	--   'mrcjkb/rustaceanvim',
+	--   version = '^5',
+	--   event = "VeryLazy",
+	--
+	-- },
+
+	-- {
+	--   'simrat39/rust-tools.nvim',
+	--   event="VeryLazy",
+	--   config = function()
+	--     require('rust-tools').setup({
+	--     tools = {
+	--       autoSetHints = true,
+	--       hover_with_actions = true,
+	--       runnables = {
+	--         use_telescope = true
+	--       },
+	--       inlay_hints = {
+	--         show_parameter_hints = true,
+	--         parameter_hints_prefix = "<-",
+	--         other_hints_prefix = "=>",
+	--       },
+	--     },
+	--
+	--     })
+	--   end
+	-- },
+	{
+		"saecki/crates.nvim",
+		ft = { "rust", "toml" },
+		config = function()
+			require("crates").setup({
+				completion = {
+					cmp = {
+						enabled = true,
+					},
+				},
+			})
+			require("cmp").setup.buffer({
+				sources = { { name = "crates" } },
+			})
+		end,
+	},
+	{
+		"nvim-pack/nvim-spectre",
+		event = "VeryLazy",
+		lazy = false,
+		cmd = "Spectre",
+		opts = {
+			open_cmd = "noswapfile vnew",
+		},
+	},
+	-- {
+	-- 	"nvim-orgmode/orgmode",
+	-- 	event = "VeryLazy",
+	-- 	opts = {},
+	-- 	config = function(_, opts)
+	-- 		require("orgmode").setup(opts)
+	-- 	end,
+	-- },
+
+	{
+		"nvim-neorg/neorg",
+		build = ":Neorg sync-parsers",
+		dependencies = { "nvim-lua/plenary.nvim" }, --, "juniorsundar/neorg-extras" },
+		-- branch = "main",
+		version = "*",
+		event = "VeryLazy",
+		config = function()
+			require("neorg").setup({
+				load = {
+					["core.defaults"] = {}, -- Loads default behaviour
+					["core.concealer"] = {}, -- Adds pretty icons to your documents
+					["core.completion"] = { -- Enables completion
+						config = {
+							engine = "nvim-cmp",
+						},
+					},
+					["core.dirman"] = { -- Manages Neorg workspaces
+						config = {
+							workspaces = {
+								notes = "~/notes",
+
+								gtd = "~/notes/gtd",
+							},
+						},
+					},
+					-- ["external.many-mans"] = {
+					-- 	config = {
+					-- 		metadata_fold = true, -- If want @data property ... @end to fold
+					-- 		code_fold = true, -- If want @code ... @end to fold
+					-- 	},
+					-- },
+					-- ["external.roam"] = {
+					-- 	config = {
+					-- 		fuzzy_finder = "Snacks", -- OR "Fzf" OR "Snacks". Defaults to "Telescope"
+					-- 		fuzzy_backlinks = false, -- Set to "true" for backlinks in fuzzy finder instead of buffer
+					-- 		roam_base_directory = "", -- Directory in current workspace to store roam nodes
+					-- 		node_name_randomiser = false, -- Tokenise node name suffix for more randomisation
+					-- 		node_name_snake_case = false, -- snake_case the names if node_name_randomiser = false
+					-- 	},
+					-- },
+					["core.ui"] = { -- Adds pretty UI elements to Neorg
+					},
+					["core.ui.calendar"] = { -- Calendar view
+					},
+
+					-- ["core.gtd.base"] = { config = { workspace = "gtd" } },
+					-- ["core.gtd.ui"] = {},
+				},
+			})
+		end,
+	},
+
+	{
+		dir = "~/Projects/task.nvim",
+		lazy = false, -- load at startup so global keymaps (<leader>tt, <leader>ta, etc.) work
+		config = function()
+			require("taskwarrior").setup({
+				on_delete = "delete",
+				urgency_coefficients = {
+					utility = 1.0,
+					-- effort is in minutes (PT1H = 60). -0.05 means:
+					-- 15 min → -0.75, 60 min → -3, 240 min → -12, 480 min → -24.
+					-- Higher effort → lower urgency (do quick wins first).
+					effort = -0.05,
+				},
+			})
+		end,
+	},
+	{
+		dir = "~/Projects/gdoc-sync.nvim", -- github.com/MattHandzel/gdoc-sync.nvim
+		ft = "markdown",
+		cmd = "Gdoc",
+		config = function()
+			require("gdoc-sync").setup({
+				-- Only speak up when something is actually broken. A successful
+				-- push/pull/watch tick says nothing at all — check the statusline
+				-- module (lua/chadrc.lua) when you want to know the state.
+				-- "errors" = conflicts + errors only; "changes" also announces every
+				-- file a watcher rewrites; "all" is everything.
+				notify = "errors",
+			})
+		end,
+	},
+	{
+		-- Grammarly bridge (MAT-1780). Mirrors the current buffer into a browser
+		-- textarea over the GhostText protocol; the Grammarly extension then
+		-- checks it there. Sync is BIDIRECTIONAL, so accepting a Grammarly
+		-- suggestion in the browser rewrites this buffer — no copy-paste.
+		--
+		-- This is the only surviving route to a Grammarly Pro subscription: the
+		-- Text Editor SDK shut down 2024-01-10 and znck/grammarly (the
+		-- "grammarly-languageserver" every blog post still links) was archived
+		-- 2024-05-07, so there is no LSP path.
+		--
+		-- Requires `bun`, declared in nixos modules/home/nvim.nix.
+		"wallpants/ghost-text.nvim",
+		cmd = "GhostTextStart",
+		-- REQUIRED. The server is TypeScript with real npm deps (bunvim,
+		-- minimatch, valibot) and lazy only clones the repo. Without this,
+		-- :GhostTextStart dies with "Cannot find package 'bunvim'", nothing ever
+		-- binds port 4001, and the failure is SILENT — the error surfaces only
+		-- in the job output. --production skips the ~40 dev dependencies.
+		-- Second half re-applies the upstream first-document race fix, which lazy
+		-- discards whenever it checks out a new revision. See the patch script.
+		build = "bun install --production && ~/dotfiles/nvim/.config/nvim/patches/apply-ghost-text-patch.sh",
+		opts = {
+			-- Opt-in rather than autostart: otherwise every nvim instance races
+			-- to bind port 4001 and all but the first fail.
+			autostart = false,
+		},
+	},
+	{
+		"neo451/feed.nvim",
+		cmd = "Feed",
+		---@module 'feed'
+		---@type feed.config
+		opts = {},
+	},
+	{
+		"not-manu/filemention.nvim",
+		event = "InsertEnter",
+		opts = {},
+	},
+}

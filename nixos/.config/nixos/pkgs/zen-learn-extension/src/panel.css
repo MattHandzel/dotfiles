@@ -1,0 +1,187 @@
+/* Learn This — Inline Panel Styles */
+
+.learn-this-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 440px;
+  max-height: 70vh;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: opacity 0.2s;
+}
+
+.learn-this-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: grab;
+  user-select: none;
+}
+
+.learn-this-header:active {
+  cursor: grabbing;
+}
+
+.learn-this-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #a0a0ff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.learn-this-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.learn-this-btn {
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 10px;
+  transition: background 0.15s;
+}
+
+.learn-this-btn-claude {
+  background: #6366f1;
+  color: white;
+}
+
+.learn-this-btn-claude:hover {
+  background: #818cf8;
+}
+
+.learn-this-btn-close {
+  background: rgba(255, 255, 255, 0.08);
+  color: #888;
+  font-size: 18px;
+  padding: 2px 8px;
+  line-height: 1;
+}
+
+.learn-this-btn-close:hover {
+  background: rgba(255, 80, 80, 0.3);
+  color: #ff6b6b;
+}
+
+.learn-this-quote {
+  padding: 10px 16px;
+  background: rgba(99, 102, 241, 0.08);
+  border-left: 3px solid #6366f1;
+  font-style: italic;
+  color: #b0b0d0;
+  font-size: 13px;
+  max-height: 60px;
+  overflow-y: auto;
+}
+
+.learn-this-content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+  max-height: calc(70vh - 120px);
+}
+
+.learn-this-content h2,
+.learn-this-content h3,
+.learn-this-content h4 {
+  color: #c0c0ff;
+  margin: 12px 0 6px;
+}
+
+.learn-this-content h2 { font-size: 16px; }
+.learn-this-content h3 { font-size: 15px; }
+.learn-this-content h4 { font-size: 14px; }
+
+.learn-this-content strong {
+  color: #f0f0ff;
+}
+
+.learn-this-content code {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 13px;
+}
+
+.learn-this-content pre {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.learn-this-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.learn-this-content ul {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.learn-this-content li {
+  margin: 4px 0;
+}
+
+.learn-this-content p {
+  margin: 8px 0;
+}
+
+.learn-this-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #888;
+  padding: 20px 0;
+}
+
+.learn-this-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: learn-this-spin 0.8s linear infinite;
+}
+
+@keyframes learn-this-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Scrollbar styling */
+.learn-this-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.learn-this-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.learn-this-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.learn-this-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}

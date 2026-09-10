@@ -25,7 +25,14 @@ in {
   nixpkgs = {
     overlays = [
       inputs.nur.overlays.default
+      inputs.vicinae.overlays.default # 0.23.2, see the flake input's comment
       (import ./overlays/command-not-found.nix)
+      (import ./overlays/espanso-wayland.nix)
+      # readest from a newer tree than the main pin — see the nixpkgs-readest
+      # comment in flake.nix.
+      (import ./overlays/readest.nix inputs)
+      # beeper 4.3.73 vendored — beeper.nvim needs the newer Desktop API. See pkgs/beeper.
+      (import ./overlays/beeper.nix)
       # (import ./overlays/hyprsession.nix)
     ];
   };
@@ -46,6 +53,7 @@ in {
     wget
     git
     lm_sensors
+    mosh
     nvme-cli
     wsdd
   ];
@@ -80,7 +88,7 @@ in {
   # Code plugins) hardcode #!/bin/bash shebangs and break without it.
   system.activationScripts.bash-compat = {
     text = ''ln -sf "${pkgs.bash}/bin/bash" /bin/bash'';
-    deps = [ "etc" ];
+    deps = ["etc"];
   };
 
   nixpkgs.config.allowUnfree = true;
