@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# password-picker — pick a secret from the `pass` store via fuzzel, then either
-# type it (wtype) or copy it (wl-copy, auto-clears). Nothing is ever stored in
+# password-picker — pick a secret from the `pass` store via fuzzel (Linux) or
+# `choose` (macOS), then either type it (wtype / osascript keystroke) or copy it
+# (wl-copy / pbcopy, auto-clears). Nothing is ever stored in
 # plaintext: entries live GPG-encrypted under ~/.password-store, unlocked by your
 # GPG key (gpg-agent caches the passphrase for the session).
 #
@@ -15,6 +16,23 @@
 
 set -euo pipefail
 
+# macOS: the picker is `choose`, typing is System Events, the clipboard is
+# pbcopy. Same shape as the Linux path so the two never drift.
+if [[ "$(uname)" == Darwin ]]; then
+  pick() { choose -n 20 -p 'pass> '; }
+  copy() { pbcopy; }
+  clear_clip() { pbcopy </dev/null; }
+  type_text() {
+    # argv, not string interpolation, so passwords with quotes/backslashes are safe.
+    osascript -e 'on run argv' -e 'tell application "System Events" to keystroke (item 1 of argv)' -e 'end run' -- "$1"
+  }
+else
+  pick() { fuzzel --dmenu --prompt 'pass> '; }
+  copy() { wl-copy; }
+  clear_clip() { wl-copy --clear; }
+  type_text() { wtype -- "$1"; }
+fi
+
 store="${PASSWORD_STORE_DIR:-$HOME/.password-store}"
 
 if [ ! -d "$store" ]; then
@@ -27,7 +45,7 @@ fi
 entry="$(
   cd "$store" && fd -e gpg --type f . 2>/dev/null \
     | sed 's/\.gpg$//' | sort \
-    | fuzzel --dmenu --prompt 'pass> '
+    | pick
 )" || exit 0
 [ -n "$entry" ] || exit 0
 
@@ -40,14 +58,14 @@ fi
 
 case "${1:-type}" in
 copy)
-  printf '%s' "$pw" | wl-copy
+  printf '%s' "$pw" | copy
   notify-send -i dialog-password "Password picker" "Copied '$entry' (clears in 45s)"
   (
     sleep 45
-    wl-copy --clear
+    clear_clip
   ) >/dev/null 2>&1 &
   ;;
 *)
-  wtype -- "$pw"
+  type_text "$pw"
   ;;
 esac

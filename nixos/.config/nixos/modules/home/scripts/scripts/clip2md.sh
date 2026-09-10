@@ -8,7 +8,16 @@
 # flavour to convert (i.e. you copied plain text), so it is safe to fire blind.
 set -euo pipefail
 
-html=$(wl-paste --type text/html 2>/dev/null || true)
+if [[ "$(uname)" == Darwin ]]; then
+  # macOS keeps rich text as the «class HTML» flavour; osascript prints it as
+  # «data HTML<hex>», so strip the wrapper and un-hex it.
+  html=$(osascript -e 'try' -e 'the clipboard as «class HTML»' -e 'end try' 2>/dev/null \
+    | sed -E 's/^«data HTML//; s/»$//' | xxd -r -p || true)
+  clip_copy() { pbcopy; }
+else
+  html=$(wl-paste --type text/html 2>/dev/null || true)
+  clip_copy() { wl-copy; }
+fi
 
 if [ -z "$html" ]; then
   notify-send -t 2500 -i edit-paste "clip2md" "No rich text on the clipboard — nothing to convert."
@@ -25,5 +34,15 @@ if [ -z "$md" ]; then
   exit 1
 fi
 
-printf '%s' "$md" | wl-copy
+printf '%s' "$md" | clip_copy
 notify-send -t 2500 -i edit-paste "clip2md → Markdown" "Clipboard converted to Markdown. Paste anywhere."
+
+# `clip2md --paste`: also paste it where the cursor is (what the espanso ;;md
+# trigger did inline; on macOS the Raycast script command uses this).
+if [[ "${1:-}" == --paste ]]; then
+  if [[ "$(uname)" == Darwin ]]; then
+    osascript -e 'tell application "System Events" to keystroke "v" using command down'
+  else
+    wtype -M ctrl -k v -m ctrl
+  fi
+fi
