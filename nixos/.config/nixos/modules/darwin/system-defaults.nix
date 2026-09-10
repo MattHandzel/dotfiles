@@ -56,6 +56,14 @@
       "com.apple.keyboard.fnState" = true; # F-keys are F-keys; kanata owns layers
       "com.apple.mouse.tapBehavior" = 1; # tap to click
       "com.apple.sound.beep.feedback" = 0;
+      # Alert at a quarter volume; UI sounds are handled by the custom key below.
+      "com.apple.sound.beep.volume" = 0.25;
+
+      # SketchyBar is THE bar (modules/home/darwin/sketchybar.nix). The native
+      # menu bar auto-hides and only appears when the pointer touches the top
+      # edge; Ice trims what shows up there. Takes effect at next login, or live
+      # via `tell dock preferences to set autohide menu bar to true`.
+      _HideMenuBar = true;
     };
 
     trackpad = {
@@ -83,6 +91,19 @@
       wvous-tr-corner = 1;
       wvous-bl-corner = 1;
       wvous-br-corner = 1;
+
+      # Seven apps, the ones that are open all day. Everything else launches
+      # from Raycast. Declaring them here is what makes the Dock survive a
+      # reinstall looking the same.
+      persistent-apps = [
+        "/Applications/kitty.app"
+        "/Applications/Zen.app"
+        "/Applications/Obsidian.app"
+        "/Applications/Slack.app"
+        "/Applications/Beeper Desktop.app"
+        "/Applications/Superhuman.app"
+        "/Applications/Bitwarden.app"
+      ];
     };
 
     finder = {
@@ -122,14 +143,31 @@
 
     controlcenter.BatteryShowPercentage = true;
     loginwindow.GuestEnabled = false;
+    # The one line on the lock screen. Middle dot, not a hyphen.
+    loginwindow.LoginwindowText = "Matt Handzel · handzelmatthew@gmail.com";
     LaunchServices.LSQuarantine = false;
     SoftwareUpdate.AutomaticallyInstallMacOSUpdates = false;
 
-    CustomUserPreferences."com.apple.symbolichotkeys".AppleSymbolicHotKeys = {
-      # 64 = Cmd+Space (Spotlight). Disabled so Raycast can take the slot.
-      # macOS only re-reads this at login, so the first switch needs a logout
-      # (or one manual toggle in System Settings) before it takes effect.
-      "64".enabled = false;
+    CustomUserPreferences = {
+      "com.apple.symbolichotkeys".AppleSymbolicHotKeys = {
+        # 64 = Cmd+Space (Spotlight). Disabled so Raycast can take the slot.
+        # macOS only re-reads this at login, so the first switch needs a logout
+        # (or one manual toggle in System Settings) before it takes effect.
+        "64".enabled = false;
+      };
+
+      # Keys nix-darwin has no typed option for.
+      NSGlobalDomain = {
+        # "Boop" in System Settings is Tink.aiff on disk (the 14.x rename).
+        "com.apple.sound.beep.sound" = "/System/Library/Sounds/Tink.aiff";
+        # No interface sound effects (empty trash, screenshots, volume blips).
+        "com.apple.sound.uiaudio.enabled" = 0;
+      };
+      # Dock icons never bounce for attention; badges are enough.
+      "com.apple.dock"."no-bouncing" = true;
+      # Screen saver off: the lock screen shows the wallpaper. (idleTime is a
+      # per-host default — `defaults -currentHost` — which CustomUserPreferences
+      # cannot write, so this one is also set live by the polish lane.)
     };
   };
 

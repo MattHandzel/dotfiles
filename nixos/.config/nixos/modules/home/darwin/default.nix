@@ -12,6 +12,7 @@
     ./zen-config.nix # Zen prefs, macOS profile root
     ./automations.nix # calendar-agenda / disk-space-alert (system services on NixOS)
     ./sketchybar.nix # the status bar (waybar's replacement): config + launchd agent
+    ./borders.nix # JankyBorders colours/width (~/.config/borders/bordersrc)
   ];
 
   # Home Manager's syncthing module supports darwin (it emits a launchd agent).
