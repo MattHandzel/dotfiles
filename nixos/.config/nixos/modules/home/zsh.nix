@@ -84,6 +84,17 @@ in {
       size = 1000000;
     };
 
+    # Homebrew's auto-update turns every `brew install` into a minutes-long
+    # refresh and can move versions under a declarative config; analytics is
+    # off by preference. `--no-quarantine` is the "no training wheels" rule:
+    # a cask Matt installed on purpose should not need a Gatekeeper prompt on
+    # first launch. Applied on macOS only — there is no brew on the laptop.
+    sessionVariables = lib.optionalAttrs isDarwin {
+      HOMEBREW_NO_AUTO_UPDATE = "1";
+      HOMEBREW_NO_ANALYTICS = "1";
+      HOMEBREW_CASK_OPTS = "--no-quarantine";
+    };
+
     oh-my-zsh = {
       enable = true;
       plugins = ["git" "fzf" "colored-man-pages"];
