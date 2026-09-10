@@ -36,11 +36,37 @@
 
   stableBin = "/usr/local/bin/kanata";
 in {
-  # Re-point the permission-stable symlink at the current store path on every
-  # switch, so Input Monitoring is granted once and never again.
-  system.activationScripts.kanataSymlink.text = ''
+  # Install the binary at a permission-stable path on every switch.
+  #
+  # It must be a REAL FILE, not a symlink (verified on macOS 26.5, 2026-09-10).
+  # macOS attributes an Input Monitoring grant to the RESOLVED executable, so a
+  # symlink pointing into /nix/store hands the grant to a store path that the
+  # next rebuild replaces — and kanata sits at "Input Monitoring permission not
+  # yet decided" forever. Copying costs 3 MB and keeps the grant attached to
+  # /usr/local/bin/kanata.
+  #
+  # Caveat that follows from the same rule: when the copy CHANGES (a kanata
+  # version bump), macOS sees a different executable at the same path and the
+  # permission has to be granted again. The `cmp` guard means that only happens
+  # on an actual upgrade, not on every switch.
+  system.activationScripts.kanataBinary.text = ''
     mkdir -p /usr/local/bin
-    ln -sfn ${pkgs.kanata}/bin/kanata ${stableBin}
+    if ! cmp -s ${pkgs.kanata}/bin/kanata ${stableBin}; then
+      echo "kanata: installing new binary at ${stableBin} (Input Monitoring must be re-granted)" >&2
+      rm -f ${stableBin}
+      cp ${pkgs.kanata}/bin/kanata ${stableBin}
+      chmod 755 ${stableBin}
+    fi
+
+    # One kanata daemon, not two. The migration created a hand-written
+    # /Library/LaunchDaemons/com.matth.kanata.plist while this module was being
+    # debugged; leaving both loaded makes them fight over the keyboard device.
+    if [ -f /Library/LaunchDaemons/com.matth.kanata.plist ]; then
+      launchctl bootout system/com.matth.kanata 2>/dev/null || true
+      mkdir -p /var/lib/kanata-superseded
+      mv -f /Library/LaunchDaemons/com.matth.kanata.plist /var/lib/kanata-superseded/
+      echo "kanata: superseded the hand-written com.matth.kanata daemon" >&2
+    fi
   '';
 
   launchd.daemons.kanata = {
