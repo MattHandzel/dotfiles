@@ -5,7 +5,10 @@
   ...
 }: let
   inherit (pkgs) tmuxPlugins;
-  tmuxPrefix = if host == "server" then "C-b" else "C-Space";
+  tmuxPrefix =
+    if host == "server"
+    then "C-b"
+    else "C-Space";
 in {
   programs.tmux = {
     enable = true;
@@ -20,8 +23,19 @@ in {
     extraConfig = ''
         set-option -sa terminal-overrides ",xterm*:Tc"
 
+        # Pass modified keys (Ctrl+Enter, Shift+Enter, Ctrl+Tab …) through to
+        # the app using the CSI-u / extended-keys encoding. Without this tmux
+        # collapses C-CR into a plain CR, so terminal apps cannot tell them
+        # apart. Requires an outer terminal that also speaks CSI-u.
+        set -g extended-keys on
+        set -as terminal-features 'xterm*:extkeys'
+
         unbind -T root C-h
-        ${if host != "server" then "unbind C-b" else ""}
+        ${
+        if host != "server"
+        then "unbind C-b"
+        else ""
+      }
         unbind C-l
         unbind C-j
         unbind C-k

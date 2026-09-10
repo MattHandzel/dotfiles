@@ -11,6 +11,21 @@ return {
 		"ActivityWatch/aw-watcher-vim",
 		cmd = { "AWStart", "AWStop", "AWStatus", "AWHeartbeat" },
 	},
+	{
+		-- NvChad's spec sets history=true, which keeps snippet sessions alive
+		-- forever: long after leaving a snippet, expand_or_jumpable() is still
+		-- true, so the cmp <Down>/<Up> fallbacks re-enter the DEAD session and
+		-- LuaSnip errors "'start' is higher than 'end'" (init.lua:272) when its
+		-- stale extmark region has inverted. These events expire a session as
+		-- soon as the cursor leaves the snippet region or its text is edited.
+		-- (opts merges into NvChad's; their config fn passes merged opts to
+		-- set_config.) Pairs with expand_or_locally_jumpable in configs/cmp.lua.
+		"L3MON4D3/LuaSnip",
+		opts = {
+			region_check_events = "CursorMoved",
+			delete_check_events = "TextChanged",
+		},
+	},
 	-- {
 	-- 	"vhyrro/luarocks.nvim",
 	-- 	priority = 1001, -- this plugin needs to run before anything else
@@ -94,6 +109,15 @@ return {
 					"cpp",
 					"toml",
 					"diff",
+					-- Required by nabla.nvim, NOT for fence highlighting.
+					-- plugins/latex.lua auto-enables nabla on every markdown
+					-- FileType; nabla's mathzone check calls
+					-- vim.treesitter.get_parser(buf, "latex") and, when that
+					-- parser is missing, nvim_echo's "Latex parser not found..."
+					-- on every note open. It echoes rather than errors, so the
+					-- pcall around enable() cannot suppress it -- the parser has
+					-- to actually exist.
+					"latex",
 				},
 				highlight = { enable = true },
 			})
@@ -368,6 +392,25 @@ return {
 
 		"obsidian-nvim/obsidian.nvim",
 		event = "VeryLazy",
+		-- Upstream builds its "invalid alias" warning by concatenating `path`,
+		-- which is an obsidian.Path TABLE — so emitting the warning throws, the
+		-- throw escapes Note.from_file_async, and ONE malformed note aborts the
+		-- entire search ("N error(s) occurred during search" + a stack trace,
+		-- zero results). lazy discards local edits on update, so re-apply on
+		-- every build. Idempotent; fails loudly. See patches/*.patch for why.
+		-- Second patch: NakedUrl pattern rejects URLs ending in base64 `=`
+		-- (Swapcard links), so follow-link errors "Failed to resolve file"
+		-- instead of opening the browser.
+		-- Third patch: get_visual_selection() invents `cscol, cecol = 0, 999`
+		-- for a live visual-LINE selection, and those columns go straight into
+		-- nvim_buf_set_text -- so ObsidianExtractNote dies with "Invalid
+		-- 'end_col': out of range" after creating the note but before replacing
+		-- the selection.
+		build = {
+			"~/dotfiles/nvim/.config/nvim/patches/apply-obsidian-alias-patch.sh",
+			"~/dotfiles/nvim/.config/nvim/patches/apply-obsidian-nakedurl-patch.sh",
+			"~/dotfiles/nvim/.config/nvim/patches/apply-obsidian-visual-line-patch.sh",
+		},
 		-- config = function()
 		-- 	require("obsidian").setup({
 		-- 		-- your configuration comes here
@@ -402,6 +445,22 @@ return {
 					path = "~/Obsidian/Main",
 				},
 			},
+			attachments = {
+				-- Pasted images land in the vault's assets/imgs/ (the folder most
+				-- image embeds already reference), never next to the note.
+				img_folder = "assets/imgs",
+				-- The "Enter file name:" prompt comes prefilled with this
+				-- timestamp: <CR> accepts it, typing replaces it with a
+				-- descriptive name, <Esc> aborts ("Paste aborted" is that abort,
+				-- not an error).
+				img_name_func = function()
+					return os.date("pasted-%Y-%m-%d-%H%M%S")
+				end,
+				-- Second prompt confirms the assets/imgs destination before
+				-- writing. Set false (with img_name_func kept) for zero-prompt
+				-- instant pastes.
+				confirm_img_paste = true,
+			},
 			daily_notes = {
 				-- Optional, if you keep daily notes in a separate directory.
 				folder = "dailies",
@@ -422,6 +481,66 @@ return {
 				substitutions = {
 					weekly_note_link = function()
 						return "[[" .. os.date("%Y-W%V") .. "#Belief Experiment]]"
+					end,
+					-- ISO week vars for templates/weekly-review.md
+					week = function()
+						return os.date("%G-W%V")
+					end,
+					next_week = function()
+						local u = tonumber(os.date("%u"))
+						return os.date("%G-W%V", os.time() + (8 - u) * 86400)
+					end,
+					week_monday = function()
+						local u = tonumber(os.date("%u"))
+						return os.date("%Y-%m-%d", os.time() - (u - 1) * 86400)
+					end,
+					week_sunday = function()
+						local u = tonumber(os.date("%u"))
+						return os.date("%Y-%m-%d", os.time() + (7 - u) * 86400)
+					end,
+					-- Quarter vars for templates/quarterly-goals.md + quarterly-review.md
+					quarter = function()
+						local t = os.date("*t")
+						return string.format("%d-Q%d", t.year, math.ceil(t.month / 3))
+					end,
+					next_quarter = function()
+						local t = os.date("*t")
+						local q = math.ceil(t.month / 3) + 1
+						local y = t.year
+						if q > 4 then
+							q, y = 1, y + 1
+						end
+						return string.format("%d-Q%d", y, q)
+					end,
+					quarter_start = function()
+						local t = os.date("*t")
+						local q = math.ceil(t.month / 3)
+						return os.date("%Y-%m-%d", os.time({ year = t.year, month = (q - 1) * 3 + 1, day = 1 }))
+					end,
+					quarter_end = function()
+						local t = os.date("*t")
+						local q = math.ceil(t.month / 3)
+						local y, m = t.year, q * 3 + 1
+						if m > 12 then
+							y, m = y + 1, 1
+						end
+						return os.date("%Y-%m-%d", os.time({ year = y, month = m, day = 1 }) - 86400)
+					end,
+					year = function()
+						return os.date("%Y")
+					end,
+					-- Basename of the current quarter's goals note in areas/goals/
+					-- (e.g. "2026-q3"; falls back to the -vision note if the plan
+					-- file doesn't exist yet). Used by the daily-note template.
+					quarter_goals_note = function()
+						local t = os.date("*t")
+						local base = string.format("%d-q%d", t.year, math.ceil(t.month / 3))
+						local dir = vim.fn.expand("~/Obsidian/Main/areas/goals/")
+						if vim.fn.filereadable(dir .. base .. ".md") == 0
+							and vim.fn.filereadable(dir .. base .. "-vision.md") == 1 then
+							return base .. "-vision"
+						end
+						return base
 					end,
 				},
 			},
@@ -1099,6 +1218,13 @@ return {
 				desc = "Find Git Files",
 			},
 			{
+				"<leader>fC",
+				function()
+					require("configs.recent-created").picker()
+				end,
+				desc = "Recently Created Files",
+			},
+			{
 				"<leader>fp",
 				function()
 					Snacks.picker.projects()
@@ -1111,6 +1237,13 @@ return {
 					Snacks.picker.recent()
 				end,
 				desc = "Recent",
+			},
+			{
+				"<leader>fR",
+				function()
+					Snacks.picker.recent({ filter = { cwd = true } })
+				end,
+				desc = "Recent (cwd)",
 			},
 			-- git
 			{
@@ -2059,7 +2192,13 @@ return {
 	},
 
 	{
-		"MattHandzel/para-organize",
+		-- para-organize.nvim — REWRITE (cutover 2026-08-16): thin client of organize-core.
+		-- All behavior (suggestions, moves, routes, learning) lives in the core;
+		-- behavioral config is ~/.config/organize-core/config.toml. This table is UI-only.
+		-- The old setup table below the early-return is DEAD CODE kept for reference;
+		-- doc/MIGRATION-from-old-setup.md in the repo maps every old key to its new home.
+		dir = "~/Projects/KnowledgeManagementSystem/organize-rewrite",
+		name = "para-organize",
 		dependencies = {
 			"nvim-lua/plenary.nvim",
 			"nvim-telescope/telescope.nvim",
@@ -2071,6 +2210,20 @@ return {
 		event = "VeryLazy",
 		config = function()
 			require("para-organize").setup({
+				-- Cold-start budgets sized for THIS vault. organize-core builds
+				-- its index before it answers the handshake, and this vault is
+				-- ~13.3k notes ≈ 2.3s — longer than the shipped 2000ms spawn
+				-- budget, so startup reported "did not complete the handshake"
+				-- against a core that was healthy and merely still indexing.
+				core = {
+					spawn_timeout_ms = 15000,
+					handshake_timeout_ms = 10000,
+				},
+			})
+			if true then
+				return
+			end
+			local _legacy_setup_unused = ({
 				-- Path configuration
 				paths = {
 					-- Base directory for your notes vault
@@ -2563,6 +2716,17 @@ return {
 					effort = -0.05,
 				},
 			})
+		end,
+	},
+	{
+		dir = "~/Projects/beeper.nvim", -- github.com/MattHandzel/beeper.nvim (private)
+		-- Beeper Desktop as buffers. Lazy on the command/key: the plugin does no
+		-- network or SQLite I/O until :Beeper runs. Needs $BEEPER_ACCESS_TOKEN and
+		-- Beeper Desktop running; :checkhealth beeper explains what is missing.
+		cmd = "Beeper",
+		keys = { { "<leader>B", "<cmd>Beeper<cr>", desc = "Beeper inbox" } },
+		config = function()
+			require("beeper").setup({ notify = "mentions" })
 		end,
 	},
 	{

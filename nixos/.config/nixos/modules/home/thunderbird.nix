@@ -84,6 +84,18 @@
       url = "https://addons.thunderbird.net/thunderbird/downloads/file/1043785/nostalgy_emails_verwalten_suchen_archivieren-5.0.3-tb.xpi";
       sha256 = "0y63dgcgff6ilqnf287psbkf4zwjqf76xy9hr0yvw06fic8h6iy6";
     })
+    # Imports .eml files into a folder (right-click folder -> ImportExportTools NG
+    # -> Import messages). Added because dragging .eml from a file manager into a
+    # folder does not work reliably under Wayland, and appending drafts to an
+    # OAuth2-authenticated account over IMAP needs a password we do not have.
+    # Note the id is "kokkini", not "kokkoni" — verified against the XPI manifest,
+    # since a wrong addonId here fails silently. Requires TB 140-153; BB is 140.10.1.
+    (buildTbAddon {
+      addonId = "ImportExportToolsNG@cleidigh.kokkini.net";
+      version = "15.0.1";
+      url = "https://addons.thunderbird.net/thunderbird/downloads/file/1048163/importexporttools_ng-15.0.1-tb.xpi";
+      sha256 = "1gkr5slfnq67vkcz3skyac1jxjafjd8y46n4khbf4ljav7f8zkyf";
+    })
   ];
 in {
   programs.thunderbird = {
@@ -93,12 +105,18 @@ in {
         isDefault = true;
         extensions = tbExtensions;
         settings = {
-          # Scale the entire UI 25% larger (1.0 = default).
-          "layout.css.devPixelsPerPx" = "1.25";
+          # Scale the entire UI 75% larger (1.0 = default).
+          "layout.css.devPixelsPerPx" = "2.00";
           # Auto-enable the declaratively-installed add-ons. HM links the XPIs into
           # the profile read-only; without this Betterbird leaves them disabled
           # pending a manual per-add-on click. 0 = enable in all install scopes.
           "extensions.autoDisableScopes" = 0;
+          # Block remote images when DISPLAYING a message. Without this, merely
+          # clicking a draft that carries an open-tracking pixel fires that
+          # pixel, which on 2026-08-04 marked 6 outreach candidates as having
+          # "opened" an email that had not been sent yet. Recipients' opens are
+          # unaffected; this only stops us from tracking ourselves.
+          "mailnews.message_display.disable_remote_image" = true;
           "network.dns.disableIPv6" = true;
           "mailnews.sendInBackground" = true;
           "mailnews.sendInBackground.DelayMinutes" = 0;

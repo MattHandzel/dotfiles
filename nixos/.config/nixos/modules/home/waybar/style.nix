@@ -89,6 +89,38 @@ in {
     #custom-stt-mic.speaking {
         color: #${p.green};
     }
+    #custom-writing {
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+    /* Under Chapin's 500 words/hour floor — the state worth noticing, so it is
+       the only one that gets a warm colour. Green once you clear the bar. */
+    #custom-writing.under-target {
+        color: #${p.peach};
+    }
+    #custom-writing.on-target {
+        color: #${p.green};
+    }
+    /* First 30s: too little signal to show a rate. */
+    #custom-writing.warming {
+        color: rgba(205, 214, 244, 0.4);
+    }
+    #custom-wispr {
+        font-size: ${custom.font_size};
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+    #custom-wispr.idle {
+        color: #${p.mauve};
+    }
+    #custom-wispr.listening {
+        color: #${p.green};
+    }
+    #custom-wispr.silent {
+        color: #${p.base};
+        background-color: #${p.red};
+        border-radius: 8px;
+    }
     #custom-kb-lang {
         padding-left: 9px;
         padding-right: 9px;
@@ -118,6 +150,34 @@ in {
         animation-timing-function: linear;
         animation-iteration-count: infinite;
         animation-direction: alternate;
+    }
+    /* now/next calendar slot, left of the clock. Colour encodes urgency so the
+       state is readable without parsing the text. */
+    #custom-agenda {
+        padding-left: 9px;
+        padding-right: 9px;
+        color: #${p.text};
+    }
+    #custom-agenda.free {
+        color: rgba(205, 214, 244, 0.4);
+    }
+    #custom-agenda.soon {
+        color: #${p.yellow};
+    }
+    #custom-agenda.imminent {
+        color: #${p.peach};
+        animation-name: blink;
+        animation-duration: 2s;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+        animation-direction: alternate;
+    }
+    #custom-agenda.conflict {
+        color: #${p.red};
+    }
+    /* the fetcher stopped updating — surface it rather than showing stale times */
+    #custom-agenda.stale, #custom-agenda.error {
+        color: #${p.overlay0};
     }
     #network {
         padding-left: 9px;

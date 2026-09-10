@@ -6,7 +6,7 @@
     avahi.enable = true;
     avahi.nssmdns4 = true;
     avahi.openFirewall = true;
-    
+
     # Remote desktop might be useful via SSH, but for headless we usually disable GUI services
     gvfs.enable = false;
     gnome.gnome-keyring.enable = false;

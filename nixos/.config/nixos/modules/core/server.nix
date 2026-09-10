@@ -21,6 +21,11 @@
     # Canary is intentionally not imported here; Faster Whisper is the default STT service.
     (import ./nginx.nix)
     (import ./firefly-iii.nix)
+    (import ./firefly-pico.nix)
+    # Budgeting + investments, running alongside Firefly rather than replacing it.
+    (import ./actual-budget.nix)
+    (import ./ghostfolio.nix)
+    (import ./monitoring.nix)
     (import ./freshrss.nix)
     (import ./silverbullet.nix)
     (import ./obsidian-mcp.nix)

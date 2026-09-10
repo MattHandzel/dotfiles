@@ -6,7 +6,10 @@ set -euo pipefail
 BIN="$HOME/Projects/lifelog/target/release/lifelog-server-frontend"
 
 find_addr() {
-  hyprctl clients -j | jq -r '.[] | select(.class=="lifelog-server-frontend") | .address' | head -1
+  # hyprctl's JSON occasionally comes back malformed (IPC race); under
+  # set -e -o pipefail a single jq parse failure would otherwise kill the
+  # whole script instead of just this one poll — swallow it and retry.
+  hyprctl clients -j 2>/dev/null | jq -r '.[] | select(.class=="lifelog-server-frontend") | .address' 2>/dev/null | head -1 || true
 }
 
 addr=$(find_addr)

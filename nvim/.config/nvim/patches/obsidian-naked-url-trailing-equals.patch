@@ -1,0 +1,26 @@
+Upstream bug: `Patterns.NakedUrl` requires a URL's LAST character to be in
+`[a-zA-Z0-9/]`. Any URL ending in `=` — every base64-padded id, e.g. the
+Swapcard profile links `https://app.swapcard.com/.../Q29t...zA3MDc==` — fails
+the anchored `is_url()` check in util.lua, so `resolve_link_async` never sets
+`res.url`. The link then falls through the note-resolution branches and
+follow-link dies with:
+
+    [Obsidian.nvim] Failed to resolve file 'https://app.swapcard.com/...=='
+
+The terminal char class exists so a naked URL in prose doesn't swallow
+trailing punctuation ("see https://xyz.com."). Adding `=` to it keeps that
+property (`.` `)` `,` still excluded) while accepting base64 endings — a
+trailing `=` directly after a URL is essentially always query/padding, not
+punctuation.
+
+--- a/lua/obsidian/search.lua
++++ b/lua/obsidian/search.lua
+@@ -41,7 +41,7 @@ M.Patterns = {
+   WikiWithAlias = "%[%[[^][%|]+%|[^%]]+%]%]", -- [[xxx|yyy]]
+   Wiki = "%[%[[^][%|]+%]%]", -- [[xxx]]
+   Markdown = "%[[^][]+%]%([^%)]+%)", -- [yyy](xxx)
+-  NakedUrl = "https?://[a-zA-Z0-9._-]+[a-zA-Z0-9._#/=&?:+%%-]+[a-zA-Z0-9/]", -- https://xyz.com
++  NakedUrl = "https?://[a-zA-Z0-9._-]+[a-zA-Z0-9._#/=&?:+%%-]+[a-zA-Z0-9/=]", -- https://xyz.com (may end in base64 `=`)
+   FileUrl = "file:/[/{2}]?.*", -- file:///
+   MailtoUrl = "mailto:.*", -- mailto:emailaddress
+   BlockID = util.BLOCK_PATTERN .. "$", -- ^hello-world

@@ -1,0 +1,40 @@
+diff --git a/app/server/websocket.ts b/app/server/websocket.ts
+index 65ec5cc..2ec8f9e 100644
+--- a/app/server/websocket.ts
++++ b/app/server/websocket.ts
+@@ -10,12 +10,21 @@ export const EDITOR_EVENTS_TOPIC = "editor_events";
+ export function websocketHandler(app: GhostText): WebSocketHandler {
+     return {
+         async open(ws) {
+-            if (typeof app.buffer !== "number") {
+-                app.buffer = await app.nvim.call("nvim_create_buf", [true, true]);
+-                await app.nvim.call("nvim_buf_set_name", [app.buffer, "ghost-text"]);
+-                await onContentChange(app);
+-                await onBufDelete(app);
++            // Bun may deliver `message` while this async `open` is still
++            // pending. The browser sends its document IMMEDIATELY on connect
++            // and never resends, so the old code (which let `message` bail out
++            // early while app.buffer was still unset) silently dropped the very
++            // first document -- the buffer stayed empty and nothing happened.
++            // Publish the setup as a promise both handlers await instead.
++            if (!app.bufferReady) {
++                app.bufferReady = (async () => {
++                    app.buffer = await app.nvim.call("nvim_create_buf", [true, true]);
++                    await app.nvim.call("nvim_buf_set_name", [app.buffer, "ghost-text"]);
++                    await onContentChange(app);
++                    await onBufDelete(app);
++                })();
+             }
++            await app.bufferReady;
+ 
+             // subscribe to a topic so we can publish messages from outside
+             // webServer.publish(EDITOR_EVENTS_TOPIC, payload);
+@@ -25,6 +34,8 @@ export function websocketHandler(app: GhostText): WebSocketHandler {
+             ws.subscribe(EDITOR_EVENTS_TOPIC);
+         },
+         async message(_ws, message: string) {
++            // Wait for `open`'s buffer setup rather than dropping the message.
++            await app.bufferReady;
+             if (typeof app.buffer !== "number") return;
+ 
+             const browserMessage = JSON.parse(message) as WsBrowserMessage;

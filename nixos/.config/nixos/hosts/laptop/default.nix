@@ -136,6 +136,7 @@ in {
     ./../../modules/core
     ./../../modules/core/gmail-automation.nix
     ./../../modules/core/focus-failopen-watchdog.nix
+    ./../../modules/core/captive-portal.nix
     ./../../modules/core/focus-state-agent.nix
     ./../../modules/core/calendar-agenda.nix
     ./../../modules/core/kanata-homerow.nix

@@ -8,6 +8,7 @@
     ./../../modules/core/server.nix
     ./../../modules/core/taskwarrior-daily-notify.nix
     ./../../modules/core/project-watcher.nix
+    ./../../modules/core/kokoro-tts.nix
   ];
 
   services.ollama = {
@@ -20,8 +21,12 @@
   services.atuin.enable = true;
   services.second-brain-search.enable = true;
   services.obsidian-mcp.enable = true;
-  services.text-to-speech-service.enable = true;
-  services.text-to-speech-service.defaultVoice = "en_US-lessac-high";
+  # Piper TTS (:47773) disabled 2026-08-03 — Kokoro-82M (:8880) covers TTS with
+  # far better prosody, and Piper was holding a GPU/service slot for nothing.
+  # NOTE: projects/B2-polish expects a Polish voice (pl_PL-gosia-medium) from
+  # this service. Kokoro does not speak Polish. Re-enable, or move Polish audio
+  # onto the voice-cloning model, before the B2 pipeline needs audio again.
+  services.text-to-speech-service.enable = false;
   networking.firewall.allowedTCPPorts = [47772];
   networking.hostName = "matts-server";
 
@@ -130,6 +135,9 @@
   # Static suffix only — a `$(date …)` here is never evaluated and breaks the
   # activation backup `mv` (see laptop host for the full explanation).
   home-manager.backupFileExtension = "hm-backup";
+  # Without this, a stale *.hm-backup left by an earlier activation makes the
+  # next backup attempt fail ("would be clobbered by backing up").
+  home-manager.overwriteBackup = true;
 
   services.ntfy-sh = {
     enable = true;

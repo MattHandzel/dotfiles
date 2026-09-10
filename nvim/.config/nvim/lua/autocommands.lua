@@ -72,8 +72,13 @@ vim.api.nvim_create_user_command("ConfigDoctor", function()
 	vim.cmd("checkhealth")
 end, { desc = "Run Neovim health checks" })
 
+-- Every autocmd in this file must belong to a `clear = true` augroup, or
+-- :ReloadConfig re-registers it and you get N copies firing per event.
+local misc_group = vim.api.nvim_create_augroup("UserMiscAutocmds", { clear = true })
+
 -- Setup autocmd to handle opening files with external programs
 vim.api.nvim_create_autocmd("BufReadPost", {
+	group = misc_group,
 	callback = function()
 		local buf = vim.api.nvim_get_current_buf()
 		local filename = vim.api.nvim_buf_get_name(buf)
@@ -162,6 +167,23 @@ vim.api.nvim_create_autocmd("DirChanged", {
 	callback = prune_stale_buffers,
 })
 
+-- Auto-restore the last session (persistence.nvim) when nvim starts with no
+-- file args inside a notes dir. Sessions are auto-saved on every exit, so the
+-- notes nvim always comes back where it left off.
+vim.api.nvim_create_autocmd("VimEnter", {
+	group = vim.api.nvim_create_augroup("NotesSessionRestore", { clear = true }),
+	nested = true,
+	callback = function()
+		if vim.fn.argc() > 0 or not is_notes_dir(vim.uv.cwd()) then
+			return
+		end
+		local ok, persistence = pcall(require, "persistence")
+		if ok then
+			persistence.load()
+		end
+	end,
+})
+
 -- Run periodically on BufEnter (throttled to once per 30s)
 local last_prune = 0
 vim.api.nvim_create_autocmd("BufEnter", {
@@ -183,6 +205,15 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 	group = obsidian_group,
 	pattern = { "*/dailies/*.md", "*/weeklies/*.md" },
 	callback = function(args)
+		-- The only autocmd in this file that writes to the buffer, and it fires
+		-- on any load of a daily/weekly — including read-only ones (picker
+		-- previews, diff views, `nvim -R`). Injecting into those raises
+		-- "E21: Cannot make changes, 'modifiable' is off" and kills the rest of
+		-- the handler. Nothing to inject into a buffer nobody can edit anyway.
+		if not vim.bo[args.buf].modifiable or vim.bo[args.buf].readonly then
+			return
+		end
+
 		local lines = vim.api.nvim_buf_get_lines(args.buf, 0, -1, false)
 		for i, line in ipairs(lines) do
 			if line:match("^## Active Projects") or line:match("^## Project Review") then
@@ -214,6 +245,7 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 
 -- add yours here!
 vim.api.nvim_create_autocmd("BufWritePre", {
+	group = misc_group,
 	pattern = "*",
 	callback = function(args)
 		if vim.b[args.buf].large_file_mode then

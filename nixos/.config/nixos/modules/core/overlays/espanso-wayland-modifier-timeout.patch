@@ -1,0 +1,26 @@
+--- a/espanso-detect/src/evdev/sync/wayland.rs	2026-07-15 07:54:59.323484578 -0700
++++ b/espanso-detect/src/evdev/sync/wayland.rs	2026-07-15 07:55:15.849524517 -0700
+@@ -112,12 +112,23 @@
+ 
+     conn.flush().unwrap();
+ 
++    // On wlroots compositors (Hyprland) this focus-less "Espanso Sync Tool"
++    // window never receives a wl_keyboard.modifiers event, so the original
++    // unbounded loop spins forever: the window steals focus and the worker
++    // never registers keyboards (no expansions). Bail out after a short grace
++    // period with an unknown (None) initial modifier state -- evdev picks up
++    // subsequent modifier changes anyway.
++    let espanso_modifier_deadline = std::time::Instant::now() + Duration::from_millis(500);
+     loop {
+         if simple_window.modifiers.is_some() {
+             debug!("{:?}", simple_window.modifiers);
+             return Ok(simple_window.modifiers);
+         }
+ 
++        if std::time::Instant::now() >= espanso_modifier_deadline {
++            return Ok(None);
++        }
++
+         event_loop
+             .dispatch(Duration::from_millis(16), &mut simple_window)
+             .unwrap();

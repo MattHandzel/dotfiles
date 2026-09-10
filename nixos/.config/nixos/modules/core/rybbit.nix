@@ -31,15 +31,14 @@
   postgresImage = "postgres:16-alpine";
   clickhouseImage = "clickhouse/clickhouse-server:latest";
 in {
-  systemd.tmpfiles.rules =
-    [
-      "d ${stateDir} 0750 root root -"
-      "d ${dataDir} 0750 root root -"
-      "d ${envDir} 0750 root root -"
-      "d ${secretsDir} 0750 root root -"
-      "d ${dataDir}/postgres 0750 root root -"
-      "d ${dataDir}/clickhouse 0750 root root -"
-    ];
+  systemd.tmpfiles.rules = [
+    "d ${stateDir} 0750 root root -"
+    "d ${dataDir} 0750 root root -"
+    "d ${envDir} 0750 root root -"
+    "d ${secretsDir} 0750 root root -"
+    "d ${dataDir}/postgres 0750 root root -"
+    "d ${dataDir}/clickhouse 0750 root root -"
+  ];
 
   systemd.services."rybbit-secrets" = {
     description = "Initialize Rybbit secrets";
@@ -86,62 +85,62 @@ in {
     ];
     serviceConfig.Type = "oneshot";
     script = ''
-      set -eu
-      umask 077
-      mkdir -p ${envDir}
+            set -eu
+            umask 077
+            mkdir -p ${envDir}
 
-      better_auth=$(tr -d '\n' < ${betterAuthSecretFile})
-      pg_pass=$(tr -d '\n' < ${postgresPasswordFile})
-      ch_pass=$(tr -d '\n' < ${clickhousePasswordFile})
+            better_auth=$(tr -d '\n' < ${betterAuthSecretFile})
+            pg_pass=$(tr -d '\n' < ${postgresPasswordFile})
+            ch_pass=$(tr -d '\n' < ${clickhousePasswordFile})
 
-      mapbox_token=""
-      if [ -s ${mapboxTokenFile} ]; then
-        mapbox_token=$(tr -d '\n' < ${mapboxTokenFile})
-      fi
+            mapbox_token=""
+            if [ -s ${mapboxTokenFile} ]; then
+              mapbox_token=$(tr -d '\n' < ${mapboxTokenFile})
+            fi
 
-      cat > ${backendEnvFile} <<EOF
-DOMAIN_NAME=${domain}
-BASE_URL=https://${domain}
-DISABLE_SIGNUP=false
-DISABLE_AUTONOMOUS_TELEMETRY=true
-BETTER_AUTH_SECRET=$better_auth
-POSTGRES_HOST=rybbit-postgres
-POSTGRES_PORT=5432
-POSTGRES_DB=analytics
-POSTGRES_USER=frog
-POSTGRES_PASSWORD=$pg_pass
-CLICKHOUSE_HOST=rybbit-clickhouse
-CLICKHOUSE_PORT=8123
-CLICKHOUSE_DB=analytics
-CLICKHOUSE_USER=frog
-CLICKHOUSE_PASSWORD=$ch_pass
-EOF
+            cat > ${backendEnvFile} <<EOF
+      DOMAIN_NAME=${domain}
+      BASE_URL=https://${domain}
+      DISABLE_SIGNUP=false
+      DISABLE_AUTONOMOUS_TELEMETRY=true
+      BETTER_AUTH_SECRET=$better_auth
+      POSTGRES_HOST=rybbit-postgres
+      POSTGRES_PORT=5432
+      POSTGRES_DB=analytics
+      POSTGRES_USER=frog
+      POSTGRES_PASSWORD=$pg_pass
+      CLICKHOUSE_HOST=rybbit-clickhouse
+      CLICKHOUSE_PORT=8123
+      CLICKHOUSE_DB=analytics
+      CLICKHOUSE_USER=frog
+      CLICKHOUSE_PASSWORD=$ch_pass
+      EOF
 
-      if [ -n "$mapbox_token" ]; then
-        printf 'MAPBOX_TOKEN=%s\n' "$mapbox_token" >> ${backendEnvFile}
-      fi
+            if [ -n "$mapbox_token" ]; then
+              printf 'MAPBOX_TOKEN=%s\n' "$mapbox_token" >> ${backendEnvFile}
+            fi
 
-      cat > ${clientEnvFile} <<EOF
-RYBBIT_PUBLIC_BASE_URL=https://${domain}
-RYBBIT_PUBLIC_API_URL=https://${domain}/api
-DISABLE_AUTONOMOUS_TELEMETRY=true
-EOF
+            cat > ${clientEnvFile} <<EOF
+      RYBBIT_PUBLIC_BASE_URL=https://${domain}
+      RYBBIT_PUBLIC_API_URL=https://${domain}/api
+      DISABLE_AUTONOMOUS_TELEMETRY=true
+      EOF
 
-      if [ -n "$mapbox_token" ]; then
-        printf 'NEXT_PUBLIC_MAPBOX_TOKEN=%s\n' "$mapbox_token" >> ${clientEnvFile}
-      fi
+            if [ -n "$mapbox_token" ]; then
+              printf 'NEXT_PUBLIC_MAPBOX_TOKEN=%s\n' "$mapbox_token" >> ${clientEnvFile}
+            fi
 
-      cat > ${postgresEnvFile} <<EOF
-POSTGRES_DB=analytics
-POSTGRES_USER=frog
-POSTGRES_PASSWORD=$pg_pass
-EOF
+            cat > ${postgresEnvFile} <<EOF
+      POSTGRES_DB=analytics
+      POSTGRES_USER=frog
+      POSTGRES_PASSWORD=$pg_pass
+      EOF
 
-      cat > ${clickhouseEnvFile} <<EOF
-CLICKHOUSE_DB=analytics
-CLICKHOUSE_USER=frog
-CLICKHOUSE_PASSWORD=$ch_pass
-EOF
+            cat > ${clickhouseEnvFile} <<EOF
+      CLICKHOUSE_DB=analytics
+      CLICKHOUSE_USER=frog
+      CLICKHOUSE_PASSWORD=$ch_pass
+      EOF
     '';
   };
 

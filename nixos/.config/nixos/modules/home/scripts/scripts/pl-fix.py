@@ -12,12 +12,30 @@ import datetime
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 
 VAULT = pathlib.Path.home() / "Obsidian" / "Main"
 LOG_FILE = VAULT / "projects" / "B2-polish" / "fixes-log.md"
-CLAUDE_BIN = "/etc/profiles/per-user/matth/bin/claude"
+def _resolve_claude() -> str:
+    """Locate the claude CLI, preferring the npm install over any nixpkgs one.
+
+    This used to hardcode /etc/profiles/per-user/matth/bin/claude, which only
+    existed because claude-autofix.nix put pkgs.claude-code on PATH. That
+    package lags npm by many minor versions and its CLI flags drift, so it was
+    removed (2026-07-24); hardcoding the path would now be a dangling reference.
+    """
+    for candidate in (
+        str(pathlib.Path.home() / ".npm-packages" / "bin" / "claude"),
+        shutil.which("claude"),
+    ):
+        if candidate and os.access(candidate, os.X_OK):
+            return candidate
+    raise SystemExit("claude CLI not found (checked ~/.npm-packages/bin and PATH)")
+
+
+CLAUDE_BIN = _resolve_claude()
 
 PROMPT = """You are a Polish-language coach for a heritage speaker. His parents are Polish; Polish was his L1 until age 3-4. He's now relearning toward B2. Retained: ear, prosody, intuition, gender feel, basic aspect feel, accent. Missing: adult vocabulary, formal case awareness, idiomatic adult collocations, register awareness.
 

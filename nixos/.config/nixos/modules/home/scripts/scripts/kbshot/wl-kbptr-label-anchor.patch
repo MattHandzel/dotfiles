@@ -1,0 +1,224 @@
+diff --color -ruN orig/src/config.c new/src/config.c
+--- a/src/config.c	2026-07-31 18:08:49.254761851 -0700
++++ b/src/config.c	2026-07-31 18:08:49.263970719 -0700
+@@ -378,6 +378,7 @@
+         mode_floating,
+         MF_FIELD(source, "stdin", parse_floating_mode_source_value, noop),
+         MF_FIELD(label_color, "#fffd", parse_color, noop),
++        MF_FIELD(label_bg_color, "#00000000", parse_color, noop),
+         MF_FIELD(label_select_color, "#fd0d", parse_color, noop),
+         MF_FIELD(unselectable_bg_color, "#2226", parse_color, noop),
+         MF_FIELD(selectable_bg_color, "#1718", parse_color, noop),
+diff --color -ruN orig/src/config.h new/src/config.h
+--- a/src/config.h	2026-07-31 18:08:49.254761851 -0700
++++ b/src/config.h	2026-07-31 18:08:49.265445697 -0700
+@@ -34,6 +34,7 @@
+ };
+ 
+ struct mode_floating_config {
++    uint32_t label_bg_color;
+     enum floating_mode_source source;
+     uint32_t                  label_color;
+     uint32_t                  label_select_color;
+diff --color -ruN orig/src/main.c new/src/main.c
+--- a/src/main.c	2026-07-31 18:08:49.254761851 -0700
++++ b/src/main.c	2026-07-31 18:09:19.057394035 -0700
+@@ -917,7 +917,14 @@
+     wl_display_roundtrip(state.wl_display);
+ 
+     int status_code = 0;
+-    if (state.result.x != -1) {
++    if (state.early_exit != EARLY_EXIT_NONE) {
++        // Exit 0 with a word instead of a geometry. A caller that does not know
++        // about these keys still sees output it cannot parse as an area and
++        // treats the run as a cancellation, which is the old behaviour.
++        printf(
++            "%s\n", state.early_exit == EARLY_EXIT_ACCEPT ? "ACCEPT" : "BACK"
++        );
++    } else if (state.result.x != -1) {
+         print_result(&state);
+         if (!only_print) {
+             move_pointer(
+diff --color -ruN orig/src/mode_floating.c new/src/mode_floating.c
+--- a/src/mode_floating.c	2026-07-31 18:08:49.254761851 -0700
++++ b/src/mode_floating.c	2026-07-31 18:08:59.952456769 -0700
+@@ -19,6 +19,7 @@
+ static void get_areas_from_stdin(struct floating_mode_state *ms) {
+     size_t       areas_cap   = 256;
+     struct rect *areas       = malloc(sizeof(struct rect) * areas_cap);
++    struct rect *labels      = malloc(sizeof(struct rect) * areas_cap);
+     int          areas_count = 0;
+     char        *buf         = NULL;
+     size_t       buf_n       = 0;
+@@ -27,17 +28,24 @@
+         if (areas_count >= areas_cap) {
+             areas_cap *= 2;
+             areas      = realloc(areas, sizeof(struct rect) * areas_cap);
++            labels     = realloc(labels, sizeof(struct rect) * areas_cap);
+         }
+ 
+         struct rect *curr_area     = &areas[areas_count];
++        struct rect *curr_label    = &labels[areas_count];
+         int          matched_count = sscanf(
+-            buf, "%dx%d+%d+%d", &curr_area->w, &curr_area->h, &curr_area->x,
+-            &curr_area->y
++            buf, "%dx%d+%d+%d %dx%d+%d+%d", &curr_area->w, &curr_area->h,
++            &curr_area->x, &curr_area->y, &curr_label->w, &curr_label->h,
++            &curr_label->x, &curr_label->y
+         );
+         if (matched_count < 4) {
+             LOG_ERR("Error parsing '%s'. Skipping.", buf);
+             continue;
+         }
++        if (matched_count < 8) {
++            // No label rect given: label the area itself, as before.
++            *curr_label = *curr_area;
++        }
+ 
+         areas_count++;
+     }
+@@ -47,6 +55,7 @@
+     LOG_INFO("Got %d areas.", areas_count);
+ 
+     ms->areas     = areas;
++    ms->labels    = labels;
+     ms->num_areas = areas_count;
+ }
+ 
+@@ -77,6 +86,10 @@
+ void *floating_mode_enter(struct state *state, struct rect area) {
+     struct floating_mode_state *ms = malloc(sizeof(*ms));
+ 
++    // ms is not zeroed, and both the NULL check below and floating_mode_free's
++    // free() would otherwise read an uninitialised pointer.
++    ms->labels = NULL;
++
+     ms->label_symbols =
+         label_symbols_from_str(state->config.mode_floating.label_symbols);
+ 
+@@ -103,6 +116,14 @@
+         break;
+     }
+ 
++    if (ms->labels == NULL && ms->num_areas > 0) {
++        // Sources other than stdin supply no label rects.
++        ms->labels = malloc(sizeof(struct rect) * ms->num_areas);
++        for (int i = 0; i < ms->num_areas; i++) {
++            ms->labels[i] = ms->areas[i];
++        }
++    }
++
+     ms->label_selection = label_selection_new(ms->label_symbols, ms->num_areas);
+ 
+     ms->label_font_face = cairo_toy_font_face_create(
+@@ -125,7 +146,24 @@
+ 
+     switch (keysym) {
+     case XKB_KEY_BackSpace:
+-        return label_selection_back(ms->label_selection) != 0;
++        if (label_selection_back(ms->label_selection)) {
++            return true;
++        }
++        // Nothing left to un-type. A caller driving a hierarchy of rounds wants
++        // that as "go up a level", which is distinct from cancelling, so report
++        // it instead of swallowing the key.
++        state->early_exit = EARLY_EXIT_BACK;
++        state->running    = false;
++        return false;
++
++    case XKB_KEY_Return:
++    case XKB_KEY_KP_Enter:
++        // Accept whatever the caller currently has selected. Floating mode has no
++        // selection of its own -- the areas on stdin are one round of a drill-down
++        // the caller owns -- so this only has to be reported, not resolved.
++        state->early_exit = EARLY_EXIT_ACCEPT;
++        state->running    = false;
++        return false;
+ 
+     case XKB_KEY_Escape:
+         state->running = false;
+@@ -201,9 +239,31 @@
+             cairo_rectangle(cairo, a.x + .5, a.y + .5, a.w - 1, a.h - 1);
+             cairo_set_line_width(cairo, 1);
+             cairo_stroke(cairo);
++        }
++
++        label_selection_incr(curr_label);
++    }
++
++    // Labels last, in their own pass. When a label rect sits outside its area --
++    // which is the point of supplying one -- a neighbouring area's fill would
++    // otherwise paint over a label already drawn.
++    label_selection_set_from_idx(curr_label, 0);
++    for (int i = 0; i < ms->num_areas; i++) {
++        struct rect l = ms->labels[i];
++
++        const bool selectable =
++            label_selection_is_included(curr_label, ms->label_selection);
++
++        if (selectable) {
++            if (config->label_bg_color & 0xff) {
++                cairo_set_operator(cairo, CAIRO_OPERATOR_OVER);
++                cairo_set_source_u32(cairo, config->label_bg_color);
++                cairo_rectangle(cairo, l.x, l.y, l.w, l.h);
++                cairo_fill(cairo);
++            }
+ 
+             cairo_set_font_size(
+-                cairo, compute_relative_font_size(&config->label_font_size, a.h)
++                cairo, compute_relative_font_size(&config->label_font_size, l.h)
+             );
+             cairo_text_extents_t te_all;
+             label_selection_str(curr_label, label_selected_str);
+@@ -220,9 +280,9 @@
+ 
+             cairo_move_to(
+                 cairo,
+-                a.x +
+-                    (a.w - te_selected.x_advance - te_unselected.x_advance) / 2,
+-                a.y + (int)((a.h + te_all.height) / 2)
++                l.x +
++                    (l.w - te_selected.x_advance - te_unselected.x_advance) / 2,
++                l.y + (int)((l.h + te_all.height) / 2)
+             );
+             cairo_set_operator(cairo, CAIRO_OPERATOR_OVER);
+             cairo_set_source_u32(cairo, config->label_select_color);
+@@ -240,6 +300,7 @@
+ void floating_mode_free(void *mode_state) {
+     struct floating_mode_state *ms = mode_state;
+     free(ms->areas);
++    free(ms->labels);
+     cairo_font_face_destroy(ms->label_font_face);
+     label_selection_free(ms->label_selection);
+     label_symbols_free(ms->label_symbols);
+diff --color -ruN orig/src/state.h new/src/state.h
+--- a/src/state.h	2026-07-31 18:08:49.254761851 -0700
++++ b/src/state.h	2026-07-31 18:09:11.284121188 -0700
+@@ -58,6 +58,9 @@
+ 
+ struct floating_mode_state {
+     struct rect *areas;
++    // Where each area's label is drawn. Defaults to the area itself, so
++    // behaviour is unchanged unless a label rect is supplied on stdin.
++    struct rect *labels;
+     int          num_areas;
+ 
+     label_selection_t *label_selection;
+@@ -101,7 +104,17 @@
+     struct state       *state;
+ };
+ 
++// How the picker ended, when it ended without a chosen area. Escape stays the
++// plain cancellation it always was; these two are keys a caller driving several
++// rounds of floating mode needs to tell apart from it and from each other.
++enum early_exit {
++    EARLY_EXIT_NONE = 0,
++    EARLY_EXIT_ACCEPT, // Return: keep what the caller already has
++    EARLY_EXIT_BACK,   // BackSpace past the start of a label: go up a level
++};
++
+ struct state {
++    enum early_exit                         early_exit;
+     struct config                           config;
+     struct wl_display                      *wl_display;
+     struct wl_registry                     *wl_registry;

@@ -1,10 +1,11 @@
 {pkgs, ...}: let
   # Python bundled with the Google client libraries the poller needs.
   # No pip, no ~/.local — everything reproducible through Nix.
-  pythonEnv = pkgs.python3.withPackages (ps: with ps; [
-    google-auth-oauthlib
-    google-api-python-client
-  ]);
+  pythonEnv = pkgs.python3.withPackages (ps:
+    with ps; [
+      google-auth-oauthlib
+      google-api-python-client
+    ]);
 
   # The poller lives in ~/Projects/gmail-automation/ (canonical engine layout).
   pollerPath = "/home/matth/Projects/gmail-automation/poller.py";

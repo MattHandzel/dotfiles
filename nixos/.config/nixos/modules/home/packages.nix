@@ -8,6 +8,10 @@
     src = inputs.project-asset-generator-src;
   };
 
+  gdoc-sync = pkgs.callPackage ../../pkgs/gdoc-sync/default.nix {
+    src = inputs.gdoc-sync-src;
+  };
+
   # Learn This extension, packaged as an unsigned local XPI (MAT-826). Source is
   # vendored under pkgs/zen-learn-extension/src/ so the install is reproducible.
   learn-this-extension = pkgs.callPackage ../../pkgs/zen-learn-extension/default.nix {};
@@ -54,6 +58,13 @@
         (forceExt "addon@darkreader.org" "darkreader") # Dark Reader
         (forceExt "{7be2ba16-0f1e-4d93-9ebc-5164397477a9}" "videospeed") # Video Speed Controller
         (forceExt "newtaboverride@agenedia.com" "new-tab-override") # New Tab Override
+        # Grammarly (MAT-1780). The browser extension is the ONLY surviving way to
+        # reach a Grammarly Pro subscription — the Text Editor SDK shut down
+        # 2024-01-10 and znck/grammarly (grammarly-languageserver) was archived
+        # 2024-05-07, so there is no LSP path. Pairs with ghost-text.nvim, which
+        # mirrors an nvim buffer into a textarea this extension can then check.
+        (forceExt "87677a2c52b84ad3a151a4a72f5bd3c4@jetpack" "grammarly-1") # Grammarly
+        (forceExt "ghosttext@bfred.it" "ghosttext") # GhostText — nvim <-> textarea
         # Learn This — local unsigned XPI, force-installed from the Nix store.
         {
           name = "learn-this@matthandzel.com";
@@ -83,17 +94,21 @@ in {
     marp-cli # markdown slides (project-asset-generator)
     tesseract # OCR for asset verification (project-asset-generator)
     project-asset-generator # generate-assets CLI (~/Projects/project-asset-generator)
+    gdoc-sync # markdown ↔ Google Docs sync CLI (~/Projects/gdoc-sync)
 
     gimp
     gtrash # rm replacement, put deleted files in system trash
+    harper # grammar checker (harper-ls LSP) — nvim prose, see nvim.nix
     hexdump
     jdk17 # java
+    languagetool # offline grammar engine for grammar-check (Super+C); CLI only, no resident JVM
     lazygit
     libreoffice
     kdePackages.dolphin # file manager
     # nitch # systhem fetch util
     nix-prefetch-github
     # pipes # terminal screensaver
+    rclone # cloud storage sync/mount (Google Drive at ~/gdrive)
     ripgrep # grep replacement
     soundwireserver # pass audio to android phone
     tdf # cli pdf viewer
@@ -129,6 +144,7 @@ in {
     playerctl # controller for media players
     wl-clipboard # clipboard utils for wayland (wl-copy, wl-paste)
     cliphist # clipboard manager
+    keymap-drawer # render ZMK/QMK keymaps to SVG (the TOTEM's zmk-config)
     poweralertd
     qalculate-gtk # calculator
     unzip
@@ -270,6 +286,10 @@ in {
     trash-cli
     mermaid-cli # for mermaid diagrams
     # busybox # common utils
+    # primary ebook reader — default for epub/mobi/azw3/fb2/cbz.
+    # See modules/home/readest.nix (desktop-entry fix) and the mimeapps block
+    # in modules/home/default.nix. PDFs stay with zathura.
+    readest
     foliate # ebook reader
     # other ebook readers:
     calibre
@@ -303,5 +323,8 @@ in {
     code-cursor
     # claude-code # installing with npm is better
     chromium
+    google-chrome
+    bitwarden-desktop # password manager (GUI)
+    bitwarden-cli # `bw` — scriptable vault access + `rbw`-style automation
   ];
 }

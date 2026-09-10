@@ -143,6 +143,11 @@ def find_code(subject, body):
     #    so things like "ABC-123" in prose don't trigger.
     for m in CODE_ALNUM.finditer(blob):
         tok = m.group(1)
+        # A token that IS a keyword phrase ("ONE-TIME", "TWO-FACTOR") is the
+        # label, not the code — uppercase bodies made "YOUR ONE-TIME PASSCODE"
+        # match here and shadow the real digit code (UNiDAYS, 2026-07-19).
+        if KEYWORD.search(tok):
+            continue
         if re.search(r"[A-Z]", tok) and _near_keyword(blob, m.start(), m.end()):
             return tok
 

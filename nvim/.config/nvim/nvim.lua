@@ -39,6 +39,12 @@ dofile(vim.g.base46_cache .. "statusline")
 require("nvchad.autocmds")
 require("autocommands")
 
+-- :ReloadConfig — re-apply this config in-session instead of restarting nvim,
+-- which would kill embedded terminals and Claude sessions. See the module header
+-- for what lazy's "Config Change Detected" toast actually does (spec only) and
+-- why it is not a real reload.
+require("configs.reload").setup()
+
 vim.schedule(function()
 	local ok, err = pcall(require, "mappings")
 	if not ok then
@@ -320,3 +326,6 @@ vim.keymap.set(
 	'"vy:lua _G.YankSelectedWithNoteID()<CR>',
 	{ silent = true, desc = "Yank text with note ID link" }
 )
+
+-- Second-brain semantic search: <leader>fB (see lua/configs/brain-search.lua)
+require("configs.brain-search").setup()

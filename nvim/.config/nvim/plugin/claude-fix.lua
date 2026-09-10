@@ -9,7 +9,13 @@ local function get_messages(max_lines)
 	if not ok or type(out) ~= "table" or type(out.output) ~= "string" or out.output == "" then
 		return ""
 	end
-	local lines = vim.split(out.output, "\n", { plain = true })
+	local lines = {}
+	for _, l in ipairs(vim.split(out.output, "\n", { plain = true })) do
+		-- our own notices must not count as capturable error content
+		if not l:find("ClaudeFix:", 1, true) then
+			table.insert(lines, l)
+		end
+	end
 	while #lines > 0 and lines[1]:match("^%s*$") do
 		table.remove(lines, 1)
 	end
@@ -69,7 +75,10 @@ local function get_notifications(max_items)
 		local lvl = tostring(n.level or "info"):upper()
 		local title = (n.title and n.title ~= "") and ("[" .. n.title .. "] ") or ""
 		local msg = tostring(n.msg or ""):gsub("%s+$", "")
-		table.insert(lines, string.format("[%s] %s%s", lvl, title, msg))
+		-- our own notices must not count as capturable error content
+		if not msg:find("ClaudeFix:", 1, true) then
+			table.insert(lines, string.format("[%s] %s%s", lvl, title, msg))
+		end
 	end
 	return table.concat(lines, "\n")
 end
@@ -382,7 +391,14 @@ local function start_terminal(cmd_list)
 		on_exit = function(_, code)
 			if code ~= 0 then
 				vim.schedule(function()
-					vim.notify("ClaudeFix: process exited with code " .. tostring(code), vim.log.levels.WARN)
+					vim.notify(
+						"ClaudeFix: process exited with code "
+							.. tostring(code)
+							.. " — see "
+							.. vim.fn.stdpath("state")
+							.. "/log for the spawn error",
+						vim.log.levels.WARN
+					)
 				end)
 			end
 		end,
@@ -425,9 +441,21 @@ vim.api.nvim_create_user_command("ClaudeFix", function(opts)
 	end
 
 	local tmp = vim.fn.tempname() .. "-claude-fix.md"
-	pcall(vim.fn.writefile, vim.split(prompt, "\n", { plain = true }), tmp)
+	local write_ok, wrote = pcall(vim.fn.writefile, vim.split(prompt, "\n", { plain = true }), tmp)
+	write_ok = write_ok and wrote == 0
 
-	if start_terminal({ claude, "--dangerously-skip-permissions", prompt }) then
+	-- Linux caps one execve() argument at MAX_ARG_STRLEN (128 KiB). A large
+	-- bundle (:messages + buffer snippet + git context) passed as argv makes the
+	-- child die with E2BIG before claude starts ("process exited with code 127").
+	-- Hand anything big over via the prompt file instead.
+	local arg = prompt
+	if write_ok and #prompt > 60000 then
+		arg = "Read the file " .. tmp .. " and follow the instructions at its top. "
+			.. "It bundles the Neovim errors/warnings I hit plus environment and git context; "
+			.. "diagnose the root cause and fix the relevant files."
+	end
+
+	if start_terminal({ claude, "--dangerously-skip-permissions", arg }) then
 		vim.notify("ClaudeFix: launched " .. claude .. " (prompt saved to " .. tmp .. ")", vim.log.levels.INFO)
 	end
 end, { nargs = "?", desc = "Launch Claude agent to fix current errors/warnings" })

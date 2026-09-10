@@ -21,7 +21,7 @@ stdenvNoCC.mkDerivation {
   # The XPI filename must be the gecko id so the wrapper/policy can find it.
   geckoId = "learn-this@matthandzel.com";
 
-  nativeBuildInputs = [ zip ];
+  nativeBuildInputs = [zip];
 
   dontConfigure = true;
 

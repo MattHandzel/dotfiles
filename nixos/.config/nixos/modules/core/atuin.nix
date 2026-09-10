@@ -41,10 +41,12 @@ in {
     services.postgresql = {
       enable = true;
       ensureDatabases = [dbName];
-      ensureUsers = [{
-        name = dbUser;
-        ensureDBOwnership = true;
-      }];
+      ensureUsers = [
+        {
+          name = dbUser;
+          ensureDBOwnership = true;
+        }
+      ];
     };
 
     # 2. Atuin systemd service

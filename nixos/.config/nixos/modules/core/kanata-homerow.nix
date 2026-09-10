@@ -17,7 +17,7 @@
 #     ;  ,  .  P  Y  | F  G  C  R  L        home-row mods: ring O/N=Super,
 #     A  O  E  I  U  | D  H  T  N  S        middle E/T=Alt, index I/H=Ctrl.
 #     '  Q  J  K  X  | B  M  W  V  Z        hold Space=NAV, hold Tab=NUM.
-#   chords: A+Q=Esc  F+G=Tab  J+K=Bksp  K+L=Ctrl+Bksp(del word)
+#   chords: A+Q=Esc  F+G=Tab  J+K=Bksp
 #
 # ── REVERSIBLE ───────────────────────────────────────────────────────────────
 #   Nuclear off (no kanata at all, but then both-Alt STT stops too):
@@ -29,6 +29,16 @@
   services.kanata = {
     enable = true;
     keyboards.homerow = {
+      # ONLY the built-in laptop keyboard. Without this, kanata grabs every
+      # keyboard — including the TOTEM/Corne, which already do home-row mods in
+      # firmware — and double-remaps them, breaking every keypress. The by-path
+      # name is stable for the internal i8042 keyboard across reboots.
+      #
+      # Do NOT add the TOTEM here to make Wispr Flow see it (tried 2026-07-14:
+      # it mangles TOTEM keys, e.g. Esc). Wispr's hot-plug blindness is solved
+      # by the passthrough relay in modules/home/kbd-relay.nix instead, which
+      # forwards the TOTEM verbatim with no remapping.
+      devices = ["/dev/input/by-path/platform-i8042-serio-0-event-kbd"];
       extraDefCfg = "process-unmapped-keys no\nconcurrent-tap-hold yes";
       config = ''
         (defvar
@@ -53,10 +63,9 @@
           tog (switch ((layer base)) (layer-switch qwerty) break () (layer-switch base) break))
 
         (defchordsv2
-          (a q)       esc     40  all-released (base)
-          (f g)       tab     40  all-released (base)
-          (j k)       bspc    40  all-released (base)
-          (k l)       C-bspc  40  all-released (base)
+          (a q)       esc     30  all-released (base)
+          (g h)       tab     30  all-released (base)
+          (j k)       bspc    30  all-released (base)
           (lalt esc)  @tog    200 all-released (base qwerty)
           ;; BOTH alts together -> F14 -> hyprland speech-to-text bind (any layer)
           (lalt ralt) f14     100 all-released (base nav num qwerty))

@@ -51,9 +51,13 @@
     # keep the rotating OAuth token out of Syncthing (daily forced re-login)
     ++ [./claude-syncthing-ignores.nix]
     ++ [./linear-notify.nix] # poll Linear → swaync desktop notifications
+    ++ [./predict-ui.nix] # prediction-tracker resolve frontend on localhost:7337
     ++ [./privacy-card.nix] # agent-issuable capped virtual cards (Privacy.com API)
     ++ [inputs.catppuccin.homeModules.catppuccin]
     ++ [(import ./foliate.nix)]
+    # e-book reader (default for epub/mobi/azw3/fb2/cbz); fixes the packaged
+    # desktop entry, which is missing the %U that makes "open with" work
+    ++ [(import ./readest.nix)]
     # voice dictation (unofficial Linux AppImage port)
     ++ [./wispr-flow.nix]
     # un-stick modifiers that Wispr's uinput keyboard strands
@@ -64,6 +68,8 @@
     ++ [./vicinae.nix]
     # periodic markdown ↔ Google Docs reconcile (timer, not a 15s watch loop)
     ++ [./gdoc-sync.nix]
+    # Google Drive rclone mount at ~/gdrive (remote configured once by hand)
+    ++ [./gdrive-mount.nix]
     # a shareable Google Doc per upcoming meeting note (the server writes the
     # notes; gdoc-sync only lives here, so the Doc half runs on the laptop)
     ++ [./meeting-note-docs.nix]
@@ -104,9 +110,18 @@
       "text/*" = "nvim.desktop";
       "application/json" = "nvim.desktop";
       "application/x-shellscript" = "nvim.desktop";
+      # PDFs stay with zathura — readest claims application/pdf upstream, but
+      # its PDF support is experimental and zathura/sioyek are the tools here.
       "application/pdf" = "zathura.desktop";
-      # Open EPUB ebooks in Calibre's reader (not the ebook editor).
-      "application/epub+zip" = "calibre-ebook-viewer.desktop";
+      # Book formats open in Readest (see modules/home/readest.nix). Previously
+      # EPUB went to calibre-ebook-viewer.desktop; calibre stays installed as a
+      # library manager, it is just no longer what opens a book on double-click.
+      "application/epub+zip" = "readest.desktop";
+      "application/x-mobipocket-ebook" = "readest.desktop";
+      "application/vnd.amazon.ebook" = "readest.desktop";
+      "application/vnd.amazon.mobi8-ebook" = "readest.desktop";
+      "application/x-fictionbook+xml" = "readest.desktop";
+      "application/vnd.comicbook+zip" = "readest.desktop";
     };
   };
 

@@ -1,5 +1,9 @@
-{ config, lib, pkgs, ... }:
-
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 # Hourly btrfs snapshots of /home, with simple retention.
 #
 # Background: On 2026-05-05, ~1.9 GB of irreplaceable personal media was destroyed
@@ -23,11 +27,10 @@
 #
 # To enable: add `(import ./btrfs-snapshots.nix)` to modules/core/default.nix
 # imports list, then run scripts/nixos-safe-rebuild.sh.
-
 {
   systemd.services.btrfs-home-snapshot = {
     description = "Take btrfs snapshot of /home with retention";
-    path = [ pkgs.btrfs-progs pkgs.coreutils ];
+    path = [pkgs.btrfs-progs pkgs.coreutils];
     serviceConfig = {
       Type = "oneshot";
       # The script runs as root; btrfs operations require it.
@@ -62,10 +65,10 @@
 
   systemd.timers.btrfs-home-snapshot = {
     description = "Hourly btrfs snapshot of /home";
-    wantedBy = [ "timers.target" ];
+    wantedBy = ["timers.target"];
     timerConfig = {
       OnCalendar = "hourly";
-      Persistent = true;        # catch up after suspend / downtime
+      Persistent = true; # catch up after suspend / downtime
       RandomizedDelaySec = "5m"; # avoid hitting :00 exactly
     };
   };

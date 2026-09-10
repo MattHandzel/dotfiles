@@ -1,5 +1,4 @@
-{ pkgs, ... }:
-let
+{pkgs, ...}: let
   encDir = "$HOME/Obsidian/Main/.private.enc";
   mountDir = "$HOME/Obsidian/Main/private";
 

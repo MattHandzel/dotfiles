@@ -1,0 +1,29 @@
+Upstream bug: the "invalid alias" warning concatenates `path` directly, but
+`path` is an `obsidian.Path` TABLE here -- so the warning itself raises
+"attempt to concatenate local 'path' (a table value)". That error propagates
+out of `Note.from_file_async` and aborts the WHOLE search, so one bad note
+kills every result instead of producing one warning about that note.
+
+The sibling `tags` branch twelve lines below already uses `tostring(path)`;
+this branch was simply missed.
+
+How you get a non-string alias in the first place: an unquoted alias
+containing ": " is valid YAML for a MAP, so
+
+    aliases:
+      - Eval SOTA: Significance
+
+parses as `{ ["Eval SOTA"] = "Significance" }` -- a table, not a string --
+which lands in exactly this branch.
+
+--- a/lua/obsidian/note.lua
++++ b/lua/obsidian/note.lua
+@@ -523,7 +523,7 @@ Note.from_lines = function(lines, path, opts)
+               else
+                 log.warn(
+                   "Invalid alias value found in frontmatter for "
+-                    .. path
++                    .. tostring(path)
+                     .. ". Expected string, found "
+                     .. type(alias)
+                     .. "."

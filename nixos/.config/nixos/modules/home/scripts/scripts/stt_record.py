@@ -267,6 +267,11 @@ def main():
 
     # VAD / segmentation knobs
     ap.add_argument("--vad-level", type=int, default=2)
+    ap.add_argument(
+        "--stop-grace-ms", type=int, default=800,
+        help="Keep capturing this long after the stop signal before killing "
+             "ffmpeg, so the words in flight at stop-press aren't discarded.",
+    )
     ap.add_argument("--frame-ms", type=int, default=30)
     ap.add_argument("--silence-ms", type=int, default=600)
     ap.add_argument("--pre-roll-ms", type=int, default=200)
@@ -398,13 +403,23 @@ def main():
                     with contextlib.suppress(Exception):
                         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
             
-            # Ensure we kill ffmpeg on SIGINT
+            # Ensure we kill ffmpeg on SIGINT — but NOT instantly. The stop
+            # keypress usually lands while the last word is still being spoken
+            # or still in the mic->pipewire->ffmpeg buffers; SIGTERMing ffmpeg
+            # at that instant discarded it (verified in /tmp/stt-v2.log: final
+            # words after the last VAD segment never reached the transcript).
+            # Keep capturing for a short grace window, then stop ffmpeg; the
+            # drain-to-EOF loop + seg.flush() below pick up the tail.
             original_sigint = signal.getsignal(signal.SIGINT)
             def on_sigint_stream(signum, frame):
                 nonlocal terminate_flag
+                if terminate_flag:
+                    return  # second press: grace timer already running
                 terminate_flag = True
-                sys.stderr.write("[stt] SIGINT received, shutting down.\n")
-                cleanup_proc()
+                sys.stderr.write(
+                    f"[stt] SIGINT received, capturing {args.stop_grace_ms}ms tail then shutting down.\n")
+                sys.stderr.flush()
+                threading.Timer(args.stop_grace_ms / 1000.0, cleanup_proc).start()
             signal.signal(signal.SIGINT, on_sigint_stream)
 
             seg = VADSegmenter(
@@ -550,7 +565,28 @@ def main():
             t.start()
 
             chunk_bytes = seg.frame_bytes * 20  # ~20 frames per read
-            
+
+            # "Mic live" cue: the toggle keybind -> python -> ffmpeg -> device-open
+            # chain takes ~1-1.5s, and anything spoken before ffmpeg delivers its
+            # first chunk is physically never captured (the missing-first-words
+            # bug). Announce readiness only once real audio is flowing: a short
+            # beep in the headset + a notification. Speak after the beep.
+            capture_live_announced = False
+
+            def announce_capture_live():
+                sys.stderr.write(f"[stt] {time.strftime('%H:%M:%S')} Mic live, capture flowing.\n")
+                sys.stderr.flush()
+                with contextlib.suppress(Exception):
+                    subprocess.Popen(
+                        ["notify-send", "-u", "low", "-t", "1200", "🎙 STT", "listening — mic live"],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                if os.environ.get("STT_READY_SOUND", "1") != "0":
+                    snd = "/run/current-system/sw/share/sounds/freedesktop/stereo/audio-volume-change.oga"
+                    if os.path.exists(snd):
+                        with contextlib.suppress(Exception):
+                            subprocess.Popen(["pw-play", snd],
+                                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
             try:
                 # Drain to EOF even after stop. The SIGINT handler sets
                 # terminate_flag AND SIGTERMs ffmpeg, so proc.stdout EOFs shortly
@@ -566,6 +602,9 @@ def main():
                             sys.stderr.write("[stt] ffmpeg stream closed unexpectedly.\n")
                             notify_error("Microphone disconnected or ffmpeg failed.")
                         break
+                    if not capture_live_announced:
+                        capture_live_announced = True
+                        announce_capture_live()
                     for utt in seg.push(chunk):
                         upload_q.put((utt, False))
 

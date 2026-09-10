@@ -17,41 +17,63 @@ in {
   # webapp-host all ship near-identical V8+Blink pages) without app cooperation.
   # Costs some kernel scan CPU; saves ~200-500 MB of duplicated runtime pages.
   # ── Slices ────────────────────────────────────────────────────────────────
-  # Caps are based on observed peaks from memwatch logs (May 4–6 2026):
-  #   Zen     12.4 GB peak  → cap 6/10, swap 6  (tightened: a 12 GB browser on
-  #           a 16 GB laptop is the root memory hog. MemoryHigh=6G makes the
-  #           kernel reclaim Zen's cold pages into zram well before the 10G
-  #           hard MemoryMax, keeping resident set down without OOM-killing it;
-  #           swap raised to 6G so reclaimed pages have somewhere to land.)
-  #   Brave    5.3 GB peak  → cap 4/6,  swap 2
-  #   Cursor   1.4 GB peak (but Code/Cursor combined hit 5.2 GB) → cap 4/6, swap 2
-  #   Beeper   1.5 GB peak  → cap 2/3,  swap 1   (raised from earlier 1G/1.5G suggestion)
+  # DESIGN (revised 2026-07-04): these slices set ONLY MemoryHigh — a *soft*
+  # throttle — never a hard MemoryMax. MemoryHigh makes the kernel aggressively
+  # reclaim a slice's cold pages into zram once the app grows past it, which is
+  # exactly the anti-thrash intent here, but it CANNOT kill the app. A hard
+  # MemoryMax (used previously) OOM-kills a process *inside that one cgroup* the
+  # moment it can't reclaim below the ceiling — independent of system-wide free
+  # RAM — which is why apps were dying with the laptop 60% free. Likewise the
+  # old low MemorySwapMax caps starved reclaim of anywhere to land, forcing the
+  # hard cap to be hit sooner. Both are gone. Genuine system-wide exhaustion is
+  # handled by systemd-oomd + zram (see hosts/laptop/default.nix), which look at
+  # real pressure across the whole session rather than per-app ceilings.
+  # MemoryHigh values track observed peaks from memwatch logs (May 4–6 2026):
+  #   Zen 12.4 GB · Brave 5.3 GB · Cursor 1.4 GB (Code+Cursor 5.2 GB) · Beeper 1.5 GB
   systemd.user.slices = {
     "app-zen" = {
-      Unit.Description = "Memory-capped slice for Zen Browser";
+      Unit.Description = "Memory-throttled slice for Zen Browser";
       Slice = {
         MemoryKSM = "yes";
-        MemoryHigh = "6G";
-        MemoryMax = "10G";
-        MemorySwapMax = "6G";
+        # Raised 6G→8G (2026-07-09): at 6G the slice showed 45M pgscan_direct +
+        # 59M workingset_refault_anon — Zen's allocating threads were being
+        # direct-reclaim throttled at the ceiling (memory.high sleeps every
+        # allocation batch), which surfaced as multi-second stalls on typing
+        # and tab switches. 8G still forces cold pages to zram well before the
+        # 12.4G observed peak, without throttling the foreground working set.
+        MemoryHigh = "8G";
+        # Favor the interactive browser over sibling app slices when background
+        # jobs saturate the CPU.
+        CPUWeight = 200;
+      };
+    };
+    # Lifelog's periodic archival jobs (tar|zstd -T0 -10, ffmpeg thumbnailing)
+    # ran unconstrained in the session scope and stalled the whole desktop
+    # (measured 2026-07-09 during a run: system IO PSI full avg10 ≈ 27%,
+    # memory PSI full ≈ 15%, load 5.2). Low weights confine them to idle
+    # capacity; the small MemoryHigh keeps their page-cache churn from
+    # evicting interactive apps' working sets. Launched into this slice by
+    # the Hyprland exec-once entry (hyprland/config.nix).
+    "app-lifelog" = {
+      Unit.Description = "Background-priority slice for the lifelog logger";
+      Slice = {
+        CPUWeight = 20;
+        IOWeight = 20;
+        MemoryHigh = "1G";
       };
     };
     "app-brave" = {
-      Unit.Description = "Memory-capped slice for Brave";
+      Unit.Description = "Memory-throttled slice for Brave";
       Slice = {
         MemoryKSM = "yes";
         MemoryHigh = "4G";
-        MemoryMax = "6G";
-        MemorySwapMax = "2G";
       };
     };
     "app-beeper" = {
-      Unit.Description = "Memory-capped slice for Beeper";
+      Unit.Description = "Memory-throttled slice for Beeper";
       Slice = {
         MemoryKSM = "yes";
         MemoryHigh = "2G";
-        MemoryMax = "3G";
-        MemorySwapMax = "1G";
       };
     };
     # Slack was measured at ~1 GB resident and uncapped (2026-06-30), the second
@@ -59,12 +81,10 @@ in {
     # both are single-workspace Electron chat clients. Note: Beeper already
     # aggregates Slack, so the lower-RAM path is to run only one of the two.
     "app-slack" = {
-      Unit.Description = "Memory-capped slice for Slack";
+      Unit.Description = "Memory-throttled slice for Slack";
       Slice = {
         MemoryKSM = "yes";
         MemoryHigh = "2G";
-        MemoryMax = "3G";
-        MemorySwapMax = "1G";
       };
     };
     # The Chromium --app webapp host (Linear/Calendar/Gemini/Claude.ai, all
@@ -72,21 +92,17 @@ in {
     # and uncapped. All launcher scripts route through this slice so whichever
     # window opens first places the shared process here.
     "app-webapps" = {
-      Unit.Description = "Memory-capped slice for the Chromium webapp host";
+      Unit.Description = "Memory-throttled slice for the Chromium webapp host";
       Slice = {
         MemoryKSM = "yes";
         MemoryHigh = "2G";
-        MemoryMax = "3G";
-        MemorySwapMax = "2G";
       };
     };
     "app-cursor" = {
-      Unit.Description = "Memory-capped slice for Cursor";
+      Unit.Description = "Memory-throttled slice for Cursor";
       Slice = {
         MemoryKSM = "yes";
         MemoryHigh = "4G";
-        MemoryMax = "6G";
-        MemorySwapMax = "2G";
       };
     };
   };

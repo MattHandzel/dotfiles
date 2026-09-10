@@ -88,11 +88,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784433528,
-        "narHash": "sha256-fRp907wIj8ZlXS/NDZUxRFRJn0RC21V6qBv+kE2HKYY=",
+        "lastModified": 1788718006,
+        "narHash": "sha256-IzeHnX/Pk1V8Kif6nu/RJnUS61b4k1x9skKr+OynKDU=",
         "owner": "aaddrick",
         "repo": "claude-desktop-debian",
-        "rev": "da1e4f81b2bcd5b70183ec47b676a0f53ef3e8d9",
+        "rev": "76b8262bedec1072d8423103933cd84c4a60757d",
         "type": "github"
       },
       "original": {
@@ -166,11 +166,11 @@
         "nixpkgs-lib": "nixpkgs-lib"
       },
       "locked": {
-        "lastModified": 1782949081,
-        "narHash": "sha256-vp6Y/Grm98ESt6ceOkWiHWyZRDV3J1RID4w+6NWK9yA=",
+        "lastModified": 1787559586,
+        "narHash": "sha256-onL0VLf9vPllmT0H/OlURIU5r5t5WIEl7t4tVNKT0Nw=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "17c9d6cdfc60c64f4ee8d306f9bc0b4ccb51481e",
+        "rev": "9d0d87172c374f89da73c1cfe6d81ae62feac1f1",
         "type": "github"
       },
       "original": {
@@ -327,8 +327,8 @@
     "gdoc-sync-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1785951512,
-        "narHash": "sha256-BmsI9U7rpVCp9GzyHpomv+Ggrxb6yQGqBvpe+OmxYsY=",
+        "lastModified": 1787503863,
+        "narHash": "sha256-aTjxDWoE/QS7tBsKPy9le+pvIIC5oi8N8IgUjCqgo54=",
         "path": "/home/matth/Projects/gdoc-sync",
         "type": "path"
       },
@@ -527,11 +527,11 @@
     },
     "nixpkgs-lib": {
       "locked": {
-        "lastModified": 1782614948,
-        "narHash": "sha256-ePjCwr1sNm9NYUqywL7QfK3JnlS015msC+eBu2zKlp8=",
+        "lastModified": 1785031560,
+        "narHash": "sha256-OmshNvn2vupOFpYinLUu+1Dnpu4n7Q5N3ggGVNHpkUI=",
         "owner": "nix-community",
         "repo": "nixpkgs.lib",
-        "rev": "db3f255737b94216eb71cce308e2912cf6bc2d7c",
+        "rev": "0e79af5e3d4dcfcd676ab5ba3f95d2e3352e078c",
         "type": "github"
       },
       "original": {
@@ -580,6 +580,22 @@
         "owner": "NixOS",
         "ref": "nixos-24.11",
         "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs-readest": {
+      "locked": {
+        "lastModified": 1786106723,
+        "narHash": "sha256-zDSUbpoeo/9ZmD2+wXnzxoo1+uhL8vxc0b8yuYMKYq0=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "f13ff45afd1bb73e640eaa08a7066dbed07e3238",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "f13ff45afd1bb73e640eaa08a7066dbed07e3238",
         "type": "github"
       }
     },
@@ -796,6 +812,7 @@
         "hyprpicker": "hyprpicker",
         "nix-gaming": "nix-gaming",
         "nixpkgs": "nixpkgs_6",
+        "nixpkgs-readest": "nixpkgs-readest",
         "nur": "nur",
         "project-asset-generator-src": "project-asset-generator-src",
         "second-brain-search": "second-brain-search",

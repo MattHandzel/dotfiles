@@ -16,7 +16,7 @@
     spotify = "S";
     discord = "D";
     obsidian = "O";
-    betterbird = "M";
+    superhuman = "M";
     slack = "K";
     calendar = "C";
     yazi = "F";
@@ -44,6 +44,7 @@ in let
   workspaceMapping = {
     calendar = "calendar";
     "gemini.google.com" = "gemini";
+    "com.anthropic.Claude" = "claude";
   };
 
   generateFloatingRules = floating_window: [
@@ -115,12 +116,16 @@ in {
         "hash dbus-update-activation-environment 2>/dev/null &"
         "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP &"
         "nm-applet &"
+        # reboot-state: after a reboot requested with `reboot-state reboot`, open the
+        # picker (floating kitty) so Matt chooses which Claude sessions/shells/apps come
+        # back. No-op on a normal login. See areas/second-brain/reboot-state.md.
+        "reboot-state login &"
         # Wispr Flow is NOT started here — it runs as the wispr-flow systemd user
         # service (modules/home/wispr-flow.nix) so its lifecycle can be coupled to
         # kbd-relay: Wispr enumerates keyboards once at startup, so it must start
         # after the relay's virtual keyboard and restart whenever the relay does.
         # Its Hub window is routed to the `wispr` workspace by windowrule below;
-        # the floating pill is pinned + follows the cursor via wispr-pill-follow.
+        # the floating "Status" pill is banished to special:hidden there too.
         "wl-clip-persist --clipboard both"
         "swaybg -m fill -i $(find ~/Pictures/wallpapers/ -maxdepth 1 -type f) &"
         "hyprctl setcursor Nordzy-cursors 22 &"
@@ -186,6 +191,11 @@ in {
           "name" = "pixa3838:00-093a:3838-touchpad";
           sensitivity = 0.25;
           natural_scroll = true;
+          # Explicit rather than relying on Hyprland's default — this is the
+          # knob that makes libinput ignore palm/finger contact while typing.
+          # Which keyboards count is decided by libinput, not here: see the
+          # local-overrides.quirks block in modules/core/xserver.nix.
+          disable_while_typing = true;
           tap_button_map = "lrm";
           clickfinger_behavior = true;
           middle_button_emulation = true;
@@ -220,6 +230,7 @@ in {
         follow_mouse = 1;
         sensitivity = 0.25;
         touchpad = {
+          disable_while_typing = true;
           natural_scroll = true;
           tap-to-click = true;
           tap-and-drag = true;
@@ -356,7 +367,7 @@ in {
         generatedSingltonKeyboardShortcuts
         ++ [
           # show keybinds list
-          "${mainMod}, F1, exec, show-keybinds"
+          "${mainMod}, F1, exec, keybinds"
           "${mainMod}, delete, exit"
 
           # nixos-assistant: floating Claude Code harness for editing this flake,
@@ -379,15 +390,17 @@ in {
           "${mainMod}, Space, togglefloating,"
           "${mainMod}, A, exec, fuzzel"
           # Vicinae — Raycast-style command palette (launch/run/timer/calc).
-          "${mainMod}, D, exec, vicinae toggle"
-          # Lifelog: focus/launch the viewer on its Search view (MAT-1413).
-          "${mainMod} SHIFT, L, exec, lifelog-search"
+          "${mainMod}, D, exec, $HOME/.local/bin/vicinae-toggle"
+          # Lifelog viewer intentionally has NO keybind — SUPER+SHIFT+L collided
+          # with window-move-right; launch it from the app launcher instead.
           "${mainMod}, SLASH, exec, $HOME/Projects/quick-reference-hotkey/quick-ref.sh"
           "${mainMod}, Escape, exec, systemctl suspend"
           "${mainMod}, E, exec, wofi-emoji"
           "${mainMod} SHIFT, Escape, exec, shutdown-script"
           # Quick prediction capture (MAT-1454); displaced `pseudo` (unused)
           "${mainMod}, P, exec, $HOME/Obsidian/Main/scripts/predictions/predict-popup"
+          # Prediction resolve UI (predict-ui.nix serves it on localhost)
+          "${mainMod} SHIFT, P, exec, xdg-open http://127.0.0.1:7337"
           "${mainMod}, S, togglesplit,"
           "${mainMod} SHIFT, B, exec, pkill -SIGUSR1 .waybar-wrapped"
           "${mainMod}, C ,exec, hyprpicker -a"
@@ -406,6 +419,20 @@ in {
           # screenshot
           "ALT, Print, exec, ocr-screenshot && wl-paste -t text/plain > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').txt"
           ",Print, exec, grimblast --notify --freeze copy area && wl-paste -t image/png > ~/Pictures/Screenshots/$(date +'%Y-%m-%d-%Ih%Mm%Ss').png"
+          # kbshot: keyboard-only object screenshot. Labels every window, text
+          # block/line and UI rectangle on screen; type the label to capture that
+          # region. No mouse, no drag. Labels avoid the home-row-mod letters.
+          "CTRL, Print, exec, kbshot"
+          # Same picker, but OCR the chosen object and copy its text instead.
+          "CTRL ALT, Print, exec, kbshot --ocr"
+          # Corner mode: no object detection at all. Type a label on a narrowing grid
+          # to place the top-left corner, then again for the bottom-right — for
+          # regions the detector splits wrongly or does not find.
+          "CTRL SHIFT, Print, exec, kbshot --corners"
+          # Last-resort backstop only; kbshot already yields the keyboard by itself
+          # when a rival overlay appears and times out on its own regardless, so this
+          # is not something to have to remember.
+          "${mainMod} SHIFT, Print, exec, kbshot --abort"
 
           # Power tooling — parallels from Saul's Mac list (MAT-572).
           # clip2md: rich text on the clipboard -> Markdown, in place.
@@ -416,7 +443,9 @@ in {
           # (0 = 10). A general leader submap — see extraConfig below to extend it.
           "${mainMod} SHIFT, Space, submap, leader"
 
-          "${mainMod}, N, exec, ~/Projects/KnowledgeManagementSystem/result/bin/kms-capture"
+          # KMS v2 (repo ~/Projects/KMS-rebuild, installed via `nix profile`).
+          # Rollback: point back at ~/Projects/KnowledgeManagementSystem/result/bin/kms-capture
+          "${mainMod}, N, exec, ~/.nix-profile/bin/kms-capture"
 
           # Move focus with mainMod + arrow keys
           # "$mainMod, h, changegroupactive, back"
@@ -573,19 +602,19 @@ in {
           # W, not I: WhatsApp (wasistlos) gave the key up — see appKeyboardShortcuts.
           "${mainMod} ALT, W, exec, wispr-hub"
 
-          # Tap the copilot key: quick "learn this" launcher — pick a mode,
-          # type/paste a word or concept, get an answer instantly in a fresh
-          # Claude chat. SUPER+SHIFT opens/focuses the full Claude.ai app, which
-          # now lives on its own "claude.ai" workspace (see shared_variables.nix).
-          ",${copilotKey}, exec, focus_app claude.ai"
-          "SUPER SHIFT, ${copilotKey}, exec, focus_app claude.ai"
-          ",XF86Tools, exec, focus_app claude.ai"
-          "SUPER SHIFT, XF86Tools, exec, focus_app claude.ai"
-          # "SUPER SHIFT, ${copilotKey}, exec, focus_app gemini.google.com"
+          # Copilot key: focus/launch the Claude Desktop app (Chat + Cowork +
+          # Code) on its own "claude" workspace. com.anthropic.Claude is the
+          # app's window class; the same-named launcher script makes focus_app's
+          # launch fallback work (see scripts/com.anthropic.Claude.sh). The old
+          # claude.ai chromium web app remains reachable via claude-ask (F13).
+          ",${copilotKey}, exec, focus_app com.anthropic.Claude"
+          "SUPER SHIFT, ${copilotKey}, exec, focus_app com.anthropic.Claude"
+          ",XF86Tools, exec, focus_app com.anthropic.Claude"
+          "SUPER SHIFT, XF86Tools, exec, focus_app com.anthropic.Claude"
           # F13 mirrors the laptop's Copilot key so the split keyboards (which
           # have no code:201 hardware key) can reach claude-ask from a layer.
           ",F13, exec, claude-ask"
-          "SUPER SHIFT, F13, exec, focus_app claude.ai"
+          "SUPER SHIFT, F13, exec, focus_app com.anthropic.Claude"
 
           # clipboard manager
           # Same window footprint, smaller text => more entries visible. Large -preview-width
@@ -632,14 +661,52 @@ in {
           "workspace name:wispr, match:class ^(wispr-flow)$, match:title ^(Hub)$"
           "float 0, match:class ^(wispr-flow)$, match:title ^(Hub)$"
 
-          # The pill is always mapped but Wispr parks it on one monitor/workspace,
-          # so dictation ran unseen. Pin it (visible on every workspace) and keep
-          # it out of the focus/keyboard path; wispr-pill-follow moves it to the
-          # cursor when dictation starts.
+          # KMS v2 capture window: fallback for non-layer-shell paths only —
+          # when gtk4-layer-shell is active the surface never hits windowrules.
+          "float 1, match:class ^(com\\.matthandzel\\.kms-capture)$"
+          "center 1, match:class ^(com\\.matthandzel\\.kms-capture)$"
+          "size 700 800, match:class ^(com\\.matthandzel\\.kms-capture)$"
+
+          # The "Status" pill is Wispr's own dictation indicator. It used to be
+          # pinned + walked to the cursor (wispr-pill-follow), which made it
+          # permanently visible mid-screen on every workspace and unmovable — it
+          # is no_focus, so SUPER+drag can't grab it, and the follower re-asserted
+          # any position change within 200ms. Banished 2026-07-24: Matt already
+          # has a live mic-level readout in waybar (custom/wispr, see
+          # modules/home/waybar/settings.nix), so the pill carried no signal the
+          # bar doesn't, at the cost of a permanent obstruction.
+          #
+          # `silent` matters: without it the workspace switch pulls focus to the
+          # hidden workspace when Wispr maps the pill. Keep float+no_focus too —
+          # a tiled or focusable window on special:hidden still perturbs layout
+          # and the keyboard path even while unseen.
+          #
+          # MATCH ON initial_title, NOT title (2026-08-07). The banishment silently
+          # stopped working: the pill maps with title "Flow Status Indicator" and
+          # only renames itself to "Status" afterwards. Hyprland evaluates a static
+          # windowrule ONCE, at map time, against the title the window has THEN — so
+          # `match:title ^(Status)$` matched nothing and all six rules were dead
+          # config. Verified with `hyprctl clients -j`: initialTitle="Flow Status
+          # Indicator", title="Status", workspace=1.
+          #
+          # The field is `initial_title` — Hyprland 0.53's new-syntax matcher list
+          # rejects `initialTitle`/`initialtitle` with "invalid field type", so a
+          # camelCase guess here fails loudly at `hyprctl reload`, not silently.
+          # Both matchers are kept: initial_title is the one that fires today, and
+          # title covers a future Wispr build that maps already-named "Status".
+          "float 1, match:class ^(wispr-flow)$, match:initial_title ^(Flow Status Indicator)$"
+          "no_focus 1, match:class ^(wispr-flow)$, match:initial_title ^(Flow Status Indicator)$"
+          "no_initial_focus 1, match:class ^(wispr-flow)$, match:initial_title ^(Flow Status Indicator)$"
+          "decorate 0, match:class ^(wispr-flow)$, match:initial_title ^(Flow Status Indicator)$"
+          "no_anim 1, match:class ^(wispr-flow)$, match:initial_title ^(Flow Status Indicator)$"
+          "workspace special:hidden silent, match:class ^(wispr-flow)$, match:initial_title ^(Flow Status Indicator)$"
+
           "float 1, match:class ^(wispr-flow)$, match:title ^(Status)$"
-          "pin 1, match:class ^(wispr-flow)$, match:title ^(Status)$"
           "no_focus 1, match:class ^(wispr-flow)$, match:title ^(Status)$"
+          "no_initial_focus 1, match:class ^(wispr-flow)$, match:title ^(Status)$"
           "decorate 0, match:class ^(wispr-flow)$, match:title ^(Status)$"
+          "no_anim 1, match:class ^(wispr-flow)$, match:title ^(Status)$"
+          "workspace special:hidden silent, match:class ^(wispr-flow)$, match:title ^(Status)$"
 
           # Every espanso (re)start maps a real window — "Espanso Sync Tool", the
           # Wayland sync helper from espanso-detect — which took focus, tiled
@@ -975,6 +1042,15 @@ plugin:touch_gestures {
     hyprgrass-bindm = , longpress:2, movewindow
     hyprgrass-bindm = , longpress:3, resizewindow
 }
+
+# Monitor layout, continued. The monitor=/workspace= lines earlier in this file
+# are the declarative defaults; these two files are what the Displays GUI
+# (nwg-displays, Mod+D -> \"Displays\") rewrites when you drag a screen around.
+# They are sourced LAST so a GUI rearrangement wins, and they are seeded from
+# the defaults on first activation so they always exist and Hyprland never logs
+# a missing-source error. See modules/home/hyprland/displays.nix.
+source = ~/.config/hypr/monitors.conf
+source = ~/.config/hypr/workspaces.conf
     ";
   };
 }

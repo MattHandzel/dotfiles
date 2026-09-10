@@ -14,6 +14,11 @@ map("n", "<Esc>", "<cmd>noh<CR>", { desc = "General Clear highlights" })
 map({ "i", "x", "n", "s" }, "<C-s>", "<cmd>w<cr><esc>", { desc = "Save file" })
 map("n", "<C-c>", "<cmd>%y+<CR>", { desc = "File Copy whole" })
 
+-- <leader>y — yank the identity of the thing under the cursor: note id,
+-- wikilink, path, path:line, URL. <leader>yp (absolute path) moved here from
+-- this file so every yank map lives in one place. See lua/configs/yank.lua.
+require("configs.yank").setup()
+
 map("n", "<leader>ch", "<cmd>NvCheatsheet<CR>", { desc = "Toggle NvCheatsheet" })
 
 -- global lsp mappings
@@ -59,6 +64,14 @@ map("n", "<leader>E", function()
 	end
 	vim.notify("Oil is not available", vim.log.levels.ERROR)
 end, { desc = "Oil Explorer (float)" })
+
+-- File actions (also bound to gD/gA inside oil, see lua/configs/file-actions.lua)
+map("n", "<leader>fD", function()
+	require("configs.file-actions").delete()
+end, { desc = "Trash current file" })
+map("n", "<leader>fA", function()
+	require("configs.file-actions").archive()
+end, { desc = "Move current file to archive/" })
 
 -- telescope
 -- local telescope_builtin = require("telescope.builtin")
@@ -143,8 +156,10 @@ end, { desc = "Blankline Jump to current context" })
 -- Make it so that when moving we keep the middle of the screen
 vim.api.nvim_set_keymap("n", "<C-u>", "<C-u>zz", { noremap = true })
 vim.api.nvim_set_keymap("n", "<C-d>", "<C-d>zz", { noremap = true })
-vim.api.nvim_set_keymap("n", "N", "Nzzzv", { noremap = true })
-vim.api.nvim_set_keymap("n", "n", "nzzzv", { noremap = true })
+-- NOTE: n/N are NOT mapped here. They are mapped further down (search for
+-- `v:searchforward`) to the direction-stable variant, which silently overrode
+-- these two lines. Two definitions of the same key is how you end up debugging
+-- a mapping that is not the one you are reading.
 -- vim.api.nvim_set_keymap("n", "<leader>gD", "<leader>gDzt", { noremap = true })
 -- vim.api.nvim_set_keymap("n", "<leader>gd", "<leader>gdzt", { noremap = true })
 --
@@ -156,8 +171,64 @@ vim.api.nvim_set_keymap("n", "db", "xdb", { noremap = true })
 vim.api.nvim_set_keymap("n", "dB", "xdB", { noremap = true })
 map({ "n", "v" }, "gg", "ggzz", { noremap = true })
 map({ "n", "v" }, "G", "Gzz", { noremap = true })
-map("v", "/", 'y<Esc>/<C-r>"', { noremap = true })
-map("v", "<M-r>", ":'<,'>s/<C-r>\"", { noremap = true })
+-- Search for the visual selection.
+--
+-- This used to be `y<Esc>/<C-r>"`, which pasted the raw selection into the
+-- search line and interpreted it as a REGEX. Any selection containing a
+-- metacharacter therefore searched for the wrong thing or blew up -- selecting
+-- `+admin` and hitting `/` is what produced `E486: Pattern not found: +admin`,
+-- because the pattern never matched the literal text it came from. It also
+-- silently corrupted the search on `.`, `*`, `[`, and `\`.
+--
+-- Now: yank via a scratch register (leaving " untouched), prefix with \V
+-- (very-nomagic) and escape backslashes, so the selection always searches
+-- literally. Being the only occurrence reports a tidy message instead of a
+-- red E486.
+map("x", "/", function()
+	local save, savetype = vim.fn.getreg("z"), vim.fn.getregtype("z")
+	vim.cmd('noautocmd silent normal! "zy')
+	local sel = vim.fn.getreg("z")
+	vim.fn.setreg("z", save, savetype)
+
+	-- A search pattern cannot span lines, so use the first line of the selection.
+	sel = vim.split(sel, "\n", { plain = true })[1] or ""
+	if sel == "" then
+		return
+	end
+
+	local pattern = "\\V" .. vim.fn.escape(sel, "\\")
+	vim.fn.setreg("/", pattern)
+	vim.fn.histadd("search", pattern)
+	vim.o.hlsearch = true
+
+	if not pcall(vim.cmd, "normal! n") then
+		vim.notify("Only occurrence of: " .. sel, vim.log.levels.INFO)
+	end
+end, { noremap = true, silent = true, desc = "Search for visual selection (literal)" })
+
+-- Substitute WITHIN the selected lines, prefilled with the selection as the
+-- pattern. Same \V escaping rationale as above.
+--
+-- The range is written out as concrete line numbers rather than `'<,'>`: a
+-- literal `'<,'>` is resolved when the command runs, so if the buffer has
+-- shrunk since those marks were set it raises `E19: Mark has invalid line
+-- number`. Numbers captured here cannot go stale.
+map("x", "<M-r>", function()
+	local save, savetype = vim.fn.getreg("z"), vim.fn.getregtype("z")
+	vim.cmd('noautocmd silent normal! "zy')
+	local sel = vim.fn.getreg("z")
+	vim.fn.setreg("z", save, savetype)
+
+	-- Clamp into [1, last]: line() returns 0 for an unset mark, and `:0,0s/`
+	-- is itself an invalid range.
+	local last = vim.api.nvim_buf_line_count(0)
+	local first_line = math.max(1, math.min(vim.fn.line("'<"), last))
+	local last_line = math.max(first_line, math.min(vim.fn.line("'>"), last))
+
+	sel = vim.split(sel, "\n", { plain = true })[1] or ""
+	local pattern = sel ~= "" and ("\\V" .. vim.fn.escape(sel, "\\/")) or ""
+	vim.api.nvim_feedkeys((":%d,%ds/%s/"):format(first_line, last_line, pattern), "n", false)
+end, { noremap = true, desc = "Substitute within visual selection" })
 
 local silent_no_remap = { silent = true, noremap = true }
 
@@ -389,10 +460,13 @@ vim.keymap.set({ "i", "n", "t" }, "<C-j>", "<cmd>TmuxNavigateDown<CR>", { norema
 vim.keymap.set({ "i", "n", "t" }, "<C-h>", "<cmd>TmuxNavigateLeft<CR>", { noremap = true, silent = true })
 vim.keymap.set({ "i", "n", "t" }, "<C-l>", "<cmd>TmuxNavigateRight<CR>", { noremap = true, silent = true })
 
--- vim.keymap.set("n", "<leader>ls", require("auto-session.session-lens").search_session, {
--- 	noremap = true,
--- })
--- vim.keymap.set("n", "<leader>qs", ":SessionRestore<CR>", { noremap = true })
+-- Session restore (persistence.nvim; sessions auto-save on exit)
+vim.keymap.set("n", "<leader>qs", function()
+	require("persistence").load()
+end, { noremap = true, desc = "Restore session for cwd" })
+vim.keymap.set("n", "<leader>ql", function()
+	require("persistence").load({ last = true })
+end, { noremap = true, desc = "Restore last session" })
 -- vim.api.nvim_set_keymap("i", "<F2>", '<cmd>lua require("renamer").rename()<cr>', { noremap = true, silent = true })
 -- vim.api.nvim_set_keymap(
 -- 	"n",
@@ -433,11 +507,6 @@ vim.keymap.set("i", "C-Z", "<Esc>ui", { noremap = true })
 
 -- Obsidian
 --
-local function getCurrentWeekNumber()
-	local current_date = os.date("*t")
-	local week_number = os.date("%W", os.time(current_date))
-	return tonumber(week_number) + 1
-end
 vim.keymap.set("n", "<leader>gl", "<cmd>ObsidianFollowLink<CR>i", { noremap = true })
 vim.keymap.set("n", "<leader>od", "<cmd>ObsidianDailies<CR>", { noremap = true })
 vim.keymap.set("n", "<leader>op", "<cmd>ObsidianPasteImg<CR>i", { noremap = true })
@@ -445,47 +514,66 @@ vim.keymap.set("n", "<leader>op", "<cmd>ObsidianPasteImg<CR>i", { noremap = true
 -- `'<,'>` range so ObsidianExtractNote receives the selection.
 vim.keymap.set("x", "<leader>oe", ":ObsidianExtractNote<CR>", { noremap = true, silent = true, desc = "Obsidian Extract Note from selection" })
 
-function PasteClipboardImage()
-	-- Get the current timestamp
-	local timestamp = os.date("%Y%m%d%H%M%S")
+-- <leader>p: paste a clipboard image through the Obsidian flow (same one the
+-- insert-mode <C-v> routes to): name prompt with timestamp default → confirm →
+-- saved under assets/imgs/ → embed link inserted. This replaced a hand-rolled
+-- PasteClipboardImage() that wrote <timestamp>.png next to the note, which is
+-- against the vault's assets convention.
+vim.keymap.set("n", "<leader>p", "<cmd>ObsidianPasteImg<CR>", { noremap = true, silent = true, desc = "Paste clipboard image into assets/imgs" })
 
-	-- Create the image file name
-	local image_name = timestamp .. ".png"
-
-	-- Get the current directory
-	local current_dir = vim.fn.expand("%:p:h")
-
-	-- Full path for the new image
-	local image_path = current_dir .. "/" .. image_name
-
-	-- Command to save clipboard image (assumes xclip for Linux)
-	local save_command = string.format("wl-paste -t image/png > %s", image_path)
-
-	-- Execute the save command
-	local success = os.execute(save_command)
-
-	if success then
-		-- Create the markdown image link
-		local markdown_link = string.format("![%s](./%s)", timestamp, image_name)
-
-		-- Insert the markdown link at the cursor position
-		vim.api.nvim_put({ markdown_link }, "c", true, true)
-
-		print("Image saved and link inserted.")
-	else
-		print("Failed to save image from clipboard.")
+-- Review pickers: like ObsidianDailies but for past weekly/quarterly/yearly
+-- reviews (the /weekly-review family writes them to capture/), newest first.
+local function review_picker(kind, glob)
+	local files = vim.fn.globpath(vim.fn.expand("~/Obsidian/Main/capture"), glob, false, true)
+	table.sort(files, function(a, b)
+		return a > b
+	end)
+	if #files == 0 then
+		vim.notify("No " .. kind .. " reviews found in capture/", vim.log.levels.WARN)
+		return
 	end
+	local pickers = require("telescope.pickers")
+	local finders = require("telescope.finders")
+	local conf = require("telescope.config").values
+	pickers
+		.new({}, {
+			prompt_title = kind .. " reviews",
+			finder = finders.new_table({
+				results = files,
+				entry_maker = function(path)
+					local name = vim.fn.fnamemodify(path, ":t:r")
+					return { value = path, display = name, ordinal = name, path = path }
+				end,
+			}),
+			sorter = conf.generic_sorter({}),
+			previewer = conf.file_previewer({}),
+		})
+		:find()
 end
 
--- Map the function to a key combination (e.g., <leader>p)
-vim.api.nvim_set_keymap("n", "<leader>p", ":lua PasteClipboardImage()<CR>", { noremap = true, silent = true })
-
-local week_number = getCurrentWeekNumber()
-local title = string.format("2025-W%d", week_number)
-
 vim.keymap.set("n", "<leader>ow", function()
-	vim.api.nvim_command(string.format(":ObsidianNewFromTemplate %s", "./notes/dailies/" .. title .. ".md"))
-end, { noremap = true })
+	review_picker("Weekly", "weekly-review-*.md")
+end, { noremap = true, desc = "Weekly reviews picker" })
+vim.keymap.set("n", "<leader>oq", function()
+	review_picker("Quarterly", "quarterly-review-*.md")
+end, { noremap = true, desc = "Quarterly reviews picker" })
+vim.keymap.set("n", "<leader>oy", function()
+	review_picker("Yearly", "yearly-review-*.md")
+end, { noremap = true, desc = "Yearly reviews picker" })
+
+-- Open the current quarter's goals (areas/goals/YYYY-qN.md, falling back to
+-- the -vision note). If neither exists, opens the plan path so :w creates it
+-- (fill it from templates/quarterly-goals.md).
+vim.keymap.set("n", "<leader>og", function()
+	local t = os.date("*t")
+	local base = string.format("%d-q%d", t.year, math.ceil(t.month / 3))
+	local dir = vim.fn.expand("~/Obsidian/Main/areas/goals/")
+	local path = dir .. base .. ".md"
+	if vim.fn.filereadable(path) == 0 and vim.fn.filereadable(dir .. base .. "-vision.md") == 1 then
+		path = dir .. base .. "-vision.md"
+	end
+	vim.cmd.edit(path)
+end, { noremap = true, desc = "Current quarter goals" })
 
 vim.keymap.set("n", "<leader>ot", ":ObsidianTemplate<CR>")
 local make_reflection = function()
@@ -511,7 +599,7 @@ local make_reflection = function()
 
 	-- now open the file with `:edit`
 	vim.api.nvim_command(":edit " .. destination_file)
-	vim.api.nvim_command(":save")
+	vim.api.nvim_command(":write")
 end
 
 vim.keymap.set("n", "<leader>or", function()
@@ -585,3 +673,112 @@ vim.keymap.set("n", "<leader>sc", function()
 end, { noremap = true, silent = true, desc = "Open in sc-im" })
 
 vim.keymap.set("n", "<leader>cf", "<cmd>ClaudeFix<CR>", { noremap = true, silent = true, desc = "ClaudeFix: launch Claude to fix errors/warnings" })
+
+-- Wispr Flow push-to-talk (Ctrl+Super+F12) and polish (Ctrl+F12+1).
+-- Wispr's Linux port reads the keyboard via evdev, so it fires on the chord but
+-- cannot consume it — the compositor still delivers the key to the focused
+-- window, and Neovim, having no mapping and no printable form for it, inserted
+-- the literal "<C-D-F12>" into the buffer. Swallow it in every mode.
+for _, key in ipairs({ "<C-D-F12>", "<C-F12>" }) do
+	vim.keymap.set({ "n", "i", "v", "x", "s", "o", "c", "t" }, key, "<Nop>", { silent = true })
+end
+
+-- Ctrl+V pastes the system clipboard in insert (and cmdline) mode.
+-- This shadows i_CTRL-V (insert-literal-character, e.g. <C-v>u00e9 or a raw
+-- tab), so that behavior moves to <C-q> — Vim's own documented alternative.
+--
+-- The insert-mode side is a function, not <C-r><C-o>+, for two reasons:
+--  1. An IMAGE in the clipboard + a markdown buffer routes to
+--     :ObsidianPasteImg (name prompt with timestamp default → confirm →
+--     save under assets/imgs/ → embed link) instead of inserting nothing.
+--  2. TEXT is scrubbed of invalid UTF-8 before insertion. Neovim passes raw
+--     register bytes straight into the LSP didChange JSON, and one invalid
+--     byte makes harper-ls answer `-32700 Parse error` and die
+--     ("LSP[harper_ls]: Error INVALID_SERVER_MESSAGE", 2026-08-25).
+--     nvim_paste keeps the literal-insert semantics of <C-r><C-o>+ (no
+--     auto-indent cascade, no abbreviation re-triggering).
+local function clipboard_holds_image()
+	local ok, proc = pcall(vim.system, { "wl-paste", "--list-types" }, { text = true })
+	if not ok then
+		return false -- no wl-paste (non-wayland session)
+	end
+	local res = proc:wait()
+	return res.code == 0 and (res.stdout or ""):find("image/", 1, true) ~= nil
+end
+
+vim.keymap.set("i", "<C-v>", function()
+	if vim.bo.filetype == "markdown" and clipboard_holds_image() then
+		vim.cmd("stopinsert")
+		-- schedule: let the mode change settle before the prompt opens
+		vim.schedule(function()
+			vim.cmd("ObsidianPasteImg")
+		end)
+		return
+	end
+	local text = vim.fn.getreg("+")
+	if text == "" then
+		return
+	end
+	local ok, proc = pcall(vim.system, { "iconv", "-f", "UTF-8", "-t", "UTF-8", "-c" }, { stdin = text })
+	if ok then
+		local res = proc:wait()
+		if res.code == 0 and res.stdout and res.stdout ~= text then
+			vim.notify(
+				("paste: dropped %d invalid UTF-8 byte(s) from the clipboard (they crash harper-ls)"):format(
+					#text - #res.stdout
+				),
+				vim.log.levels.WARN
+			)
+			text = res.stdout
+		end
+	end
+	vim.api.nvim_paste(text, false, -1)
+end, { silent = true, desc = "Paste from system clipboard (image-aware, UTF-8-scrubbed)" })
+vim.keymap.set("c", "<C-v>", "<C-r><C-o>+", { noremap = true, desc = "Paste from system clipboard" })
+vim.keymap.set("i", "<C-q>", "<C-v>", { noremap = true, desc = "Insert literal character (former <C-v>)" })
+
+-- Paste the system clipboard below the current line, wrapped in a ``` fence.
+-- <leader>p` leaves the cursor on the (blank) line just below the closing fence,
+-- ready to keep writing; <leader>P` restores the original cursor position.
+-- NOTE: this makes bare <leader>p (image paste) wait one 'timeoutlen'
+-- to see whether a ` follows — the cost of hanging both off the p/P prefix.
+local function paste_fenced_block(keep_cursor)
+	local clip = vim.fn.getreg("+")
+	if clip == "" then
+		clip = vim.fn.getreg('"') -- fall back to the unnamed register
+	end
+	if clip == "" then
+		vim.notify("Clipboard is empty", vim.log.levels.WARN)
+		return
+	end
+
+	-- Split into lines, dropping a single trailing newline so we don't emit a
+	-- blank line inside the fence.
+	local content = vim.split((clip:gsub("\n$", "")), "\n", { plain = true })
+	local block = { "```" }
+	vim.list_extend(block, content)
+	table.insert(block, "```")
+
+	local orig = vim.api.nvim_win_get_cursor(0) -- {row(1-idx), col}
+	local row = orig[1]
+	vim.api.nvim_buf_set_lines(0, row, row, false, block) -- insert below current line
+
+	if keep_cursor then
+		vim.api.nvim_win_set_cursor(0, orig)
+		return
+	end
+
+	-- Focus the line below the closing fence, creating it if we hit EOF.
+	local target = row + #block + 1
+	if target > vim.api.nvim_buf_line_count(0) then
+		vim.api.nvim_buf_set_lines(0, -1, -1, false, { "" })
+	end
+	vim.api.nvim_win_set_cursor(0, { target, 0 })
+end
+
+vim.keymap.set("n", "<leader>p`", function()
+	paste_fenced_block(false)
+end, { silent = true, desc = "Paste clipboard as ``` fence (cursor below fence)" })
+vim.keymap.set("n", "<leader>P`", function()
+	paste_fenced_block(true)
+end, { silent = true, desc = "Paste clipboard as ``` fence (cursor stays)" })

@@ -53,14 +53,19 @@ in {
   systemd.user.timers.meeting-note-docs = {
     Unit.Description = "Periodic Google Doc creation for upcoming meeting notes";
     Timer = {
-      # Offset from the server's :00/:30 note-writing tick so the two halves are
-      # never mid-write on the same file, and from gdoc-sync.nix's own reconcile.
-      OnBootSec = "8m";
-      OnUnitActiveSec = "30m";
-      RandomizedDelaySec = "3m";
-      # The laptop is routinely asleep. Persistent replays the most recent missed
-      # trigger on wake, so a meeting tomorrow morning still gets its Doc.
+      # :10 and :40 — offset from the server's :00/:30 note-writing tick so the two
+      # halves are never mid-write on one file, and from gdoc-sync.timer's *:0/15.
+      #
+      # OnCalendar, NOT the monotonic OnBootSec/OnUnitActiveSec pair: written that
+      # way, gdoc-sync.timer fired exactly once and then sat at
+      # NextElapseUSecMonotonic=infinity while still reporting enabled + active
+      # with a successful last run. Persistent is also only honoured for calendar
+      # timers, and it is the whole point here — the laptop is routinely asleep,
+      # and a meeting note that appears overnight must get its Doc on wake rather
+      # than silently skip the slot.
+      OnCalendar = "*:10/30";
       Persistent = true;
+      RandomizedDelaySec = "3m";
     };
     Install.WantedBy = ["timers.target"];
   };

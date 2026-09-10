@@ -92,6 +92,50 @@ in {
         bindkey -v
         export KEYTIMEOUT=1
 
+        # Suggestion autofill: when a command fails with a "you probably meant X"
+        # hint, put X on the NEXT prompt line, pre-filled and editable — one Enter
+        # runs it. No retyping.
+        #
+        # WHY THE FILE HANDOFF: zsh forks a SUBSHELL to run
+        # command_not_found_handler (verified: ZSH_SUBSHELL=1 inside it), so a
+        # `print -z` there pushes onto the child's buffer stack and is discarded on
+        # exit — it silently does nothing. Variable assignments are lost the same
+        # way. A file survives the fork, so the handler writes the suggestion and a
+        # precmd hook in the PARENT shell replays it into the ZLE buffer. ($$ is the
+        # parent's pid even inside a zsh subshell, so both agree on the path.)
+        typeset -g __suggest_file="''${XDG_RUNTIME_DIR:-/tmp}/zsh-suggest-$$"
+
+        __suggest_replay() {
+          if [[ -s $__suggest_file ]]; then
+            print -z -- "$(<$__suggest_file)"
+            command rm -f -- "$__suggest_file"
+          fi
+        }
+        autoload -Uz add-zsh-hook
+        add-zsh-hook precmd __suggest_replay
+        __suggest_cleanup() { command rm -f -- "$__suggest_file"; }
+        add-zsh-hook zshexit __suggest_cleanup
+
+        # Missing binary -> NixOS suggests `nix-shell -p <pkg>`. Parse the package
+        # out of the hint rather than assuming it equals the command: `nvim`
+        # resolves to `nix-shell -p neovim`, not `-p nvim`.
+        if (( $+commands[command-not-found] )); then
+          command_not_found_handler() {
+            local out pkg orig
+            out="$(command-not-found "$@" 2>&1)"
+            print -u2 -r -- "$out"
+            if [[ -o interactive ]]; then
+              pkg="$(print -r -- "$out" | grep -oE 'nix-shell -p [A-Za-z0-9_.+-]+' | head -n1)"
+              pkg="''${pkg##* }"
+              if [[ -n $pkg ]]; then
+                orig="''${(j: :)''${(q)@}}"   # original argv, safely requoted
+                print -r -- "nix-shell -p $pkg --run ''${(q)orig}" > "$__suggest_file"
+              fi
+            fi
+            return 127
+          }
+        fi
+
         # Mirror vi-mode yanks into the Wayland system clipboard.
         if (( $+commands[wl-copy] )); then
           function _yank-to-clipboard() {
@@ -227,7 +271,21 @@ in {
       # notetaker = "kitty sh -c \"cd ~/notes ; neovim .\" --title notetaker --name notetaker --start-as=fullscreen";
 
       # `git add .` is added because if there is a file not staged then nixos-rebuild won't look for it
-      rebuild = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && sudo nixos-rebuild switch --flake .#${host} && popd";
+      # The only switch that survives a reboot: it is what writes the Home
+      # Manager generation into the system generation, which is what
+      # home-manager-${user}.service re-activates at every boot. Clearing the
+      # stamp is therefore correct here — after this, nothing is pending.
+      rebuild = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && sudo nixos-rebuild switch --flake .#${host} && rm -f ~/.local/state/hm-switch-pending && popd";
+      # Home-only switch: builds the SAME Home Manager generation the NixOS
+      # config defines (no sudo, no bootloader) and activates it in the LIVE
+      # session. It does NOT persist: home-manager-${user}.service re-activates
+      # the generation baked into the current *system* generation at boot, so
+      # anything applied here is thrown away on reboot until `rebuild` runs.
+      # The stamp records what was activated so hm-drift-guard.nix can report
+      # the revert instead of letting it pass silently.
+      # Backup env vars mirror home-manager.backupFileExtension/overwriteBackup,
+      # which otherwise only apply when activation runs via home-manager-<user>.service.
+      hm-switch = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && nix build .#nixosConfigurations.${host}.config.home-manager.users.matth.home.activationPackage -o /tmp/hm-activation-result && HOME_MANAGER_BACKUP_EXT=hm-backup HOME_MANAGER_BACKUP_OVERWRITE=1 /tmp/hm-activation-result/activate && mkdir -p ~/.local/state && { readlink -f /tmp/hm-activation-result; cat /proc/sys/kernel/random/boot_id; } > ~/.local/state/hm-switch-pending && print -P '%F{yellow}hm-switch applied to the LIVE session only — reverted at next boot until you run: rebuild%f' && popd";
       rebuildu = "pushd ~/dotfiles/nixos/.config/nixos && cp flake.lock flake.$(date +%Y-%m-%d).lock && git add --all . && sudo nix flake update --flake ./flake.nix ; sudo nixos-rebuild switch --upgrade --flake .#${host} && popd";
       link-agent-md = "ln -sfn AGENTS.md GEMINI.md && ln -sfn AGENTS.md CLAUDE.md";
       # testing = "echo \"sudo nixos-rebuild switch --flake .#${host}\"";
@@ -263,7 +321,7 @@ in {
       serverfs = "sshfs matth@ssh.matthandzel.com:/home/matth/";
       # make transcribe available as a command
       transcribe = "${transcribe_file_script}";
-      claude = "claude --dangerously-skip-permissions";
+      claude = "claude --permission-mode auto --chrome";
 
       # move folder to archive with the same name as the folder
       second-brain-archive = "${second-brain-archive-script}";

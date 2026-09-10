@@ -35,7 +35,14 @@
 
       tree-sitter
 
+      # ghost-text.nvim runtime (MAT-1780). The plugin's server is written in
+      # TypeScript and is executed with bun, so bun must be on nvim's PATH or
+      # :GhostTextStart fails silently. Bridges nvim <-> a browser textarea so
+      # the Grammarly extension can check buffer text (no Grammarly LSP exists).
+      bun
+
       # Langugage servers
+      harper # harper-ls — markdown/gitcommit grammar (lua/configs/lspconfig.lua expects it)
       marksman
       yaml-language-server
       nixd
@@ -50,6 +57,8 @@
 
       # Nvim image in document
       imagemagick
+      websocat # beeper.nvim: Beeper Desktop /v1/ws event feed via vim.system
+      sqlite # beeper.nvim: read-only queries on ~/.config/BeeperTexts/index.db
       ghostscript # provides `gs`, required by imagemagick to rasterize PDFs (snacks.nvim image preview)
 
       # Go

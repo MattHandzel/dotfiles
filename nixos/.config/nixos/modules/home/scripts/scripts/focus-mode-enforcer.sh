@@ -56,29 +56,68 @@ if [ -z "$socket" ]; then
 fi
 log "connected to $socket (sig=${HYPRLAND_INSTANCE_SIGNATURE:-?})"
 
-declare -A unlocked
+CANCEL_COOLDOWN="${FOCUS_CANCEL_COOLDOWN:-45}"
+
+# Unlock/deny state lives on disk, not in bash associative arrays. Two reasons,
+# both bugs we actually hit:
+#   1. `${#arr[@]}` on a declared-but-empty associative array trips `set -u`
+#      (bash 5.3), which killed the service on the first event after Focus Mode
+#      turned off — 58 restarts in one session.
+#   2. systemd restarts this unit freely (socat drops, Hyprland reloads). In-memory
+#      state meant every restart re-nagged you for apps you had already waited out.
+# Files survive both. XDG_RUNTIME_DIR is tmpfs and cleared at logout.
+STATE_DIR="${XDG_RUNTIME_DIR:-/tmp}/focus-enforcer"
+UNLOCK_DIR="$STATE_DIR/unlocked"
+DENY_DIR="$STATE_DIR/denied"
+mkdir -p "$UNLOCK_DIR" "$DENY_DIR"
+
+# Addresses are like 0x5601ccf84850 — already safe as filenames, but be strict.
+sane_addr() { printf '%s' "${1//[^0-9a-fA-Fx]/}"; }
 
 socat -U - "UNIX-CONNECT:$socket" 2>/dev/null | while IFS= read -r line; do
-  # Idle when Focus Mode is off; clear remembered unlocks.
+  # Idle when Focus Mode is off; clear remembered unlocks + cancellations.
   if [ ! -e "$FOCUS_MODE_FILE" ]; then
-    [ "${#unlocked[@]}" -ne 0 ] && unlocked=()
+    rm -f "$UNLOCK_DIR"/* "$DENY_DIR"/* 2>/dev/null || true
     continue
   fi
 
+  # activewindowv2 carries the window ADDRESS. The older activewindow event
+  # carries only class,title — pairing it with a separate `hyprctl activewindow`
+  # call raced against queued events and could record the unlock against the
+  # WRONG window, which re-gated an app you had just cleared. Take the address
+  # from the event and derive the class from it, so both always describe the
+  # same window.
   case "$line" in
-    activewindow'>>'*) : ;;
+    activewindowv2'>>'*) : ;;
     *) continue ;;
   esac
 
-  payload="${line#activewindow>>}"
-  class="${payload%%,*}"
+  addr="$(sane_addr "${line#activewindowv2>>}")"
+  [ -n "$addr" ] || continue
+  case "$addr" in 0x*) : ;; *) addr="0x$addr" ;; esac
+
+  class="$(hyprctl clients -j 2>/dev/null |
+    jq -r --arg a "$addr" '.[] | select(.address == $a) | .class // empty')"
   [ -n "$class" ] || continue
 
   is_distracting "$class" || continue
 
-  addr="$(hyprctl activewindow -j 2>/dev/null | jq -r '.address // empty')"
-  [ -n "$addr" ] || continue
-  [ -n "${unlocked[$addr]:-}" ] && continue # already cleared this window
+  [ -e "$UNLOCK_DIR/$addr" ] && continue # already cleared this window
+
+  # You cancelled this window's gate recently → don't nag again. The app keeps
+  # re-acquiring focus on its own (an email client raising itself, or focus
+  # returning to it when the zenity dialog closed), which used to re-open the
+  # gate on a loop. Silently bounce away until the cooldown lapses; only a
+  # deliberate re-focus after that re-opens the gate.
+  if [ -e "$DENY_DIR/$addr" ]; then
+    last_denied="$(stat -c %Y "$DENY_DIR/$addr" 2>/dev/null || echo 0)"
+    if [ "$(($(date +%s) - last_denied))" -lt "$CANCEL_COOLDOWN" ]; then
+      hyprctl dispatch focuscurrentorlast >/dev/null 2>&1
+      while IFS= read -r -t 0.3 _stale; do :; done
+      continue
+    fi
+    rm -f "$DENY_DIR/$addr" 2>/dev/null || true # cooldown lapsed
+  fi
 
   log "distracting app '$class' ($addr) focused → cancellable ${FOCUS_DELAY_SECONDS:-10}s gate"
   # Bounce away first so the app isn't usable behind the dialog.
@@ -87,12 +126,17 @@ socat -U - "UNIX-CONNECT:$socket" 2>/dev/null | while IFS= read -r line; do
   if focus-delay-gate "$class"; then
     # Waited it out (or focus ended) → allow + refocus.
     if [ -e "$FOCUS_MODE_FILE" ]; then
-      unlocked[$addr]=1
+      # Record the unlock BEFORE refocusing: the refocus generates its own
+      # activewindowv2 event, and if that is read before the marker exists the
+      # gate re-fires immediately — the "opens for a split second, then asks
+      # again" symptom.
+      : >"$UNLOCK_DIR/$addr"
       hyprctl dispatch focuswindow "address:$addr" >/dev/null 2>&1
       log "unlocked '$class' ($addr)"
     fi
   else
-    log "user cancelled opening '$class' — staying focused"
+    : >"$DENY_DIR/$addr"
+    log "user cancelled opening '$class' — staying focused (${CANCEL_COOLDOWN}s cooldown)"
   fi
 
   # focus-delay-gate blocks this read loop while its countdown is open, so

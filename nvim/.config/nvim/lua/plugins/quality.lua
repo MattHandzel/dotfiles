@@ -111,8 +111,52 @@ return {
 		lazy = false, -- load at startup so it hijacks netrw and handles `:e .`/directory buffers
 		opts = {
 			default_file_explorer = true,
+			-- oil's own `dd` + `:w` also goes to the trash, never a hard delete
+			delete_to_trash = true,
 			view_options = {
 				show_hidden = true,
+				-- hides git-ignored entries while the recently-created view is active
+				is_always_hidden = function(name, bufnr)
+					return require("configs.recent-created").is_always_hidden(name, bufnr)
+				end,
+			},
+			keymaps = {
+				-- Oil's defaults claim four Ctrl keys that are already global
+				-- bindings here, and a buffer-local map always wins — so inside
+				-- an oil buffer they silently did the wrong thing. `false`
+				-- removes oil's map and lets the global one through.
+				--   <C-s> oil: split vertically  -> global: save file
+				--   <C-h> oil: split horizontally -> global: TmuxNavigateLeft
+				--   <C-l> oil: refresh            -> global: TmuxNavigateRight
+				--   <C-c> oil: close              -> global: yank whole file
+				-- (<C-j>/<C-k> were never oil's, so they already worked.)
+				-- Oil keeps <C-p> preview and <C-t> open-in-tab: no conflict.
+				-- Replacements for what's given up: `:w` applies pending edits
+				-- (same as before), `g?` lists oil's keys, and `q` now closes.
+				["<C-s>"] = false,
+				["<C-h>"] = false,
+				["<C-l>"] = false,
+				["<C-c>"] = false,
+				["q"] = { "actions.close", mode = "n" },
+				["<C-r>"] = "actions.refresh",
+				["gC"] = {
+					callback = function()
+						require("configs.recent-created").toggle()
+					end,
+					desc = "Toggle sort by creation time (newest first)",
+				},
+				["gD"] = {
+					callback = function()
+						require("configs.file-actions").delete()
+					end,
+					desc = "Trash file under cursor",
+				},
+				["gA"] = {
+					callback = function()
+						require("configs.file-actions").archive()
+					end,
+					desc = "Move file under cursor to archive/",
+				},
 			},
 		},
 		dependencies = { "nvim-tree/nvim-web-devicons" },
@@ -171,6 +215,15 @@ return {
 
 	{
 		"monkoose/neocodeium",
+		-- Disabled: no Codeium API key is configured (nothing under ~/.codeium),
+		-- so on every InsertEnter it fired the "No API key found" warning AND its
+		-- language server flooded ~/.local/state/nvim/lsp.log with
+		-- "[streamChoices] Request id invalid" errors (empty completionId because
+		-- unauthenticated) — the real cause of the multi-GB lsp.log, not Copilot.
+		-- Copilot (authenticated, ~/.config/github-copilot) is the active inline
+		-- engine, so this is redundant. Re-enable by removing this line and
+		-- running :NeoCodeium auth.
+		enabled = false,
 		event = "InsertEnter",
 		config = function()
 			local neocodeium = require("neocodeium")

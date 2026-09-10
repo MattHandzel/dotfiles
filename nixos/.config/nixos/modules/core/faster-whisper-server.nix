@@ -24,6 +24,12 @@ in {
           UVICORN_PORT = "8000";
           DEFAULT_LANGUAGE = "en";
           WHISPER__MODEL = "Systran/faster-distil-whisper-large-v3";
+          # RTX 3060 (12 GB) is shared with second-brain-search's ingest job (~3.75 GB).
+          # int8_float16 ~halves the model's VRAM (negligible accuracy loss on Ampere)
+          # and expandable_segments avoids fragmentation OOMs — both fix the intermittent
+          # "CUDA failed with error out of memory" 500s the STT client was hitting.
+          WHISPER__COMPUTE_TYPE = "int8_float16";
+          PYTORCH_CUDA_ALLOC_CONF = "expandable_segments:True";
         };
       };
     };

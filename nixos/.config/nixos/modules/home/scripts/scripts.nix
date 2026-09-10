@@ -1,5 +1,10 @@
 {pkgs, ...}: let
   # Helper function to create a shell script bin
+  # reboot-state: save Claude Code sessions / tmux shells / windows, reboot, pick what
+  # comes back (Python; source in ./scripts/reboot-state.py). Doc: areas/second-brain/reboot-state.md
+  rebootState = pkgs.writeScriptBin "reboot-state" (
+    "#!${pkgs.python3}/bin/python3\n" + builtins.readFile ./scripts/reboot-state.py
+  );
   removeShExtension = str: builtins.replaceStrings [".sh"] [""] str;
   makeShellScriptBin = script: pkgs.writeShellScriptBin (removeShExtension (builtins.baseNameOf script)) (builtins.readFile script);
 
@@ -37,6 +42,10 @@
     ./scripts/kill-window-and-switch.sh
     ./scripts/take-note.sh
     ./scripts/calendar.sh
+    ./scripts/notion-calendar.sh
+    ./scripts/superhuman.sh
+    ./scripts/shortwave.sh
+    ./scripts/otter.sh
     ./scripts/tasker.sh
     ./scripts/quick-capture.sh
     ./scripts/copy-to-clipboard.sh
@@ -90,6 +99,27 @@
     exec ${pkgs.python3}/bin/python3 ${./scripts/auth-code-watcher.py} "$@"
   '';
 
+  # Drafting-velocity tracker behind the waybar "custom/writing" module and the
+  # :WriteFast nvim commands. Stdlib-only Python; daemonless (waybar's poll of
+  # `status --json` is what advances the session).
+  writingSession = pkgs.writeShellScriptBin "writing-session" ''
+    exec ${pkgs.python3}/bin/python3 ${./scripts/writing-session.py} "$@"
+  '';
+
+  # Create/inspect Zen Browser Spaces, which live as JSON inside the mozLz4
+  # session store. Refuses to write while the profile is locked — Zen rewrites
+  # that file from memory, so an edit made while it runs silently disappears.
+  zenSpaces = pkgs.writeShellScriptBin "zen-spaces" ''
+    exec ${pkgs.python3.withPackages (ps: [ps.lz4])}/bin/python3 ${./scripts/zen-spaces.py} "$@"
+  '';
+
+  # Backs the waybar "custom/agenda" slot (now / next calendar event). Stdlib-only:
+  # it reads the cache written by calendar-agenda.service and does no network I/O,
+  # so waybar can poll it every 30s for a live countdown.
+  waybarAgenda = pkgs.writeShellScriptBin "waybar-agenda" ''
+    exec ${pkgs.python3}/bin/python3 ${./scripts/waybar-agenda.py} "$@"
+  '';
+
   # Built as their own derivations (not via the shellScripts list) so the systemd
   # services can reference their store paths.
   focusEnforcer = makeShellScriptBin ./scripts/focus-mode-enforcer.sh;
@@ -108,6 +138,7 @@ in {
   home.packages = with pkgs;
     shellScriptBins
     ++ [
+      rebootState
       bc # for brightness script
       ddcutil # for brightness script
       gum # run-nix-shell-on-new-tmux-session requires this
@@ -128,10 +159,14 @@ in {
     ++ [
       (import ./scripts/ocr-screenshot/default.nix {inherit pkgs;})
       authCodeWatcher
+      writingSession
+      waybarAgenda
+      zenSpaces
       focusEnforcer
       ntfyDesktopSub
       (import ./scripts/link-search/default.nix {inherit pkgs;})
       (import ./scripts/read-aloud/default.nix {inherit pkgs;})
+      (import ./scripts/kbshot/default.nix {inherit pkgs;})
     ];
 
   # GUI ntfy client: a standalone web-app window for the server's ntfy web UI,
@@ -145,6 +180,54 @@ in {
     type = "Application";
     categories = ["Network" "Utility"];
     settings.StartupWMClass = "ntfy";
+  };
+
+  # Superhuman: no Linux client exists, so this is the chromium --app wrapper
+  # (see scripts/superhuman.sh, which puts itself in app-webapps.slice). Without
+  # a desktop entry the launcher never surfaced it in Vicinae. StartupWMClass is
+  # the class Chromium actually sets for this --app window, read off hyprctl
+  # rather than guessed:
+  #   class: chrome-mail.superhuman.com__-Default
+  xdg.desktopEntries.superhuman = {
+    name = "Superhuman";
+    genericName = "Email";
+    comment = "Superhuman Mail (web app)";
+    exec = "superhuman";
+    icon = "mail-unread";
+    type = "Application";
+    categories = ["Network" "Email"];
+    settings.StartupWMClass = "chrome-mail.superhuman.com__-Default";
+  };
+
+  # Shortwave: AI email client, web-only like Superhuman, so the same chromium
+  # --app wrapper (see scripts/shortwave.sh). No browser extension needed here --
+  # app.shortwave.com is a real web app, not an extension-injected host page.
+  # StartupWMClass read off hyprctl after launching, not guessed:
+  #   class: chrome-app.shortwave.com__-Default
+  xdg.desktopEntries.shortwave = {
+    name = "Shortwave";
+    genericName = "Email";
+    comment = "Shortwave AI email (web app)";
+    exec = "shortwave";
+    icon = "mail-unread";
+    type = "Application";
+    categories = ["Network" "Email"];
+    settings.StartupWMClass = "chrome-app.shortwave.com__-Default";
+  };
+
+  # Otter.ai: transcription service, web-only on Linux, so the same chromium
+  # --app wrapper (see scripts/otter.sh). StartupWMClass read off hyprctl after
+  # launching, not guessed:
+  #   class: chrome-otter.ai__home-Default
+  xdg.desktopEntries.otter = {
+    name = "Otter.ai";
+    genericName = "Transcription";
+    comment = "Otter.ai meeting transcription (web app)";
+    exec = "otter";
+    icon = "audio-input-microphone";
+    type = "Application";
+    categories = ["Network" "AudioVideo"];
+    settings.StartupWMClass = "chrome-otter.ai__home-Default";
   };
 
   # ntfy → native desktop notifications for Matt's topics. Always-on user service;

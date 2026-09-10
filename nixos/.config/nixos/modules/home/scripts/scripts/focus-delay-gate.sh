@@ -32,7 +32,10 @@ fi
     echo "# Opening ${app} in $((DELAY - i))s…  Cancel to stay focused."
     sleep 1
   done
-) | zenity --progress \
+  # When Cancel closes zenity, the read end of this pipe is gone; the next echo
+  # would spam "write error: Broken pipe" into the journal. Swallow the feeder's
+  # stderr — SIGPIPE still terminates it cleanly.
+) 2>/dev/null | zenity --progress \
   --title="Focus Mode" \
   --text="Opening ${app}…" \
   --width=400 --percentage=0 --auto-close 2>/dev/null

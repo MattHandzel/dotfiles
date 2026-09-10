@@ -108,10 +108,10 @@ in {
     description = "Run disk space check every 15 minutes";
     wantedBy = ["timers.target"];
     timerConfig = {
-      OnBootSec = "5min";   # first run 5 min after boot (let network settle)
+      OnBootSec = "5min"; # first run 5 min after boot (let network settle)
       OnUnitActiveSec = "15min";
-      Persistent = false;   # intentionally NOT persistent: missed runs during
-                            # sleep are fine — we don't want a burst on wake
+      Persistent = false; # intentionally NOT persistent: missed runs during
+      # sleep are fine — we don't want a burst on wake
     };
   };
 }

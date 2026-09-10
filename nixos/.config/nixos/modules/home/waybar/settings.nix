@@ -15,11 +15,12 @@
     planify = "✅";
     PrusaSlicer = "🧩";
     discord = "󰙯";
-    betterbird = "✉️";
+    superhuman = "✉️";
     gimp = "🎨";
     yazi = "🗂";
     "gemini.google.com" = "🧠";
     "claude.ai" = "🧠";
+    "com.anthropic.Claude" = "✳️";
     beeper = "🔔";
     linear = "📐";
     spotify = "";
@@ -38,9 +39,11 @@ in {
       "hyprland/workspaces"
     ];
     modules-center = [
+      "custom/agenda"
       "clock"
     ];
     modules-right = [
+      "custom/writing"
       "custom/lifelog"
       "tray"
       "cpu"
@@ -49,6 +52,7 @@ in {
       "pulseaudio"
       "custom/kb-lang"
       "custom/stt-mic"
+      "custom/wispr"
       "custom/focus-mode"
       "battery"
       "network"
@@ -61,6 +65,19 @@ in {
       exec = "toggle-focus-mode --status";
       on-click = "toggle-focus-mode";
       tooltip = true;
+    };
+    # "now / next" calendar slot, immediately left of the clock. Polls every 30s so
+    # the countdown ticks; the underlying agenda cache is refreshed out-of-band by
+    # calendar-agenda.timer (modules/core/calendar-agenda.nix), so this does no
+    # network I/O. Click opens the existing Google Calendar app window.
+    "custom/agenda" = {
+      interval = 30;
+      return-type = "json";
+      exec = "waybar-agenda";
+      exec-if = "command -v waybar-agenda";
+      on-click = "calendar";
+      tooltip = true;
+      max-length = 64;
     };
     clock = {
       calendar = {
@@ -108,6 +125,10 @@ in {
               then "calendar"
               else if name == "wasistlos"
               then "wasistlos"
+              # workspaceMapping sends the Claude Desktop app to the "claude"
+              # workspace; key the icon by that name so waybar matches it.
+              else if name == "com.anthropic.Claude"
+              then "claude"
               else name;
             value = singletonIcons.${name};
           })
@@ -120,6 +141,22 @@ in {
         # "5"= [];
         "10.5" = [];
       };
+    };
+    "custom/writing" = {
+      # Drafting speed for the current writing session (Chapin: clear 500
+      # words/hour and you outrun the inner critic). The module is empty
+      # whenever no session is running, so it costs no bar space when idle.
+      #
+      # This poll is also what SAMPLES the session — `status` folds the current
+      # word count into the running average as a side effect, which is why
+      # there is no daemon. 5s keeps the readout live while typing without
+      # making the average jumpy.
+      interval = 5;
+      return-type = "json";
+      format = "{}";
+      exec = "writing-session status --json";
+      on-click = "writing-session stop";
+      tooltip = true;
     };
     "custom/lifelog" = {
       "exec" = "cat /tmp/lifelog_status.json";
@@ -173,6 +210,18 @@ in {
       format = "{}";
       exec = ''bash -c 'status_file="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/stt-waybar-status.json"; if [[ -s "$status_file" ]]; then cat "$status_file"; else printf "%s\n" "{\"text\":\"\",\"class\":[\"off\"],\"tooltip\":\"STT off (click to toggle live)\"}"; fi' '';
       on-click = "bash /home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/toggle-stt.sh --live";
+      tooltip = true;
+    };
+    "custom/wispr" = {
+      # Live mic-level meter for Wispr Flow. Streams JSON continuously (no
+      # interval): off/idle/listening/silent. `silent` = REC is live but the
+      # mic is ~silent (muted / wrong default source) — the failure that used
+      # to look identical to a good dictation. Click focuses the Hub.
+      return-type = "json";
+      format = "{}";
+      exec = "wispr-meter";
+      restart-interval = 2;
+      on-click = "wispr-hub";
       tooltip = true;
     };
     "custom/kb-lang" = {

@@ -16,7 +16,6 @@
   kitty,
   src,
 }: let
-
   # Bundle the Node-side Playwright dependency (used for .playwright.js
   # workflow scripts). We build node_modules from the committed lockfile and
   # disable Playwright's browser download — we point at the system `chromium`

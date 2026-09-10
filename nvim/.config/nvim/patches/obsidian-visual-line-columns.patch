@@ -1,0 +1,94 @@
+Fix ObsidianExtractNote / ObsidianLink crashing with
+"Invalid 'end_col': out of range" on a visual-line selection.
+
+obsidian.nvim's util.get_visual_selection() fabricates columns when it is
+called while visual-LINE mode is still live (mode() == "V"):
+
+    cscol, cecol = 0, 999
+
+Those are not real columns. extract_note.lua:36 passes them straight into
+
+    vim.api.nvim_buf_set_text(0, csrow-1, cscol-1, cerow-1, cecol, { link })
+
+so:
+  * end_col = 999 is out of range on any line shorter than 999 bytes, i.e.
+    essentially always -> "Invalid 'end_col': out of range", thrown AFTER the
+    new note has already been created but BEFORE the selection is replaced.
+    Half-done extraction: an orphan note, and the source text untouched.
+  * start_col = cscol - 1 = -1 is read by nvim as "end of the line", so even
+    where it does not throw it writes the link in the wrong place.
+  * the sentinel is written BEFORE the start/end swap, and in live visual mode
+    `.` is the cursor -- usually the END of the selection -- so the swap
+    exchanges the two columns and the sentinel ends up on the wrong end.
+
+The live-"V" branch is reached whenever the command runs without leaving
+visual mode first -- a <Cmd>ObsidianExtractNote<CR> mapping, a command
+picker, or any Lua caller. (A ":ObsidianExtractNote<CR>" x-mode mapping
+leaves visual mode first, so it takes the '< / '> branch and escapes the
+bug -- which is why this only bites some invocations.)
+
+Fix: defer the visual-line columns until after the swap, set them to 1 and
+v:maxcol (the sentinel this function's own normalization block already
+resolves to the real line length), then clamp both columns to the actual
+lines as a last line of defence for every caller
+(extract_note / link / link_new / tags).
+
+--- a/lua/obsidian/util.lua
++++ b/lua/obsidian/util.lua
+@@ -898,6 +898,7 @@
+   -- this will exit visual mode
+   -- use 'gv' to reselect the text
+   local _, csrow, cscol, cerow, cecol
++  local linewise = false
+   local mode = vim.fn.mode()
+   if opts.strict and not vim.endswith(string.lower(mode), "v") then
+     return
+@@ -908,8 +909,18 @@
+     _, csrow, cscol, _ = unpack(vim.fn.getpos ".")
+     _, cerow, cecol, _ = unpack(vim.fn.getpos "v")
+     if mode == "V" then
+-      -- visual line doesn't provide columns
+-      cscol, cecol = 0, 999
++      -- Visual line doesn't provide columns, so they get filled in below --
++      -- AFTER the start/end swap, and with real values.
++      --
++      -- Upstream did `cscol, cecol = 0, 999` right here, which is wrong twice
++      -- over. These columns are handed straight to nvim_buf_set_text by
++      -- extract_note / link / link_new: 999 is out of range on any line
++      -- shorter than 999 bytes ("Invalid 'end_col': out of range"), and
++      -- cscol - 1 = -1 is read by nvim as "end of the line". And because in
++      -- live visual mode `.` is the cursor (often the END of the selection),
++      -- the swap below can exchange the two columns, so any sentinel written
++      -- here lands on the wrong end.
++      linewise = true
+     end
+     -- exit visual mode
+     vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", true)
+@@ -927,6 +938,13 @@
+     cscol, cecol = cecol, cscol
+   end
+ 
++  -- Fill in the visual-line columns now that start/end are in the right order:
++  -- the whole first line through the whole last line. v:maxcol is the sentinel
++  -- the normalization below already resolves to the real line length.
++  if linewise then
++    cscol, cecol = 1, vim.api.nvim_get_vvar "maxcol"
++  end
++
+   local lines = vim.fn.getline(csrow, cerow)
+   assert(type(lines) == "table")
+   if vim.tbl_isempty(lines) then
+@@ -943,6 +961,13 @@
+     cecol = string.len(lines[#lines])
+   end
+ 
++  -- Last line of defence: an out-of-range column in nvim_buf_set_text is a hard
++  -- error that aborts the command halfway through (extract_note has already
++  -- created the new note by then, and the selection is never replaced -- an
++  -- orphan note plus untouched source text). Clamp to the real lines.
++  cscol = math.min(math.max(cscol, 1), math.max(string.len(lines[1]), 1))
++  cecol = math.min(math.max(cecol, 0), string.len(lines[#lines]))
++
+   ---@type string
+   local selection
+   local n = #lines

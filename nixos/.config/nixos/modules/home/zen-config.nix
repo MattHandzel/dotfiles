@@ -30,6 +30,14 @@
 
     // Scale the entire UI 25% larger (1.0 = default).
     user_pref("layout.css.devPixelsPerPx", "1.25");
+
+    // Disable the built-in password manager (moving to Bitwarden): stop
+    // saving/offering to save logins, stop autofilling saved logins, and
+    // stop the generated-password suggestion.
+    user_pref("signon.rememberSignons", false);
+    user_pref("signon.autofillForms", false);
+    user_pref("signon.formlessCapture.enabled", false);
+    user_pref("signon.generation.enabled", false);
     // === END nix-managed ===
   '';
 in {
