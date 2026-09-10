@@ -1,4 +1,15 @@
-{pkgs, ...}: let
+{
+  config,
+  host,
+  lib,
+  osConfig,
+  pkgs,
+  ...
+}: let
+  # Platform test from the `host` specialArg, not from `pkgs` — see the
+  # comment at the top of lib/scheduled.nix for why.
+  isDarwin = host == "mac";
+  isLinux = !isDarwin;
   # Linear ships no Linux app, so we poll its GraphQL API for unread
   # notifications and surface them through swaync via notify-send. This is a
   # systemd *user* service (not a system one) so notify-send finds the session
@@ -6,12 +17,19 @@
   # gmail-automation.nix, but no browser needs to stay open.
   #
   # The Linear personal API key lives in the sops secret `linear_api_key`
-  # (declared in modules/core/sops.nix), materialized at /run/secrets/linear_api_key.
-  keyFile = "/run/secrets/linear_api_key";
+  # (declared in modules/core/sops.nix on NixOS, modules/darwin/sops.nix on the
+  # Mac). Read the path out of the OS config rather than hardcoding
+  # /run/secrets: on darwin /run only exists as a firmlink after a reboot, and
+  # sops-nix's darwin module puts secrets somewhere else entirely.
+  keyFile = osConfig.sops.secrets.linear_api_key.path;
+
+  # notify-send does not exist on macOS; the platform shim maps it onto
+  # terminal-notifier there and onto libnotify on Linux.
+  inherit (import ./lib/platform-scripts.nix {inherit pkgs;}) notify;
 
   poller = pkgs.writeShellApplication {
     name = "linear-notify-poll";
-    runtimeInputs = with pkgs; [curl jq libnotify coreutils];
+    runtimeInputs = [pkgs.curl pkgs.jq notify pkgs.coreutils];
     text = ''
       set -euo pipefail
 
@@ -63,7 +81,7 @@
       echo "$new" | jq -c '.[]' | while IFS= read -r n; do
         ident="$(echo "$n" | jq -r '.issue.identifier // "Linear"')"
         title="$(echo "$n" | jq -r '.issue.title // .type // "New notification"')"
-        notify-send -a Linear -u normal "Linear: $ident" "$title"
+        notify "Linear: $ident" "$title"
       done
 
       # Remember every currently-unread id (cap the set so it can't grow forever).
@@ -71,30 +89,28 @@
         '($seen + $ids) | unique' > "$seen_file"
     '';
   };
+  inherit (import ./lib/scheduled.nix {inherit lib pkgs config isDarwin;}) scheduled;
 in {
-  systemd.user.services.linear-notify = {
-    Unit = {
-      Description = "Poll Linear for unread notifications → swaync";
-      After = ["network-online.target"];
-    };
-    Service = {
-      Type = "oneshot";
-      ExecStart = "${poller}/bin/linear-notify-poll";
-      # 0 ok, 1 transient API error, 2 missing key — none should spam failure logs.
-      SuccessExitStatus = "0 1 2";
-    };
-  };
+  config = scheduled {
+    name = "linear-notify";
+    description = "Poll Linear for unread notifications → swaync";
+    command = ["${poller}/bin/linear-notify-poll"];
 
-  systemd.user.timers.linear-notify = {
-    Unit.Description = "Poll Linear notifications every 5min";
-    Timer = {
-      # Linear notifications aren't time-critical; 5min latency is fine and cuts
-      # the curl+jq poll from 1440 to ~288 runs/day.
-      OnBootSec = "1min";
-      OnUnitActiveSec = "5min";
-      # Catch up after suspend/resume.
-      Persistent = true;
-    };
-    Install.WantedBy = ["timers.target"];
+    after = ["network-online.target"];
+
+    # Linear notifications aren't time-critical; 5min latency is fine and cuts
+    # the curl+jq poll from 1440 to ~288 runs/day.
+    onBootSec = "1min";
+    onUnitActiveSec = "5min";
+    # Catch up after suspend/resume.
+    persistent = true;
+    timerDescription = "Poll Linear notifications every 5min";
+
+    everySeconds = 300;
+    path = [poller pkgs.coreutils];
+    logFile = "%h/.local/state/linear-notify.log";
+
+    # 0 ok, 1 transient API error, 2 missing key — none should spam failure logs.
+    serviceExtra.SuccessExitStatus = "0 1 2";
   };
 }

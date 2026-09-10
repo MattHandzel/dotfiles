@@ -1,42 +1,50 @@
 {
-  pkgs,
   config,
+  host,
+  lib,
+  pkgs,
   ...
-}: {
-  systemd.user.paths."transcribe-captures" = {
-    Unit = {
-      Description = "Monitor audio recordings for new files";
-    };
-    Path = {
-      PathChanged = [
-        "/home/matth/notes/capture/raw_capture/audio_recordings"
-        "/home/matth/Obsidian/Main/capture/raw_capture/media"
-        "/home/matth/Obsidian/Main/archive/capture/raw_capture"
-      ];
-      Unit = "transcribe-captures.service";
-    };
-    Install = {
-      WantedBy = ["paths.target"];
-    };
-  };
+}: let
+  # Platform test from the `host` specialArg, not from `pkgs` — see the
+  # comment at the top of lib/scheduled.nix for why.
+  isDarwin = host == "mac";
+  isLinux = !isDarwin;
+  inherit (import ./lib/scheduled.nix {inherit lib pkgs config isDarwin;}) scheduled;
+  home = config.home.homeDirectory;
+in {
+  config = scheduled {
+    name = "transcribe-captures";
+    description = "Transcribe audio recordings to text";
+    command = ["${home}/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/transcribe_captures.sh"];
 
-  systemd.user.services."transcribe-captures" = {
-    Unit = {
-      Description = "Transcribe audio recordings to text";
-      After = ["network.target"];
+    after = ["network.target"];
+
+    watchPaths = [
+      "${home}/notes/capture/raw_capture/audio_recordings"
+      "${home}/Obsidian/Main/capture/raw_capture/media"
+      "${home}/Obsidian/Main/archive/capture/raw_capture"
+    ];
+    pathsDescription = "Monitor audio recordings for new files";
+
+    path = with pkgs; [bash coreutils unzip nix git];
+    logFile = "%h/.local/state/transcribe-captures.log";
+
+    unitExtra = {
       X-Restart-Triggers = [];
       RefuseManualStart = true;
       RefuseManualStop = true;
       X-Switch-To-Configuration = "no";
     };
-    Service = {
-      Type = "oneshot";
+    serviceExtra = {
       Environment = "PATH=${with pkgs; lib.makeBinPath [bash coreutils unzip nix git]}";
       ExecStartPre = "${pkgs.coreutils}/bin/sleep 2";
-      ExecStart = "/home/matth/dotfiles/nixos/.config/nixos/modules/home/scripts/scripts/transcribe_captures.sh";
       # Ensure it doesn't run multiple instances simultaneously
       IOSchedulingClass = "idle";
       CPUSchedulingPolicy = "idle";
+    };
+    launchdExtra = {
+      Nice = 10;
+      LowPriorityIO = true;
     };
   };
 }

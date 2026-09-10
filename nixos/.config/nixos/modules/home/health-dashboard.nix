@@ -1,8 +1,14 @@
 {
   config,
+  host,
+  lib,
   pkgs,
   ...
 }: let
+  # Platform test from the `host` specialArg, not from `pkgs` — see the
+  # comment at the top of lib/scheduled.nix for why.
+  isDarwin = host == "mac";
+  isLinux = !isDarwin;
   # Where the health-data-dashboard pipeline lives. The importer itself
   # (refresh.sh = pull.py [Google Sheet -> parquet] -> render.py -> the vault
   # digest) is part of *that* project, not the dotfiles — this module only
@@ -71,38 +77,43 @@
 
     log "health-dashboard refresh completed"
   '';
+  inherit (import ./lib/scheduled.nix {inherit lib pkgs config isDarwin;}) scheduled;
 in {
-  systemd.user.services.health-dashboard-refresh = {
-    Unit = {
-      Description = "Refresh the multi-source health-data dashboard (pull -> render)";
-      After = ["network.target"];
-    };
-    Service = {
-      Type = "oneshot";
-      ExecStart = "${pkgs.bash}/bin/bash ${refreshScript}";
+  config = scheduled {
+    name = "health-dashboard-refresh";
+    description = "Refresh the multi-source health-data dashboard (pull -> render)";
+    command = ["${pkgs.bash}/bin/bash" "${refreshScript}"];
+
+    after = ["network.target"];
+
+    onCalendar = "*-*-* 09:00:00";
+    # CRITICAL: the laptop is routinely asleep/off at 09:00. Persistent makes
+    # systemd run the most recent missed trigger on the next boot/login, so the
+    # import can't silently skip for days — the exact failure this issue fixes.
+    persistent = true;
+    timerUnit = "health-dashboard-refresh.service";
+    timerDescription = "Daily 09:00 health-dashboard refresh (Persistent: a missed run fires on next boot)";
+
+    # launchd runs a missed StartCalendarInterval job when the Mac next wakes,
+    # which is the Persistent behaviour above.
+    startCalendarInterval = [
+      {
+        Hour = 9;
+        Minute = 0;
+      }
+    ];
+    path = [pkgs.bash pkgs.coreutils pkgs.curl pkgs.nix];
+    logFile = "%h/.local/state/health-dashboard-refresh.log";
+
+    serviceExtra = {
       # Heavy pandas/plotly run — stay out of the way of interactive work.
       IOSchedulingClass = "idle";
       CPUSchedulingPolicy = "idle";
     };
-    # Timer-driven only. Do NOT enable on default.target: a long oneshot started
-    # during Home Manager activation makes `nixos-rebuild switch` appear to hang
-    # (see the personal-website-sync note in services.nix).
-  };
-
-  systemd.user.timers.health-dashboard-refresh = {
-    Unit = {
-      Description = "Daily 09:00 health-dashboard refresh (Persistent: a missed run fires on next boot)";
-    };
-    Timer = {
-      OnCalendar = "*-*-* 09:00:00";
-      # CRITICAL: the laptop is routinely asleep/off at 09:00. Persistent makes
-      # systemd run the most recent missed trigger on the next boot/login, so the
-      # import can't silently skip for days — the exact failure this issue fixes.
-      Persistent = true;
-      Unit = "health-dashboard-refresh.service";
-    };
-    Install = {
-      WantedBy = ["timers.target"];
+    # macOS equivalent of the idle IO/CPU scheduling above.
+    launchdExtra = {
+      Nice = 10;
+      LowPriorityIO = true;
     };
   };
 }

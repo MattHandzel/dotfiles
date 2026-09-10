@@ -1,10 +1,20 @@
 {
   config,
+  host,
   lib,
   pkgs,
   ...
 }: let
+  # Platform test from the `host` specialArg, not from `pkgs` — see the
+  # comment at the top of lib/scheduled.nix for why.
+  isDarwin = host == "mac";
+  isLinux = !isDarwin;
   notesDir = "${config.home.homeDirectory}/notes";
+  vaultDir = "${config.home.homeDirectory}/Obsidian/Main";
+
+  inherit (import ./lib/scheduled.nix {inherit lib pkgs config isDarwin;}) scheduled;
+  inherit (import ./lib/platform-scripts.nix {inherit pkgs;}) notify;
+
   personalWebsiteSyncScript = pkgs.writeShellScript "personal-website-sync" ''
     set -euo pipefail
 
@@ -26,152 +36,131 @@
     echo "Sync completed at $(date)"
   '';
 in {
-  # tw-gcal-sync disabled — syncall uses taskw-ng which reads TW2 data files
-  # directly and is incompatible with TW3's SQLite storage.
-  # TODO: find TW3-compatible calendar sync solution
+  config =
+    # tw-gcal-sync disabled — syncall uses taskw-ng which reads TW2 data files
+    # directly and is incompatible with TW3's SQLite storage.
+    # TODO: find TW3-compatible calendar sync solution
+    lib.mkMerge [
+      (scheduled {
+        name = "second-brain-automation";
+        description = "Run Beeper sync and PARA automation on a timer";
+        # Was /etc/profiles/per-user/matth/bin/python3 — the same interpreter, but
+        # by a path that only exists on NixOS. The store path is identical on both
+        # platforms and immune to profile churn.
+        command = ["${pkgs.python3}/bin/python3" "${vaultDir}/scripts/second-brain-automation.py"];
+        linuxPathEntries = ["/etc/profiles/per-user/matth/bin" "/run/current-system/sw/bin"];
 
-  systemd.user.services.second-brain-automation = {
-    Unit = {
-      Description = "Run Beeper sync and PARA automation on a timer";
-    };
-    Service = {
-      Type = "oneshot";
-      ExecStart = "/etc/profiles/per-user/matth/bin/python3 /home/matth/Obsidian/Main/scripts/second-brain-automation.py";
-      Environment = ["PATH=/etc/profiles/per-user/matth/bin:/run/current-system/sw/bin"];
-    };
-  };
+        onBootSec = "5m";
+        onUnitActiveSec = "10m";
+        persistent = true;
+        timerUnit = "second-brain-automation.service";
+        timerDescription = "Timer for second-brain-automation (every 10 minutes)";
+        everySeconds = 600;
 
-  systemd.user.timers.second-brain-automation = {
-    Unit = {
-      Description = "Timer for second-brain-automation (every 10 minutes)";
-    };
-    Timer = {
-      OnBootSec = "5m";
-      OnUnitActiveSec = "10m";
-      Persistent = true;
-      Unit = "second-brain-automation.service";
-    };
-    Install = {
-      WantedBy = ["timers.target"];
-    };
-  };
+        # Path watcher: trigger automation immediately when captures change
+        # (complements the 10-minute timer with instant processing)
+        watchPaths = [
+          "${notesDir}/capture/raw_capture"
+          "${notesDir}/resources"
+        ];
+        pathsName = "para-automation-watcher";
+        pathsDescription = "Watch capture directory for new files";
+        pathsExtra = {
+          # Debounce: don't trigger more than once per 30 seconds
+          MakeDirectory = true;
+        };
 
-  systemd.user.services."focus-reflection-reminder" = {
-    Unit = {
-      Description = "Send an hourly focus/reflection reminder";
-    };
-    Service = {
-      Type = "oneshot";
-      ExecStart = ''
-        ${pkgs.libnotify}/bin/notify-send -t 10000 -u normal \
-          "Focus check" "Make sure you're focused on a task and have done your reflection for it!"
-      '';
-    };
-  };
+        path = [pkgs.python3 pkgs.coreutils pkgs.git];
+        logFile = "%h/.local/state/second-brain-automation.log";
+      })
 
-  systemd.user.timers."focus-reflection-reminder" = {
-    Unit = {
-      Description = "Timer for focus/reflection reminder";
-    };
-    Timer = {
-      OnBootSec = "5m";
-      OnUnitActiveSec = "1h";
-      Persistent = true;
-      Unit = "focus-reflection-reminder.service";
-    };
-    Install = {
-      WantedBy = ["timers.target"];
-    };
-  };
+      (scheduled {
+        name = "focus-reflection-reminder";
+        description = "Send an hourly focus/reflection reminder";
+        # notify-send's -t/-u have no terminal-notifier equivalent, and folding
+        # them into the shared `notify` shim would quietly change every other
+        # caller. So the Linux argv stays exactly what it was (10s, normal
+        # urgency) and only the Mac goes through the shim.
+        command =
+          if isDarwin
+          then [
+            "${notify}/bin/notify"
+            "Focus check"
+            "Make sure you're focused on a task and have done your reflection for it!"
+          ]
+          else [
+            "${pkgs.libnotify}/bin/notify-send"
+            "-t"
+            "10000"
+            "-u"
+            "normal"
+            "Focus check"
+            "Make sure you're focused on a task and have done your reflection for it!"
+          ];
 
-  systemd.user.services.taskwarrior-export = {
-    Unit = {
-      Description = "Export Taskwarrior tasks to ShareComputer for server notifications";
-    };
-    Service = {
-      Type = "oneshot";
-      ExecStart = "${pkgs.bash}/bin/bash ${notesDir}/scripts/taskwarrior-export-due.sh";
-      Environment = ["PATH=${pkgs.coreutils}/bin:${pkgs.taskwarrior3}/bin:/run/current-system/sw/bin"];
-    };
-  };
+        onBootSec = "5m";
+        onUnitActiveSec = "1h";
+        persistent = true;
+        timerUnit = "focus-reflection-reminder.service";
+        timerDescription = "Timer for focus/reflection reminder";
+        everySeconds = 3600;
 
-  systemd.user.timers.taskwarrior-export = {
-    Unit = {
-      Description = "Export Taskwarrior tasks every 30 minutes";
-    };
-    Timer = {
-      OnBootSec = "2m";
-      OnUnitActiveSec = "30m";
-      Persistent = true;
-      Unit = "taskwarrior-export.service";
-    };
-    Install = {
-      WantedBy = ["timers.target"];
-    };
-  };
+        path = [notify];
+      })
 
-  systemd.user.services.personal-website-sync = {
-    Unit = {
-      Description = "Sync Obsidian Vault to Personal Website MongoDB";
-      After = ["network.target"];
-      # Home Manager activation runs `systemctl --user start/stop` on managed
-      # units during `reloadSystemd`. This is a long-running oneshot (can build
-      # large deps like MongoDB), so starting it during activation makes
-      # `nixos-rebuild switch` appear to "freeze" and often times out.
-      #
-      # The timer can still start it (dependency activation), but manual starts
-      # during HM activation are refused.
-    };
-    Service = {
-      Type = "oneshot";
-      ExecStart = "${pkgs.bash}/bin/bash ${personalWebsiteSyncScript}";
-      WorkingDirectory = "${config.home.homeDirectory}/Projects/website/data-processing";
-      StandardOutput = "append:${config.home.homeDirectory}/Projects/website/sync.log";
-      StandardError = "append:${config.home.homeDirectory}/Projects/website/sync.error.log";
-    };
-    # This is a timer-driven oneshot. Enabling it on `default.target` makes
-    # Home Manager activation block while the sync runs (can take minutes),
-    # causing `nixos-rebuild switch` to time out.
-  };
+      (scheduled {
+        name = "taskwarrior-export";
+        description = "Export Taskwarrior tasks to ShareComputer for server notifications";
+        command = ["${pkgs.bash}/bin/bash" "${notesDir}/scripts/taskwarrior-export-due.sh"];
+        linuxPathPackages = [pkgs.coreutils pkgs.taskwarrior3];
+        linuxPathEntries = ["/run/current-system/sw/bin"];
 
-  systemd.user.timers.personal-website-sync = {
-    Unit = {
-      Description = "Run Website Sync every hour";
-    };
-    Timer = {
-      OnBootSec = "5min";
-      OnUnitActiveSec = "1h";
-      Unit = "personal-website-sync.service";
-    };
-    Install = {
-      WantedBy = ["timers.target"];
-    };
-  };
+        onBootSec = "2m";
+        onUnitActiveSec = "30m";
+        persistent = true;
+        timerUnit = "taskwarrior-export.service";
+        timerDescription = "Export Taskwarrior tasks every 30 minutes";
+        everySeconds = 1800;
 
-  # Path watcher: trigger automation immediately when captures change
-  # (complements the 10-minute timer with instant processing)
-  systemd.user.paths."para-automation-watcher" = {
-    Unit = {
-      Description = "Watch capture directory for new files";
-    };
-    Path = {
-      PathChanged = [
-        "${notesDir}/capture/raw_capture"
-        "${notesDir}/resources"
-      ];
-      Unit = "second-brain-automation.service";
-      # Debounce: don't trigger more than once per 30 seconds
-      MakeDirectory = true;
-    };
-    Install = {
-      WantedBy = ["paths.target"];
-    };
-  };
+        path = [pkgs.bash pkgs.coreutils pkgs.taskwarrior3];
+        logFile = "%h/.local/state/taskwarrior-export.log";
+      })
 
-  # If this unit was previously enabled on default.target, the symlink can stick
-  # around and Home Manager activation will try to stop/start it during rebuilds.
-  # Make sure it is timer-only.
-  home.activation.personalWebsiteSyncCleanup = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    rm -f "$HOME/.config/systemd/user/default.target.wants/personal-website-sync.service"
-  '';
+      (scheduled {
+        name = "personal-website-sync";
+        description = "Sync Obsidian Vault to Personal Website MongoDB";
+        command = ["${pkgs.bash}/bin/bash" "${personalWebsiteSyncScript}"];
+
+        # Home Manager activation runs `systemctl --user start/stop` on managed
+        # units during `reloadSystemd`. This is a long-running oneshot (can build
+        # large deps like MongoDB), so starting it during activation makes
+        # `nixos-rebuild switch` appear to "freeze" and often times out.
+        #
+        # The timer can still start it (dependency activation), but manual starts
+        # during HM activation are refused. Deliberately NOT enabled on
+        # default.target for the same reason.
+        after = ["network.target"];
+
+        onBootSec = "5min";
+        onUnitActiveSec = "1h";
+        timerUnit = "personal-website-sync.service";
+        timerDescription = "Run Website Sync every hour";
+        everySeconds = 3600;
+
+        workingDirectory = "${config.home.homeDirectory}/Projects/website/data-processing";
+        linuxLogFile = "${config.home.homeDirectory}/Projects/website/sync.log";
+        logFile = "${config.home.homeDirectory}/Projects/website/sync.log";
+        path = [pkgs.bash pkgs.nix pkgs.coreutils];
+        serviceExtra.StandardError = "append:${config.home.homeDirectory}/Projects/website/sync.error.log";
+      })
+
+      # If this unit was previously enabled on default.target, the symlink can stick
+      # around and Home Manager activation will try to stop/start it during rebuilds.
+      # Make sure it is timer-only. (systemd-only leftover; no launchd analogue.)
+      (lib.optionalAttrs isLinux {
+        home.activation.personalWebsiteSyncCleanup = lib.hm.dag.entryAfter ["writeBoundary"] ''
+          rm -f "$HOME/.config/systemd/user/default.target.wants/personal-website-sync.service"
+        '';
+      })
+    ];
 }
