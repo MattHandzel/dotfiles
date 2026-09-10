@@ -31,7 +31,12 @@ python3Packages.buildPythonApplication {
       --prefix PATH : ${lib.makeBinPath [pandoc]}
   '';
 
-  nativeCheckInputs = [python3Packages.pytestCheckHook];
+  # pandoc is needed at CHECK time too, not just at runtime: the markdown
+  # round-trip tests shell out to it and fail with "pandoc not found on PATH"
+  # without it. This never surfaced while `src` was a `path:` input, because the
+  # store path never changed and the old build stayed cached; repointing the
+  # input at the GitHub remote changed the hash and rebuilt it.
+  nativeCheckInputs = [python3Packages.pytestCheckHook pandoc];
 
   meta = with lib; {
     description = "Sync Markdown files with Google Docs from the CLI";
