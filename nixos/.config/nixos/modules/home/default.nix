@@ -37,6 +37,7 @@
     ./todoist.nix
     ./transcribe-captures.nix
     ./luck-scheduler.nix
+    ./email-do.nix # Gmail claude/do label queue -> headless Claude worker (drafts only)
     ./polish-pipeline.nix
     # keep the rotating OAuth token out of Syncthing (daily forced re-login)
     ./claude-syncthing-ignores.nix
