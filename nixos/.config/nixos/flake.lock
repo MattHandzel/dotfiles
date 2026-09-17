@@ -360,11 +360,11 @@
     "gdoc-sync-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1788491003,
-        "narHash": "sha256-CWIVT5HwHbRwiCyNBuCV232FBhBftuo54aGy66KmZQA=",
+        "lastModified": 1789681765,
+        "narHash": "sha256-7xPVq8yMhKd0fJM7mzTgUVHb+YjIABXpOcrk9jCtUZA=",
         "ref": "main",
-        "rev": "2d339e74767f8864296cb08cf5877574f31291f7",
-        "revCount": 40,
+        "rev": "4d0e227458f86b18ed8cca9c1ba87023871e7e52",
+        "revCount": 45,
         "type": "git",
         "url": "ssh://git@github.com/MattHandzel/gdoc-sync"
       },
@@ -939,6 +939,23 @@
         "type": "github"
       }
     },
+    "organize-core-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789340618,
+        "narHash": "sha256-KBZJXJh1rjWatsx/Syu2/Vq6zZEyGFo2tmfg942PB+0=",
+        "ref": "rewrite",
+        "rev": "e10bb8981189b84395eace4da02be21d21ce7299",
+        "revCount": 121,
+        "type": "git",
+        "url": "ssh://git@github.com/MattHandzel/para-organize"
+      },
+      "original": {
+        "ref": "rewrite",
+        "type": "git",
+        "url": "ssh://git@github.com/MattHandzel/para-organize"
+      }
+    },
     "pre-commit-hooks": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -1004,6 +1021,7 @@
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nixpkgs-readest": "nixpkgs-readest",
         "nur": "nur",
+        "organize-core-src": "organize-core-src",
         "project-asset-generator-src": "project-asset-generator-src",
         "second-brain-search": "second-brain-search",
         "sops-nix": "sops-nix",
