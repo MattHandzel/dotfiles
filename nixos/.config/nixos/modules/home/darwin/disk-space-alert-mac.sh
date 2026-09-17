@@ -23,9 +23,12 @@ NTFY_URL="http://server.matthandzel.com:8124/claude"
 STATE_DIR="$HOME/.local/state/disk-space-alert"
 STATE_FILE="$STATE_DIR/last-alert-level"
 
-# Same thresholds as the NixOS unit (GiB free).
-WARN_GIB=20
-URGENT_GIB=5
+# Higher than the NixOS unit (20/5). macOS swap lives on this same pool and
+# grows in 1 GiB files; at 5 GiB free it already could not grow and apps were
+# paused ("out of application memory", Oops 2026-09-15 10:28). 15 GiB is the
+# swap headroom this 32 GB machine used that morning (9 GiB) plus margin.
+WARN_GIB=40
+URGENT_GIB=15
 
 mkdir -p "$STATE_DIR"
 
@@ -52,6 +55,64 @@ fi
 
 echo "$(date -Iseconds) data=${avail_gib}G root=${root_gib}G level=$current_level prev=$prev_level"
 
+# Urgent: reclaim regenerable caches on every run (idempotent, cheap when
+# empty). On 2026-09-15 this gave back 11 GiB (Homebrew 9.5, uv 1.8).
+if [ "$current_level" = "urgent" ]; then
+  HOMEBREW_NO_AUTO_UPDATE=1 /opt/homebrew/bin/brew cleanup --prune=all -s 2>&1 | tail -1
+  "$HOME/.nix-profile/bin/uv" cache prune 2>&1 | tail -1
+  avail_gib="$(/bin/df -k -P /System/Volumes/Data | tail -1 | awk '{printf "%d", $4/1048576}')"
+  echo "after cache cleanup: data=${avail_gib}G"
+fi
+
+# ntfy alone was not enough: the server timed out on every alert that morning
+# (curl: (28)), so Matt saw nothing. Also post a local notification.
+local_notify() {
+  /usr/bin/osascript -e "display notification \"$2\" with title \"$1\"" >/dev/null 2>&1 || true
+}
+
+# ── Runaway log detection ────────────────────────────────────────────────────
+# The free-space thresholds above are absolute, and a file growing slowly
+# stays under them for months: ~/Projects/website/sync.log reached 40 GB
+# (2026-09-16) without this script ever having a reason to speak. So also
+# watch the RATE. Every launchd log we write lives in one of LOG_DIRS; sizes
+# from the previous tick are kept in $SIZES_FILE as "<bytes> <path>" lines,
+# and a file that grew more than GROWTH_GIB since then (15 minutes ago), or
+# just crossed BIG_GIB outright, gets an alert that names it. Crossing is
+# detected against the previous size, so a big-but-stable file pings once.
+GROWTH_GIB=1
+BIG_GIB=5
+SIZES_FILE="$STATE_DIR/log-sizes"
+LOG_DIRS=("$HOME/.local/state" "$HOME/.local/log" "$HOME/Library/Logs" "$HOME/Projects/website")
+
+check_log_growth() {
+  local next="$SIZES_FILE.next" msg="" path size old
+  local growth_bytes=$((GROWTH_GIB * 1073741824)) big_bytes=$((BIG_GIB * 1073741824))
+  : > "$next"
+  while IFS= read -r path; do
+    size="$(/usr/bin/stat -f %z "$path" 2>/dev/null)" || continue
+    printf '%s %s\n' "$size" "$path" >> "$next"
+    old=""
+    [ -f "$SIZES_FILE" ] && old="$(awk -v p="$path" 'substr($0, index($0, " ") + 1) == p {print $1; exit}' "$SIZES_FILE")"
+    if [ -n "$old" ] && [ $((size - old)) -gt "$growth_bytes" ]; then
+      msg="$msg$path grew $(( (size - old) / 1048576 )) MiB in the last 15 min. "
+    elif [ "$size" -gt "$big_bytes" ] && [ "${old:-0}" -le "$big_bytes" ]; then
+      msg="$msg$path is $(( size / 1073741824 )) GiB. "
+    fi
+  done < <(/usr/bin/find "${LOG_DIRS[@]}" -maxdepth 1 -type f -name '*.log*' 2>/dev/null)
+  mv -f "$next" "$SIZES_FILE"
+
+  [ -z "$msg" ] && return 0
+  echo "runaway log: $msg"
+  local_notify "Runaway log file" "$msg"
+  curl -sS --max-time 15 \
+    -H "Title: Runaway log file" \
+    -H "Priority: high" \
+    -H "Tags: page_facing_up,warning" \
+    -d "$(hostname -s): $msg" \
+    "$NTFY_URL" >/dev/null || true
+}
+check_log_growth
+
 if [ "$current_level" = "$prev_level" ]; then
   echo "Disk level unchanged ($current_level). No notification."
   exit 0
@@ -76,6 +137,8 @@ if [ "$current_level" = "urgent" ]; then
 else
   priority="high"; title="Disk space warning"; tags="warning"
 fi
+
+local_notify "$title" "${avail_gib}G free. Below ${URGENT_GIB}G macOS cannot grow swap and pauses apps. Biggest: /Volumes/LinuxHome, ~/Projects, ~/Videos."
 
 curl -sS --max-time 15 \
   -H "Title: $title" \

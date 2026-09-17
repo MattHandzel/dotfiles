@@ -119,6 +119,13 @@ in {
     path ? [], # darwin PATH (packages)
     darwinPathEntries ? ["/usr/bin" "/bin" "/usr/sbin" "/sbin"],
     logFile ? null, # darwin StandardOutPath/StandardErrorPath
+    # Rotate `logFile` before each run once it is larger than this (darwin
+    # only; null disables). launchd opens StandardOutPath in append mode and
+    # never truncates it, so every log declared here is otherwise unbounded —
+    # the website sync's reached 40 GB (79.5M lines) on a disk with 45 GB
+    # free before anyone noticed. One previous generation (`<log>.1`) is kept,
+    # so the pair is capped at roughly 2x this.
+    logMaxBytes ? 20 * 1024 * 1024,
     linuxPathPackages ? [],
     linuxPathEntries ? [],
     linuxLogFile ? null,
@@ -134,6 +141,25 @@ in {
   }: let
     linuxPath = mkPath linuxPathEntries linuxPathPackages;
     darwinPath = mkPath darwinPathEntries path;
+
+    # Rotation happens INSIDE the job, not in launchd: rename the old file,
+    # reopen our own stdout/stderr onto a fresh one (replacing the descriptor
+    # launchd handed us), then exec the real command. launchd keeps no handle
+    # on the file itself, so nothing else has to learn the inode changed.
+    # Absolute coreutils paths because the agent's PATH is whatever `path`
+    # says, which need not include them.
+    rotateLog = pkgs.writeShellScript "${name}-rotate-log" ''
+      log_file=${lib.escapeShellArg (expand logFile)}
+      if [ -f "$log_file" ] && [ "$(${pkgs.coreutils}/bin/wc -c <"$log_file")" -gt ${toString logMaxBytes} ]; then
+        ${pkgs.coreutils}/bin/mv -f "$log_file" "$log_file.1"
+      fi
+      exec >>"$log_file" 2>&1
+      exec "$@"
+    '';
+    darwinCommand =
+      if logFile != null && logMaxBytes != null
+      then ["${rotateLog}"] ++ expandList command
+      else expandList command;
 
     hasSchedule =
       onCalendar
@@ -203,7 +229,7 @@ in {
     darwinAgent =
       {
         Label = "org.nix-community.home.${name}";
-        ProgramArguments = expandList command;
+        ProgramArguments = darwinCommand;
         ProcessType = "Background";
         EnvironmentVariables = {PATH = darwinPath;} // environment;
         RunAtLoad =

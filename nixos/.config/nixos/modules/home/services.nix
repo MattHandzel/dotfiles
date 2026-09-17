@@ -70,7 +70,11 @@ in {
           MakeDirectory = true;
         };
 
-        path = [pkgs.python3 pkgs.coreutils pkgs.git];
+        # nix + bash: the script hands off to the vault's beeper/run_sync.sh,
+        # which shells out to `nix-shell`. A LaunchAgent's PATH has none of the
+        # profile dirs that supply it, so without these the Mac side fails with
+        # "nix-shell: command not found" the moment the script path is right.
+        path = [pkgs.python3 pkgs.coreutils pkgs.git pkgs.nix pkgs.bash];
         logFile = "%h/.local/state/second-brain-automation.log";
       })
 
@@ -150,6 +154,9 @@ in {
         workingDirectory = "${config.home.homeDirectory}/Projects/website/data-processing";
         linuxLogFile = "${config.home.homeDirectory}/Projects/website/sync.log";
         logFile = "${config.home.homeDirectory}/Projects/website/sync.log";
+        # A full run writes ~1.2 MB now (was 56 MB before pymongo's wire log was
+        # silenced); 50 MB keeps about two days of hourly runs per generation.
+        logMaxBytes = 50 * 1024 * 1024;
         path = [pkgs.bash pkgs.nix pkgs.coreutils];
         serviceExtra.StandardError = "append:${config.home.homeDirectory}/Projects/website/sync.error.log";
       })
