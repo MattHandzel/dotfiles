@@ -92,12 +92,18 @@
     ./scripts/zoom-web.sh
   ];
 
+  # runbg (detach a command from the tty) and lofi (toggle a background mpv of
+  # the lofi stream) are plain POSIX + mpv; moved out of linuxScripts 2026-09-12
+  # so the Mac gets them too.
+  macPortableScripts = [
+    ./scripts/runbg.sh
+    ./scripts/lofi.sh
+  ];
+
   # Hyprland / Wayland / NixOS-specific: these talk to hyprctl, the Wayland
   # compositor, chromium --app wrappers, or systemd. macOS equivalents are
   # Phase 6 work on the Mac — see docs/mac-migration/TODO-path-inputs.md.
   linuxScripts = [
-    ./scripts/runbg.sh
-    ./scripts/lofi.sh
     ./scripts/toggle_blur.sh
     ./scripts/toggle_oppacity.sh
     ./scripts/keybinds.sh
@@ -115,7 +121,7 @@
     ./scripts/hyprland-session-restore.sh # relaunch saved windows on their workspaces
   ];
 
-  shellScripts = sharedScripts ++ lib.optionals isLinux linuxScripts;
+  shellScripts = sharedScripts ++ macPortableScripts ++ lib.optionals isLinux linuxScripts;
 
   # Create shell script bins
   shellScriptBins = map makeShellScriptBin shellScripts;
@@ -360,6 +366,11 @@ in {
       linuxPathPackages = [pkgs.wl-clipboard pkgs.libnotify pkgs.coreutils];
       keepAlive = true;
       path = [platform.clip-copy platform.notify pkgs.coreutils];
+      # The script calls `notify-send` and `wl-copy` by their Linux names; on the
+      # Mac those are the compat-shims in the HM profile, which a LaunchAgent's
+      # empty PATH never sees (it died with FileNotFoundError: 'notify-send',
+      # status 1, found by the 2026-09-12 migration audit).
+      darwinPathEntries = ["${config.home.profileDirectory}/bin" "/usr/bin" "/bin" "/usr/sbin" "/sbin"];
       logFile = "%h/.local/state/auth-code-watcher.log";
     })
   ];

@@ -44,7 +44,14 @@ fi
 
 mkdir -p "$dir"
 stamp=$(date +'%Y-%m-%d-%Ih%Mm%Ss')
-tmp=$(mktemp -t kbshot).png
+# NOT `mktemp -t kbshot`: that is the BSD spelling, and this script runs with
+# Nix coreutils ahead of /usr/bin on PATH, where GNU mktemp rejects a template
+# with no X's ("too few X's in template") and the script died before taking a
+# single screenshot. A temp DIRECTORY also lets the file keep its .png suffix,
+# which screencapture needs to pick the output format.
+tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/kbshot.XXXXXX")
+trap 'rm -rf "$tmpdir"' EXIT
+tmp="$tmpdir/shot.png"
 case "$mode" in
   area) /usr/sbin/screencapture -i -o -x "$tmp" ;;
   window) /usr/sbin/screencapture -i -W -o -x "$tmp" ;;

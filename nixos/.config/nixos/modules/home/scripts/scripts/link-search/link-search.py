@@ -117,11 +117,53 @@ def places_db() -> str | None:
     return max(candidates, key=os.path.getmtime)
 
 
+def chromium_history_db() -> str | None:
+    """Dia/Chrome/Brave `History` sqlite on macOS (Dia since the 2026-09-12 Zen → Dia move)."""
+    patterns = [
+        "~/Library/Application Support/Dia/User Data/*/History",
+        "~/Library/Application Support/Google/Chrome/*/History",
+        "~/Library/Application Support/BraveSoftware/Brave-Browser/*/History",
+    ]
+    candidates = [c for pat in patterns for c in glob.glob(os.path.expanduser(pat))]
+    candidates = [c for c in candidates if os.path.getsize(c) > 0]
+    return max(candidates, key=os.path.getmtime) if candidates else None
+
+
+def chromium_links() -> list[tuple[str, str]]:
+    """(url, title) from a Chromium `History` db, same frecency order as the Firefox path."""
+    import sqlite3
+
+    db = chromium_history_db()
+    if not db:
+        return []
+    # Chromium holds an exclusive lock while the browser runs — read a copy.
+    tmp = tempfile.mkdtemp(prefix="link-search-")
+    try:
+        for suffix in ("", "-journal", "-wal"):
+            src = db + suffix
+            if os.path.exists(src):
+                shutil.copy2(src, os.path.join(tmp, "History" + suffix))
+        con = sqlite3.connect(os.path.join(tmp, "History"))
+        rows = con.execute(
+            "SELECT url, COALESCE(title, '') FROM urls WHERE hidden = 0 AND url NOT LIKE 'chrome://%' "
+            "ORDER BY visit_count DESC, last_visit_time DESC LIMIT 5000"
+        ).fetchall()
+        con.close()
+        return [(u, t) for u, t in rows if u]
+    except Exception:
+        return []
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def browser_links() -> list[tuple[str, str]]:
     """(url, title) from browser history, ranked by frecency (visits, then recency)."""
     import sqlite3
 
     db = places_db()
+    cdb = chromium_history_db()
+    if cdb and (not db or os.path.getmtime(cdb) > os.path.getmtime(db)):
+        return chromium_links()
     if not db:
         return []
     # places.sqlite is locked + WAL-backed while the browser runs — copy the db

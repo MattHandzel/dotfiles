@@ -15,6 +15,10 @@
     src = inputs.gdoc-sync-src;
   };
 
+  organize-core = pkgs.callPackage ../../pkgs/organize-core/default.nix {
+    src = inputs.organize-core-src;
+  };
+
   # Learn This extension, packaged as an unsigned local XPI (MAT-826). Source is
   # vendored under pkgs/zen-learn-extension/src/ so the install is reproducible.
   learn-this-extension = pkgs.callPackage ../../pkgs/zen-learn-extension/default.nix {};
@@ -139,6 +143,7 @@
     sc-im
     ntfy-sh
     gdoc-sync # markdown ↔ Google Docs sync CLI (~/Projects/gdoc-sync)
+    organize-core # `organize serve` for para-organize.nvim (para-organize@rewrite)
 
     # ── toolchains ──
     gcc

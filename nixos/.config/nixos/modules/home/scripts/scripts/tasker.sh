@@ -1,6 +1,11 @@
 #! /usr/bin/env bash
 
-kitty --hold --title tasker --name tasker zsh -c "nvim -c 'Tw'" 
+# --name is an X11/Wayland concept (it sets WM_CLASS) and kitty on macOS
+# rejects it outright with "Unknown flag: --name", so the whole script died
+# before opening anything. --title is the portable half, and it is also what
+# the AeroSpace binding matches on:
+#   alt-ctrl-t = focus-app --title tasker -- tasker
+kitty --hold --title tasker zsh -c "nvim -c 'Tw'" 
 
 # # Function to sync vdirsyncer and calcurse
 # sync_calendars() {

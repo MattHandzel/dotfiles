@@ -108,6 +108,13 @@
       flake = false;
     };
 
+    # organize-core: the `organize serve` engine para-organize.nvim spawns.
+    # Lives on the `rewrite` branch (main is the legacy Lua-only plugin).
+    organize-core-src = {
+      url = "git+ssh://git@github.com/MattHandzel/para-organize?ref=rewrite";
+      flake = false;
+    };
+
     betterbird = {
       url = "github:Heehaaw/betterbird-flake";
       inputs.nixpkgs.follows = "nixpkgs";

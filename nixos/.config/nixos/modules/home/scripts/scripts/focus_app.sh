@@ -12,7 +12,7 @@ class_name="$1"
 # Focus Mode friction: if focus mode is ON (/tmp/focus_mode exists) and this is a
 # distracting app, show a cancellable wait UI (focus-delay-gate) before the app
 # is focused/launched. Cancel → abort (you changed your mind); wait it out →
-# proceed. The distracting list comes from ~/notes/resources/dns-blocklist.md via
+# proceed. The distracting list comes from ~/notes/resources/focus-mode-apps.md via
 # focus-distracting-apps, shared with focus-mode-enforcer.sh.
 FOCUS_MODE_FILE="/tmp/focus_mode"
 if [ -e "$FOCUS_MODE_FILE" ]; then

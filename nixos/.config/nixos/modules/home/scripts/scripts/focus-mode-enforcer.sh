@@ -8,8 +8,8 @@
 # Cancel → you stay where you were (you changed your mind). Unlocks reset when
 # Focus Mode turns off.
 #
-# The distracting list is derived from ~/notes/resources/dns-blocklist.md via
-# `focus-distracting-apps` — one source of truth shared with focus_app + DNS.
+# The distracting list comes from ~/notes/resources/focus-mode-apps.md via
+# `focus-distracting-apps` — one source of truth shared with focus_app, the Mac gate and SketchyBar.
 #
 # Logs: journalctl --user -u focus-mode-enforcer -f
 set -u
@@ -36,7 +36,7 @@ find_socket() {
   return 1
 }
 
-# Distracting window classes, sourced from the blocklist markdown. Re-read on
+# Distracting window classes, sourced from focus-mode-apps.md. Re-read on
 # each focus event so edits to the list take effect without a restart.
 is_distracting() {
   local class="$1" re
@@ -119,7 +119,7 @@ socat -U - "UNIX-CONNECT:$socket" 2>/dev/null | while IFS= read -r line; do
     rm -f "$DENY_DIR/$addr" 2>/dev/null || true # cooldown lapsed
   fi
 
-  log "distracting app '$class' ($addr) focused → cancellable ${FOCUS_DELAY_SECONDS:-10}s gate"
+  log "distracting app '$class' ($addr) focused → cancellable ${FOCUS_DELAY_SECONDS:-15}s gate"
   # Bounce away first so the app isn't usable behind the dialog.
   hyprctl dispatch focuscurrentorlast >/dev/null 2>&1
 

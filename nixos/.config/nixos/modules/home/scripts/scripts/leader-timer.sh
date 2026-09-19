@@ -25,8 +25,12 @@ set -euo pipefail
 if [[ "$(uname)" == Darwin ]]; then
   LT_DIR="$HOME/Library/Caches/leader-timer"
   mkdir -p "$LT_DIR"
-  NOTIFY="$(command -v terminal-notifier || true)"
+  # No terminal-notifier: the nix build hangs forever on macOS 26 and the brew
+  # build has notifications switched off, so neither ever showed a banner
+  # (2026-09-12). osascript posts via Script Editor, allowed by default.
+  NOTIFY=""
   SOUND_FILE=/System/Library/Sounds/Glass.aiff
+  mac_notify() { /usr/bin/osascript -e 'on run argv' -e 'display notification (item 2 of argv) with title (item 1 of argv)' -e 'end run' "$1" "$2" >/dev/null 2>&1 || true; }
   _uid="$(id -u)"
 
   mac_units() { local f; for f in "$LT_DIR"/*.plist; do [[ -e "$f" ]] || continue; basename "$f" .plist; done; }
@@ -86,7 +90,7 @@ if [[ "$(uname)" == Darwin ]]; then
 
   # The finishing script: title/body/paths arrive as environment, never
   # interpolated into the command string (labels are free text).
-  finish='sleep "$LT_SECS"; if [ -n "$LT_NOTIFY" ]; then "$LT_NOTIFY" -title "$LT_TITLE" -message "$LT_BODY" -sound default >/dev/null 2>&1 || true; else /usr/bin/osascript -e "display notification \"$LT_BODY\" with title \"$LT_TITLE\""; fi; [ -r "$LT_SOUND" ] && /usr/bin/afplay "$LT_SOUND" >/dev/null 2>&1 || true; rm -f "$LT_PLIST" "${LT_PLIST%.plist}.what" "${LT_PLIST%.plist}.deadline"; launchctl bootout "gui/$(id -u)/$LT_UNIT" >/dev/null 2>&1 || true'
+  finish='sleep "$LT_SECS"; /usr/bin/osascript -e "on run argv" -e "display notification (item 2 of argv) with title (item 1 of argv)" -e "end run" "$LT_TITLE" "$LT_BODY" >/dev/null 2>&1 || true; [ -r "$LT_SOUND" ] && /usr/bin/afplay "$LT_SOUND" >/dev/null 2>&1 || true; rm -f "$LT_PLIST" "${LT_PLIST%.plist}.what" "${LT_PLIST%.plist}.deadline"; launchctl bootout "gui/$(id -u)/$LT_UNIT" >/dev/null 2>&1 || true'
 
   xml_escape() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' <<<"$1"; }
   cat >"$plist" <<PLIST
@@ -108,7 +112,7 @@ if [[ "$(uname)" == Darwin ]]; then
 </dict></plist>
 PLIST
   launchctl bootstrap "gui/$_uid" "$plist"
-  [[ -n "$NOTIFY" ]] && "$NOTIFY" -title "⏱ Timer started" -message "$what" >/dev/null 2>&1 || true
+  mac_notify "⏱ Timer started" "$what"
   exit 0
 fi
 

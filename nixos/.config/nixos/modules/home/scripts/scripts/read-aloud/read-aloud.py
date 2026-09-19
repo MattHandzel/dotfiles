@@ -156,8 +156,10 @@ def url_from_browser_history(title: str) -> str:
     extension-free way to query the active tab. The tab you are looking at is
     necessarily in history, so match on title, newest visit first.
     """
-    # Zen/Firefox suffix the window title with the browser name.
+    # Zen/Firefox suffix the window title with the browser name; Dia prefixes it
+    # with the profile name ("Work: Page title").
     page = re.sub(r"\s+[-—]\s+(Zen Browser|Mozilla Firefox|Firefox)\s*$", "", title).strip()
+    page = re.sub(r"^(Work|Personal|Generator): ", "", page)
     if not page:
         return ""
 
@@ -170,6 +172,23 @@ def url_from_browser_history(title: str) -> str:
     ]
     dbs = [d for pat in patterns for d in glob.glob(os.path.expanduser(pat))]
     dbs.sort(key=lambda d: os.path.getmtime(d), reverse=True)  # live profile first
+
+    # Dia (Chromium) on macOS since 2026-09-12: `urls` table instead of moz_places.
+    for cdb in sorted(glob.glob(os.path.expanduser("~/Library/Application Support/Dia/User Data/*/History")),
+                      key=os.path.getmtime, reverse=True):
+        try:
+            tmp = tempfile.mkdtemp(prefix="read-aloud-")
+            shutil.copy2(cdb, os.path.join(tmp, "History"))
+            con = sqlite3.connect(os.path.join(tmp, "History"))
+            row = con.execute(
+                "SELECT url FROM urls WHERE title = ? ORDER BY last_visit_time DESC LIMIT 1", (page,)
+            ).fetchone()
+            con.close()
+            shutil.rmtree(tmp, ignore_errors=True)
+            if row and row[0]:
+                return row[0]
+        except Exception:
+            continue
     for db in dbs:
         # The live DB is locked by the running browser; read a copy.
         with tempfile.NamedTemporaryFile(suffix=".sqlite") as tmp:
@@ -207,7 +226,7 @@ def extract_article(url: str) -> tuple[str, str]:
     return title, text.strip()
 
 
-BROWSER_CLASSES = ("zen", "firefox", "navigator", "chrom", "brave", "vivaldi", "librewolf", "safari", "arc")
+BROWSER_CLASSES = ("zen", "firefox", "navigator", "chrom", "brave", "vivaldi", "librewolf", "safari", "arc", "dia")
 
 
 def is_browser(cls: str) -> bool:

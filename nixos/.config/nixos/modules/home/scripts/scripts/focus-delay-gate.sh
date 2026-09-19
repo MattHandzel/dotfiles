@@ -9,7 +9,7 @@
 set -u
 
 app="${1:-this app}"
-DELAY="${FOCUS_DELAY_SECONDS:-10}"
+DELAY="${FOCUS_DELAY_SECONDS:-15}" # 15 s since 2026-09-14 (was 10)
 FOCUS_MODE_FILE="/tmp/focus_mode"
 
 # No focus mode -> no friction.

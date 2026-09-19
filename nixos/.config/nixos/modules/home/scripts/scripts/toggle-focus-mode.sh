@@ -18,11 +18,20 @@ write_status() {
   fi
 }
 
+# macOS: SketchyBar hides the distracting workspaces while the flag exists
+# (plugins/aerospace.sh), so redraw the strip on every flip.
+refresh_bar() {
+  [[ -x /opt/homebrew/bin/sketchybar ]] &&
+    /opt/homebrew/bin/sketchybar --trigger aerospace_workspace_change >/dev/null 2>&1
+  return 0
+}
+
 turn_on() {
   touch "$FOCUS_MODE_FILE"
-  notify-send -t 2000 -u normal -i dialog-warning "Focus Mode On" "Stay focused! Distracting apps will have a 10s delay."
+  notify-send -t 2000 -u normal -i dialog-warning "Focus Mode On" "Stay focused! Distracting apps will have a 15s delay."
   write_status on
   hyprctl keyword general:col.active_border "rgb(fab387) rgb(f38ba8) 45deg" >/dev/null 2>&1
+  refresh_bar
 }
 
 turn_off() {
@@ -30,6 +39,7 @@ turn_off() {
   notify-send -t 2000 -u normal -i dialog-information "Focus Mode Off" "You can now access all applications."
   write_status off
   hyprctl keyword general:col.active_border "rgb(cba6f7) rgb(94e2d5) 45deg" >/dev/null 2>&1
+  refresh_bar
 }
 
 case "${1:-toggle}" in

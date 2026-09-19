@@ -18,6 +18,7 @@ import json
 import datetime
 import pathlib
 import re
+import shutil
 
 
 # IMPRPOVEMENTS
@@ -408,6 +409,8 @@ def main():
             [
                 "curl",
                 "-s",
+                "--connect-timeout",
+                "5",
                 "-X",
                 "POST",
                 f"{OLLAMA_HOST}/api/generate",
@@ -417,14 +420,27 @@ def main():
                 req_json,
             ]
         )
-    except subprocess.CalledProcessError as e:
-        sys.exit(f"LLM request failed: {e}")
+    except subprocess.CalledProcessError:
+        resp = ""
 
     try:
         parsed = json.loads(resp)
         output = parsed.get("response", "") if isinstance(parsed, dict) else resp
     except json.JSONDecodeError:
         output = resp
+
+    # Ollama server unreachable (curl exit 7 → empty resp) or no response:
+    # fall back to the Claude CLI so the numpad key still works off-network.
+    if not output.strip():
+        claude = shutil.which("claude")
+        if not claude:
+            sys.exit("LLM request failed (Ollama unreachable, no claude CLI)")
+        try:
+            output = run_subproc(
+                [claude, "-p", "--model", "haiku"], input_text=final_prompt
+            )
+        except subprocess.CalledProcessError as e:
+            sys.exit(f"LLM request failed (Ollama + claude fallback): {e}")
 
     cfg = prompt_obj.capture_config
     if cfg is not None:
