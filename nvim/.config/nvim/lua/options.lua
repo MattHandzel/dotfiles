@@ -115,7 +115,10 @@ o.updatetime = 250
 -- go to previous/next line with h,l,left arrow and right arrow
 -- when cursor reaches end/beginning of line
 opt.whichwrap:append("<>[]hl")
-vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { focusable = false })
+-- vim.lsp.with() is deprecated (":checkhealth vim.deprecated"), and so is
+-- overriding vim.lsp.handlers["textDocument/hover"]. Hover options are now
+-- passed straight to vim.lsp.buf.hover(), so focusable = false moved to the
+-- K mapping in configs/lspconfig.lua.
 -- g.mapleader = " "
 
 -- disable some default providers
@@ -182,11 +185,13 @@ vim.opt.foldexpr = "nvim_treesitter#foldexpr()"
 -- Silence the log; raise to "WARN"/"DEBUG" temporarily when debugging a server.
 -- This lives in options.lua, not configs/lspconfig.lua, because the latter is
 -- lazy-loaded on LSP attach — too late, and skipped entirely in headless runs.
-vim.lsp.set_log_level("OFF")
+-- (vim.lsp.set_log_level() is deprecated; vim.lsp.log.set_level() replaces it.)
+vim.lsp.log.set_level(vim.lsp.log.levels.OFF)
 
 -- Belt and braces: if the level is ever raised and forgotten, drop the log at
 -- startup once it passes 50MB so it can never silently reach GB scale again.
-local ok, logpath = pcall(vim.lsp.get_log_path)
+-- (vim.lsp.get_log_path() is deprecated; vim.lsp.log.get_filename() replaces it.)
+local ok, logpath = pcall(vim.lsp.log.get_filename)
 if ok and logpath then
 	local stat = vim.uv.fs_stat(logpath)
 	if stat and stat.size > 50 * 1024 * 1024 then

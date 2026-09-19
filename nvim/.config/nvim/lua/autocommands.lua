@@ -261,3 +261,13 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 		end
 	end,
 })
+
+-- Timed autosave (replaces pocco81/auto-save.nvim -- see the module header for
+-- why that plugin could not be configured). Required here rather than from a
+-- lazy spec so that :ReloadConfig re-runs it; the module stops its previous
+-- timer on reload instead of stacking a second one.
+require("configs.autosave")
+
+-- Rename timestamp-named notes (1789411698-ZTCV.md) after their `# title` on
+-- write, re-pointing the buffer and rewriting backlinks.
+require("configs.note_rename")

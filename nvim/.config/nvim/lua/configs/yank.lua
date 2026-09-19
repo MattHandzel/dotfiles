@@ -199,11 +199,111 @@ local function url_at_cursor()
 	return line:match("%[.-%]%((.-)%)") or line:match("%a[%w+.-]*://[^%s)%]\"'>]+")
 end
 
+-- --- rich text --------------------------------------------------------------
+
+--- Markdown with its YAML frontmatter removed.
+--- pandoc would swallow a well-formed block as metadata anyway, but a vault
+--- note's frontmatter is not always well-formed YAML (unquoted wikilinks, stray
+--- colons), and a parse error there would fail the whole conversion.
+local function strip_frontmatter(markdown)
+	if not markdown:match("^%-%-%-\n") then
+		return markdown
+	end
+	local body = markdown:match("^%-%-%-\n.-\n%-%-%-\n(.*)$") or markdown:match("^%-%-%-\n.-\n%.%.%.\n(.*)$")
+	return body or markdown
+end
+
+--- Put HTML on the system clipboard as a *flavour*, not as text.
+--- This is the whole point of the map: Substack, Gmail and Docs paste formatted
+--- text when the clipboard carries an HTML flavour, and literal `<h1>` tags when
+--- it carries the same HTML as plain text. `markdown` rides along as the
+--- plain-text flavour so a paste into a terminal, or back into a note, still
+--- gets something sensible instead of nothing.
+local function set_clipboard_html(html, markdown)
+	if vim.fn.has("mac") == 1 then
+		-- macOS has no pbcopy equivalent of `wl-copy -t text/html`: pbcopy writes
+		-- one flavour and cannot be told to write public.html. AppleScript can,
+		-- via a hex `«data HTML...»` literal. The script goes through a file
+		-- rather than `osascript -e` because that literal is as long as the
+		-- document and would blow the argument limit on a long note.
+		local hex = (html:gsub(".", function(c)
+			return string.format("%02x", string.byte(c))
+		end))
+		local md_file, scpt = vim.fn.tempname(), vim.fn.tempname() .. ".scpt"
+		vim.fn.writefile(vim.split(markdown, "\n"), md_file)
+		vim.fn.writefile({
+			("set h to «data HTML%s»"):format(hex),
+			('set t to (read POSIX file "%s" as «class utf8»)'):format(md_file),
+			"set the clipboard to {«class HTML»:h, string:t}",
+		}, scpt)
+		local res = vim.system({ "osascript", scpt }, { text = true }):wait()
+		vim.fn.delete(md_file)
+		vim.fn.delete(scpt)
+		if res.code ~= 0 then
+			return false, vim.trim(res.stderr ~= "" and res.stderr or "osascript failed")
+		end
+		return true
+	end
+
+	-- Wayland: one flavour only, same as the `md2substack` alias.
+	if vim.fn.executable("wl-copy") == 1 then
+		local res = vim.system({ "wl-copy", "-t", "text/html" }, { stdin = html, text = true }):wait()
+		if res.code ~= 0 then
+			return false, vim.trim(res.stderr ~= "" and res.stderr or "wl-copy failed")
+		end
+		return true
+	end
+
+	return false, "no HTML-capable clipboard tool (need osascript or wl-copy)"
+end
+
+--- Convert `markdown` to HTML and put it on the clipboard as rich text.
+local function copy_as_html(markdown, label)
+	markdown = vim.trim(strip_frontmatter(markdown or ""))
+	if markdown == "" then
+		copy(nil, label)
+		return
+	end
+	if vim.fn.executable("pandoc") ~= 1 then
+		vim.notify("pandoc is not on PATH", vim.log.levels.ERROR, { title = "Yank" })
+		return
+	end
+
+	local pandoc = vim.system({ "pandoc", "-f", "markdown", "-t", "html" }, { stdin = markdown, text = true }):wait()
+	if pandoc.code ~= 0 then
+		vim.notify("pandoc failed: " .. vim.trim(pandoc.stderr or ""), vim.log.levels.ERROR, { title = "Yank" })
+		return
+	end
+
+	local ok, err = set_clipboard_html(pandoc.stdout or "", markdown)
+	if not ok then
+		vim.notify(err, vim.log.levels.ERROR, { title = "Yank" })
+		return
+	end
+
+	-- The `+` register is deliberately left alone: writing to it would clobber
+	-- the HTML flavour we just set with a plain-text one. `"` still gets the
+	-- markdown, so `p` pastes it inside nvim.
+	vim.fn.setreg('"', markdown)
+	local count = select(2, markdown:gsub("\n", "")) + 1
+	vim.notify(
+		("%d line%s as HTML"):format(count, count == 1 and "" or "s"),
+		vim.log.levels.INFO,
+		{ title = "Yanked " .. label }
+	)
+end
+
+--- The text of the current visual selection, or nil when it is empty.
+local function visual_selection()
+	local lines = vim.fn.getregion(vim.fn.getpos("v"), vim.fn.getpos("."), { type = vim.fn.mode() })
+	return #lines > 0 and table.concat(lines, "\n") or nil
+end
+
 -- --- maps -------------------------------------------------------------------
 
-local function map(lhs, fn, desc, opts)
+local function map(lhs, fn, desc, opts, mode)
 	opts = vim.tbl_extend("force", { desc = "Yank " .. desc, silent = true }, opts or {})
-	vim.keymap.set("n", lhs, fn, opts)
+	vim.keymap.set(mode or "n", lhs, fn, opts)
 end
 
 --- Maps that make sense in any buffer.
@@ -262,6 +362,21 @@ local function note_maps(buf)
 		end
 		copy(("[[%s#%s]]"):format(note_id(buf), heading), "heading link")
 	end, "link to heading under cursor")
+
+	-- Rich text, for pasting into Substack / Gmail / Docs. Normal mode takes the
+	-- whole note (minus frontmatter), visual mode takes the selection. Same job
+	-- as the shell's `md2substack` alias, without leaving the buffer.
+	map("<leader>yH", function()
+		copy_as_html(table.concat(buf_lines(buf), "\n"), "note")
+	end, "note as rich text (HTML)", { buffer = buf })
+
+	map("<leader>yH", function()
+		local selection = visual_selection()
+		-- Leave visual mode first, so the notify does not redraw over a
+		-- selection that is about to disappear anyway.
+		vim.api.nvim_feedkeys(vim.keycode("<Esc>"), "n", false)
+		copy_as_html(selection, "selection")
+	end, "selection as rich text (HTML)", { buffer = buf }, "x")
 
 	bmap("<leader>yt", function()
 		copy(note_title(buf), "note title")

@@ -1,0 +1,28 @@
+Upstream (zbirenbaum/copilot-cmp, unmaintained -- this is HEAD) calls the
+client field `self.client.is_stopped()` with a DOT. In Neovim 0.11+ the dotted
+`client.is_stopped` field is a deprecation shim over the `client:is_stopped()`
+method, so every call emits
+
+    client.is_stopped is deprecated. Run ":checkhealth vim.deprecated" ...
+
+source.is_available() runs on essentially every completion request, and copilot
+attaches to every buffer, so this was the single noisiest line in :messages.
+
+Switching the dot to a colon calls the real method. Behaviour is identical --
+the shim just forwards to it.
+
+The `not self.client.name == "copilot"` on the same line is a separate upstream
+bug (it parses as `(not self.client.name) == "copilot"`, always false) and is
+deliberately left alone: fixing it would change which sources are offered.
+
+--- a/lua/copilot_cmp/source.lua
++++ b/lua/copilot_cmp/source.lua
+@@ -20,7 +20,7 @@ end
+ 
+ source.is_available = function(self)
+   -- client is stopped.
+-  if self.client.is_stopped() or not self.client.name == "copilot" then
++  if self.client:is_stopped() or not self.client.name == "copilot" then
+     return false
+   end
+ 

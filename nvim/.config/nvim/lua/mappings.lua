@@ -100,6 +100,33 @@ map("v", ">", ">gv")
 -- terminal
 map("t", "<Esc>", "<C-\\><C-N>", { desc = "Terminal Escape terminal mode" })
 
+-- ...and stop that map from eating a paste. kitty wraps a paste as
+-- ESC[200~ <text> ESC[201~. nvim has only 'ttimeoutlen' (50 ms by default) to
+-- decide whether a bare ESC begins a sequence, so when I/O jitter separates the
+-- ESC from the "[200~" by more than that, the map above fires instead: nvim
+-- drops to terminal-normal mode, the paste never reaches the shell, and the
+-- rest of the clipboard runs as normal-mode commands (":" opens the cmdline,
+-- "/" opens a search, "p" puts). It is silent -- it looks exactly like a dead
+-- paste key.
+--
+-- Widen the window only while terminal mode is active, which is where pastes
+-- land; normal editing keeps a 50 ms ESC. The only cost is that leaving a
+-- terminal with ESC can take up to 250 ms. Revert by deleting this block.
+-- 2026-09-16, Oops run 20260916-120719.
+local term_esc_window = vim.api.nvim_create_augroup("TermEscWindow", { clear = true })
+vim.api.nvim_create_autocmd("TermEnter", {
+	group = term_esc_window,
+	callback = function()
+		vim.o.ttimeoutlen = 250
+	end,
+})
+vim.api.nvim_create_autocmd("TermLeave", {
+	group = term_esc_window,
+	callback = function()
+		vim.o.ttimeoutlen = 50
+	end,
+})
+
 -- new terminals
 map("n", "<leader>tv", function()
 	require("nvchad.term").new({ pos = "sp", size = 0.3 })
@@ -481,9 +508,42 @@ end, { noremap = true, desc = "Restore last session" })
 -- 	{ noremap = true, silent = true }
 -- )
 
--- yanky mappings
-vim.keymap.set({ "n", "x" }, "p", "<Plug>(YankyPutAfter)")
-vim.keymap.set({ "n", "x" }, "P", "<Plug>(YankyPutBefore)")
+-- True when the system clipboard holds an image. Linux: wl-paste. macOS:
+-- AppleScript's `clipboard info` lists PNGf/TIFF for screenshots (kbshot,
+-- ⌘⇧⌃4); without this branch every image paste on the Mac silently did nothing
+-- (Oops 2026-09-14 17:04, `Register "+" is empty`).
+local function clipboard_holds_image()
+	if vim.fn.has("mac") == 1 then
+		local res = vim.system({ "osascript", "-e", "clipboard info" }, { text = true }):wait()
+		local info = res.stdout or ""
+		return res.code == 0 and (info:find("PNGf", 1, true) or info:find("TIFF", 1, true)) ~= nil
+	end
+	local ok, proc = pcall(vim.system, { "wl-paste", "--list-types" }, { text = true })
+	if not ok then
+		return false -- no wl-paste (non-wayland session)
+	end
+	local res = proc:wait()
+	return res.code == 0 and (res.stdout or ""):find("image/", 1, true) ~= nil
+end
+
+-- yanky mappings. In a markdown buffer, `p`/`P` from the clipboard register
+-- when it has no text but an image routes to :ObsidianPasteImg instead of
+-- failing with `Register "+" is empty`.
+local function put_or_paste_image(plug)
+	return function()
+		if
+			vim.bo.filetype == "markdown"
+			and vim.v.register == "+"
+			and vim.fn.getreg("+") == ""
+			and clipboard_holds_image()
+		then
+			return "<Esc><Cmd>ObsidianPasteImg<CR>"
+		end
+		return plug
+	end
+end
+vim.keymap.set({ "n", "x" }, "p", put_or_paste_image("<Plug>(YankyPutAfter)"), { expr = true })
+vim.keymap.set({ "n", "x" }, "P", put_or_paste_image("<Plug>(YankyPutBefore)"), { expr = true })
 vim.keymap.set({ "n", "x" }, "gp", "<Plug>(YankyGPutAfter)")
 vim.keymap.set({ "n", "x" }, "gP", "<Plug>(YankyGPutBefore)")
 
@@ -510,9 +570,28 @@ vim.keymap.set("i", "C-Z", "<Esc>ui", { noremap = true })
 vim.keymap.set("n", "<leader>gl", "<cmd>ObsidianFollowLink<CR>i", { noremap = true })
 vim.keymap.set("n", "<leader>od", "<cmd>ObsidianDailies<CR>", { noremap = true })
 vim.keymap.set("n", "<leader>op", "<cmd>ObsidianPasteImg<CR>i", { noremap = true })
--- Visual mode: extract the highlighted text into a new note. `:` prefills the
--- `'<,'>` range so ObsidianExtractNote receives the selection.
-vim.keymap.set("x", "<leader>oe", ":ObsidianExtractNote<CR>", { noremap = true, silent = true, desc = "Obsidian Extract Note from selection" })
+-- Visual mode: extract the highlighted text into a new note.
+--
+-- This used to be `:ObsidianExtractNote<CR>`, relying on `:` to prefill the
+-- `'<,'>` range. Those marks are resolved when the command runs, so after the
+-- buffer shrinks (an extract removes the lines it took) a re-fire resolves
+-- `'>` past the last line and raises `E19: Mark has invalid line number`
+-- (2026-09-16 10:15, what-do-i-want-what-do-i-care-about.md, 28L -> 17L).
+--
+-- Clamping the range like <M-r> does would be wrong here: a silently clamped
+-- range extracts the WRONG lines into a real note. So the marks are validated
+-- instead -- out of range means say so and do nothing -- and the in-range case
+-- passes concrete line numbers, which cannot go stale.
+vim.keymap.set("x", "<leader>oe", function()
+	vim.cmd("normal! \27") -- leave visual so '< and '> are set for this selection
+	local last = vim.api.nvim_buf_line_count(0)
+	local first_line, last_line = vim.fn.line("'<"), vim.fn.line("'>")
+	if first_line < 1 or last_line < first_line or last_line > last then
+		vim.notify("Selection is stale -- re-select the lines to extract", vim.log.levels.WARN)
+		return
+	end
+	vim.cmd(("%d,%dObsidianExtractNote"):format(first_line, last_line))
+end, { noremap = true, silent = true, desc = "Obsidian Extract Note from selection" })
 
 -- <leader>p: paste a clipboard image through the Obsidian flow (same one the
 -- insert-mode <C-v> routes to): name prompt with timestamp default → confirm →
@@ -697,15 +776,7 @@ end
 --     ("LSP[harper_ls]: Error INVALID_SERVER_MESSAGE", 2026-08-25).
 --     nvim_paste keeps the literal-insert semantics of <C-r><C-o>+ (no
 --     auto-indent cascade, no abbreviation re-triggering).
-local function clipboard_holds_image()
-	local ok, proc = pcall(vim.system, { "wl-paste", "--list-types" }, { text = true })
-	if not ok then
-		return false -- no wl-paste (non-wayland session)
-	end
-	local res = proc:wait()
-	return res.code == 0 and (res.stdout or ""):find("image/", 1, true) ~= nil
-end
-
+-- (clipboard_holds_image is defined above the yanky mappings.)
 vim.keymap.set("i", "<C-v>", function()
 	if vim.bo.filetype == "markdown" and clipboard_holds_image() then
 		vim.cmd("stopinsert")

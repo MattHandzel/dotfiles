@@ -1,5 +1,14 @@
 -- Setup language servers.
-local lspconfig = require("lspconfig")
+--
+-- The `require("lspconfig")` framework (lspconfig.<server>.setup{}) is
+-- deprecated and is removed in nvim-lspconfig v3.0.0; it warned on every
+-- start. The replacement is Neovim's own vim.lsp.config()/vim.lsp.enable().
+-- nvim-lspconfig still ships each server's cmd/filetypes/root_markers as
+-- lsp/<server>.lua, and vim.lsp.config() merges the table below over those
+-- defaults, so only the overrides need to live here. See :help lspconfig-nvim-0.11.
+--
+-- NvChad's require("nvchad.configs.lspconfig").defaults() runs first and
+-- already applies capabilities + on_init globally via vim.lsp.config("*", ...).
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities.offsetEncoding = { "utf-16" }
 
@@ -15,15 +24,15 @@ vim.diagnostic.config({
 	},
 })
 
-lspconfig.rust_analyzer.setup({
+vim.lsp.config("rust_analyzer", {
 	-- Server-specific settings. See `:help lspconfig-setup`
 	settings = {
 		["rust-analyzer"] = {},
 	},
 })
 
-lspconfig.pyright.setup({})
-lspconfig.ts_ls.setup({
+vim.lsp.config("pyright", {})
+vim.lsp.config("ts_ls", {
 	capabilities = capabilities,
 	settings = {
 		typescript = {
@@ -39,7 +48,19 @@ lspconfig.ts_ls.setup({
 -- Obsidian vault (a git repo) plus every project repo you edit markdown in — which
 -- left ~1.3GB of idle JVMs parked in zram on this 16GB machine. harper's footprint
 -- is negligible. Dictionary lives in spell/harper-dict.txt (one word per line).
-lspconfig.harper_ls.setup({
+--
+-- FOOTGUN (fixed 2026-09-16): harper keys the user dictionary case-insensitively
+-- and the LAST matching line wins, so listing both `bluedot` and `Bluedot` left only
+-- the capitalized form usable and flagged every lowercase use as a misspelling —
+-- silently, with no error anywhere. A lowercase entry already matches every
+-- capitalization (`dnd` covers `DnD` and `DND`), so keep ONE lowercase entry per
+-- word and never add a capitalized variant of a word already present. The
+-- `HarperAddToUserDict` code action appends the word exactly as typed, so it can
+-- reintroduce a duplicate; check with:
+--   awk '{print tolower($0)}' spell/harper-dict.txt | sort | uniq -d
+-- Affix flags (`CAIS/M`) are NOT supported here and break the entry; possessives
+-- must be listed in full (`CAIS's`).
+vim.lsp.config("harper_ls", {
 	filetypes = { "markdown", "gitcommit" },
 	settings = {
 		["harper-ls"] = {
@@ -82,7 +103,7 @@ lspconfig.harper_ls.setup({
 
 -- ltex-ls kept for LaTeX ONLY. tex is rare, so its heavy JVM now spawns rarely
 -- instead of once per markdown git root. Markdown moved to harper_ls above.
-lspconfig.ltex.setup({
+vim.lsp.config("ltex", {
 	cmd = {
 		"env",
 		"JAVA_TOOL_OPTIONS=-Xms128m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Dorg.bsplines.ltexls.logLevel=WARNING",
@@ -112,17 +133,17 @@ lspconfig.ltex.setup({
 -- 		["rust-analyzer"] = {},
 -- 	},
 -- })
-lspconfig.hls.setup({
+vim.lsp.config("hls", {
 	filetypes = { "haskell", "lhaskell", "cabal" },
 })
 
-lspconfig.nixd.setup({})
+vim.lsp.config("nixd", {})
 
-lspconfig.clangd.setup({ capabilities = capabilities })
-lspconfig.denols.setup({})
+vim.lsp.config("clangd", { capabilities = capabilities })
+vim.lsp.config("denols", {})
 
 -- go setup
-lspconfig.gopls.setup({
+vim.lsp.config("gopls", {
 	cmd = { "gopls", "serve" },
 	capabilities = capabilities,
 	settings = {
@@ -133,6 +154,22 @@ lspconfig.gopls.setup({
 			staticcheck = true,
 		},
 	},
+})
+
+-- vim.lsp.config() only registers a config; vim.lsp.enable() is what
+-- makes Neovim actually launch the server for matching buffers.
+-- (lua_ls is enabled by NvChad's defaults(), so it is not repeated here.)
+vim.lsp.enable({
+	"rust_analyzer",
+	"pyright",
+	"ts_ls",
+	"harper_ls",
+	"ltex",
+	"hls",
+	"nixd",
+	"clangd",
+	"denols",
+	"gopls",
 })
 
 -- Global mappings.
@@ -173,7 +210,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		-- is the more useful behaviour in prose anyway.
 		local client = vim.lsp.get_client_by_id(ev.data.client_id)
 		if client and client:supports_method("textDocument/hover") then
-			vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+			-- focusable = false used to be applied globally in options.lua via the
+			-- deprecated vim.lsp.with(); it is a plain hover option now.
+			vim.keymap.set("n", "K", function()
+				vim.lsp.buf.hover({ focusable = false })
+			end, opts)
 		end
 		if client and client:supports_method("textDocument/signatureHelp") then
 			vim.keymap.set("n", "<M-K>", vim.lsp.buf.signature_help, opts)

@@ -90,53 +90,76 @@ return {
 	},
 	{
 		"nvim-treesitter/nvim-treesitter",
+		-- Pinned to `main` explicitly: that is now the repo's default branch and
+		-- it is a full rewrite. `main` DELETED the `nvim-treesitter.configs`
+		-- module, so the old
+		--   require("nvim-treesitter.configs").setup{ ensure_installed, highlight }
+		-- call errors with "module 'nvim-treesitter.configs' not found" and the
+		-- whole plugin fails to configure. On `main` the plugin's only job is
+		-- installing parsers + their queries; turning highlighting ON is now
+		-- Neovim's own vim.treesitter.start(), done in the autocmd below.
+		branch = "main",
 		config = function()
-			require("nvim-treesitter.configs").setup({
-				-- Languages worth highlighting INSIDE ```fences``` in markdown.
-				-- markdown/markdown_inline are omitted deliberately: Neovim
-				-- bundles those parsers, and listing them here would compile a
-				-- redundant second copy.
-				ensure_installed = {
-					"norg",
-					"python",
-					"bash",
-					"json",
-					"yaml",
-					"nix",
-					"javascript",
-					"typescript",
-					"c",
-					"cpp",
-					"toml",
-					"diff",
-					-- Required by nabla.nvim, NOT for fence highlighting.
-					-- plugins/latex.lua auto-enables nabla on every markdown
-					-- FileType; nabla's mathzone check calls
-					-- vim.treesitter.get_parser(buf, "latex") and, when that
-					-- parser is missing, nvim_echo's "Latex parser not found..."
-					-- on every note open. It echoes rather than errors, so the
-					-- pcall around enable() cannot suppress it -- the parser has
-					-- to actually exist.
-					"latex",
-				},
-				highlight = { enable = true },
-			})
+			local ts = require("nvim-treesitter")
 
-			-- nvim-treesitter only starts its highlighter for parsers IT
-			-- installed. markdown's parser ships inside Neovim itself, so
-			-- nvim-treesitter never counts it as installed and never starts —
-			-- which is why fenced blocks had no colour and `**bold**` did not
-			-- render. Start it explicitly for markdown; that also activates the
-			-- injections query, which is what highlights ```python as python.
-			-- Colours come from the capture groups (@keyword, @markup.strong…),
-			-- so the active base46/NvChad theme controls them.
+			-- Prepends stdpath("data")/site to the runtimepath. That is where
+			-- `main` installs parsers (site/parser) AND the queries that go with
+			-- them (site/queries) -- unlike the old branch, the checkout itself
+			-- ships no top-level queries/ directory.
+			ts.setup()
+
+			-- Languages worth highlighting INSIDE ```fences``` in markdown.
+			-- markdown/markdown_inline are omitted deliberately: Neovim
+			-- bundles those parsers, and listing them here would compile a
+			-- redundant second copy.
+			local ensure_installed = {
+				-- norg is deliberately absent. The `main` branch dropped it
+				-- from its parser list, so asking for it only produced
+				-- "skipping unsupported language: norg" on every start.
+				-- neorg ships its own parser instead, via the
+				-- tree-sitter-norg luarock in lazy-rocks/.
+				"python",
+				"bash",
+				"json",
+				"yaml",
+				"nix",
+				"javascript",
+				"typescript",
+				"c",
+				"cpp",
+				"toml",
+				"diff",
+				-- Required by nabla.nvim, NOT for fence highlighting.
+				-- plugins/latex.lua auto-enables nabla on every markdown
+				-- FileType; nabla's mathzone check calls
+				-- vim.treesitter.get_parser(buf, "latex") and, when that
+				-- parser is missing, nvim_echo's "Latex parser not found..."
+				-- on every note open. It echoes rather than errors, so the
+				-- pcall around enable() cannot suppress it -- the parser has
+				-- to actually exist.
+				"latex",
+			}
+
+			-- Async, and a no-op for anything already on disk, so this costs
+			-- nothing on a warm start. Replaces the old ensure_installed field.
+			ts.install(ensure_installed)
+
+			-- `main` starts no highlighter by itself -- there is no
+			-- highlight = { enable = true } any more. vim.treesitter.start()
+			-- resolves the language from the buffer's filetype and errors when
+			-- no parser exists, hence the pcall. This also covers markdown,
+			-- whose parser ships inside Neovim rather than being installed
+			-- here, and it is what activates the injections query that
+			-- highlights ```python fences as python. Colours come from the
+			-- capture groups (@keyword, @markup.strong...), so the active
+			-- base46/NvChad theme still controls them.
 			vim.api.nvim_create_autocmd("FileType", {
-				group = vim.api.nvim_create_augroup("MarkdownTreesitter", { clear = true }),
-				pattern = { "markdown" },
+				group = vim.api.nvim_create_augroup("UserTreesitterStart", { clear = true }),
+				pattern = "*",
 				callback = function(args)
-					pcall(vim.treesitter.start, args.buf, "markdown")
+					pcall(vim.treesitter.start, args.buf)
 				end,
-				desc = "Treesitter highlighting + fence injections for markdown",
+				desc = "Treesitter highlighting + injections where a parser exists",
 			})
 		end,
 	},
@@ -570,6 +593,16 @@ return {
 				-- Trigger completion at 2 chars.
 				min_chars = 2,
 			},
+			-- Name new notes after their title (what-i-will-do.md) instead of a
+			-- timestamp. Untitled notes keep the timestamp id and are renamed from
+			-- their `# H1` on write -- see configs/note_rename.lua.
+			note_id_func = function(title)
+				local slug = title and require("configs.note_rename").slug(title) or ""
+				if slug ~= "" then
+					return slug
+				end
+				return require("obsidian.util").zettel_id()
+			end,
 			note_frontmatter_func = function(note)
 				-- List of articles to exclude from capitalization
 				local articles = {
@@ -608,14 +641,20 @@ return {
 				-- Add the title of the note as an alias
 				if note.title == nil and note.id then
 					note.title = capitalize_title_simple(note.id:gsub("%-", " "))
-					print("We are setting the title to", note.id)
 				end
 
 				if note.title then
+					-- Every write recomputes the title, so only say something when
+					-- it is actually new to the note -- an unchanged title already
+					-- sits in `aliases` and needs no notification.
+					local is_new = not vim.tbl_contains(note.aliases or {}, note.title)
 					note:add_alias(note.title)
 					local formatted_name = note.title:lower():gsub("%s", "-")
 					if formatted_name ~= note.title:lower() then
 						note:add_alias(formatted_name)
+					end
+					if is_new then
+						vim.notify(("Note title: %s"):format(note.title), vim.log.levels.INFO)
 					end
 					-- formatted_name = capitalize_title_simple(note.title:gsub("%-", " "))
 					-- if formatted_name ~= note.title then
@@ -1050,6 +1089,12 @@ return {
 	{
 		"zbirenbaum/copilot-cmp",
 		dependencies = "copilot.lua",
+		-- Upstream is unmaintained and calls the DEPRECATED dotted
+		-- client.is_stopped field from is_available(), which runs on nearly
+		-- every completion request -- so Neovim 0.11+ printed
+		-- "client.is_stopped is deprecated" over and over. Re-applied on every
+		-- clone/update. Idempotent; fails loudly. See patches/*.patch for why.
+		build = "~/dotfiles/nvim/.config/nvim/patches/apply-copilot-cmp-is-stopped-patch.sh",
 		opts = {},
 		config = function(_, opts)
 			local copilot_cmp = require("copilot_cmp")
@@ -1156,7 +1201,9 @@ return {
 			{
 				"<leader><space>",
 				function()
-					Snacks.picker.smart()
+					-- Plain smart() outside a vault; inside one, also matches notes by
+					-- frontmatter aliases. See configs/vault_alias_search.lua.
+					require("configs.vault_alias_search").smart()
 				end,
 				desc = "Smart Find Files",
 			},
@@ -1859,41 +1906,13 @@ return {
 		lazy = false, -- or ft = 'toggleterm' if you use toggleterm.nvim
 		version = "1.*",
 	},
-	{
-		event = "VeryLazy",
-		"pocco81/auto-save.nvim",
-		config = function()
-			require("auto-save").setup({
-				enabled = true, -- start auto-save when the plugin is loaded (i.e. when your package manager loads it)
-				execution_message = {
-					message = function() -- message to print on save
-						return ("AutoSave: saved at " .. vim.fn.strftime("%H:%M:%S"))
-					end,
-					dim = 0.18, -- dim the color of `message`
-					cleaning_interval = 1250, -- (milliseconds) automatically clean MsgArea after displaying `message`. See :h MsgArea
-				},
-				trigger_events = {}, -- vim events that trigger auto-save. See :h events
-				condition = function(buf)
-					local fn = vim.fn
-					local utils = require("auto-save.utils.data")
+	-- pocco81/auto-save.nvim removed: its setup() options never took effect
+	-- (plugin/auto-save.lua enables itself with the DEFAULT trigger_events
+	-- before lazy runs config(), and debounce_delay is captured at require
+	-- time), so it saved on every InsertLeave/TextChanged no matter what was
+	-- configured -- reformatting prose mid-thought via BufWritePre -> conform.
+	-- Replaced by the 5-minute timer in lua/configs/autosave.lua.
 
-					if fn.getbufvar(buf, "&modifiable") == 1 and utils.not_in(fn.getbufvar(buf, "&filetype"), {}) then
-						return true -- met condition(s), can save
-					end
-					return false -- can't save
-				end,
-				write_all_buffers = true, -- write all buffers when the current one meets `condition`
-				debounce_delay = 300000, -- saves the file at most every `debounce_delay` milliseconds
-				callbacks = { -- functions to be executed at different intervals
-					enabling = nil, -- ran when enabling auto-save
-					disabling = nil, -- ran when disabling auto-save
-					before_asserting_save = nil, -- ran before checking `condition`
-					before_saving = nil, -- ran before doing the actual save
-					after_saving = nil, -- ran after doing the actual save
-				},
-			})
-		end,
-	},
 
 	{
 		"nvim-pack/nvim-spectre",
@@ -2727,6 +2746,28 @@ return {
 		keys = { { "<leader>B", "<cmd>Beeper<cr>", desc = "Beeper inbox" } },
 		config = function()
 			require("beeper").setup({ notify = "mentions" })
+		end,
+	},
+	{
+		dir = "~/Projects/kms-capture.nvim",
+		-- Capture into the KMS inbox (capture/raw_capture) from Neovim: like
+		-- <leader>oe (Obsidian extract) but through `kms capture`, with a tag
+		-- field that completes from the vault vocabulary. The selection is
+		-- replaced by [[<capture_id>|<title>]]; :checkhealth kms-capture.
+		cmd = "KmsCapture",
+		keys = {
+			{ "<leader>ok", ":KmsCapture<CR>", mode = "x", desc = "KMS capture from selection" },
+			{ "<leader>ok", "<cmd>KmsCapture<CR>", mode = "n", desc = "KMS capture (empty form)" },
+		},
+		config = function()
+			require("kms-capture").setup({
+				-- On this Mac the CLI lives in the KMS-rebuild venv, not on PATH.
+				kms_bin_fallbacks = {
+					vim.fn.expand("~/Projects/KMS-rebuild/.venv-darwin/bin/kms"),
+					vim.fn.expand("~/Projects/KMS-rebuild/.venv/bin/kms"),
+					vim.fn.expand("~/.nix-profile/bin/kms"),
+				},
+			})
 		end,
 	},
 	{
