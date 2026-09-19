@@ -61,8 +61,8 @@
     # "zap" — until then a mismatch silently means "zap would delete an app".
     casks = [
       # ── browsers ──
-      "zen" # the cask is "zen", not "zen-browser" (renamed upstream)
-      "arc" # Matt's daily driver since 2026-09-10; Zen stayed installed
+      "thebrowsercompany-dia" # 2026-09-12: migrating from Zen to Dia (projects/zen-to-arc-migration in the vault; "dia" is a diagram editor)
+      "zen" # stays installed as the rollback until Dia has proven itself; the cask is "zen", not "zen-browser" (renamed upstream)
       "google-chrome"
       "brave-browser"
 
@@ -94,13 +94,11 @@
       "homerow" # keyboard-click any UI element
       "kitty" # the cask, not nixpkgs: the nix build loses code signing and
       # with it Accessibility/Screen-Recording grants
-      # espanso: the CASK IS STILL INSTALLED but deliberately unmanaged.
-      # Raycast Snippets took over the ;; triggers on 2026-09-10
-      # (~/migration/raycast-snippets.json from ~/migration/espanso-to-raycast.py)
-      # and `espanso service unregister` removed its LaunchAgent. Listing it
-      # here would be honest but would also invite `rebuild` to re-register it;
-      # uninstall it by hand when you are sure Raycast covers every trigger.
-      # "espanso"
+      # Espanso IS in use (reality check 2026-09-12): the 2026-09-10 note here
+      # claimed Raycast Snippets had replaced it, but Espanso.app was installed,
+      # its LaunchAgent (com.federicoterzi.espanso) running and 33 triggers live.
+      # The ;; matches are now nix-managed in modules/home/darwin/espanso.nix.
+      "espanso"
 
       # ── infrastructure ──
       "orbstack"
@@ -130,6 +128,9 @@
       "shottr" # OCR + annotated screenshots (satty + ocr-screenshot)
       "jordanbaird-ice" # hide menu-bar clutter; cask is "jordanbaird-ice"
       "mysides" # scripted Finder sidebar order
+      "linearmouse" # trackpad/mouse speed past the System Settings cap (2026-09-13, carolannejiang.com/computer-things)
+      "flux-app" # f.lux: sunset colour shift; goes warmer (1900K) than Night Shift and ramps (2026-09-13 Oops)
+      "bluesnooze" # Bluetooth off while asleep: the Totem's BLE link woke the Mac every 60 s after lid close (2026-09-14 Oops)
 
       # ── fonts and glyphs ──
       "font-jetbrains-mono-nerd-font"

@@ -84,12 +84,23 @@
       AppleICUForce24HourTime = true;
 
       "com.apple.swipescrolldirection" = true; # natural scrolling ON
-      "com.apple.keyboard.fnState" = true; # F-keys are F-keys; kanata owns layers
+      # false = the top row does brightness/volume/media by default and F1-F12 need Fn.
+      # It was true ("kanata owns layers") but kanata is disabled on the Mac
+      # (com.matth.kanata.plist.disabled), so the brightness keys were bare F1/F2
+      # with nothing behind them. Matt, 2026-09-12: "brightness key is brightness".
+      "com.apple.keyboard.fnState" = false;
       "com.apple.mouse.tapBehavior" = 1; # tap to click
-      "com.apple.trackpad.scaling" = 2.5;
+      # Pointer speed. The slider in System Settings is 0..3; 2.5 was fast
+      # enough that small targets needed a second pass. Lowered 2026-09-11.
+      # The external-mouse twin lives in CustomUserPreferences below:
+      # nix-darwin has no NSGlobalDomain option for mouse.scaling.
+      "com.apple.trackpad.scaling" = 1.5;
       "com.apple.trackpad.enableSecondaryClick" = true;
       "com.apple.trackpad.forceClick" = true;
       "com.apple.sound.beep.feedback" = 0; # no volume-change feedback beep
+      # Alert at a quarter volume (design lane, POLISH.md); UI sounds are
+      # handled by the custom uiaudio key below.
+      "com.apple.sound.beep.volume" = 0.25;
     };
 
     trackpad = {
@@ -121,7 +132,7 @@
       # mac-personalize.sh). Downloads stack gone; Trash stays.
       persistent-apps = [
         "/Applications/kitty.app"
-        "/Applications/Zen.app"
+        "/Applications/Dia.app" # 2026-09-12: Zen -> Dia (Zen.app stays installed as rollback)
         "/Applications/Obsidian.app"
         "/Applications/Slack.app"
         "/Applications/Beeper Desktop.app"
@@ -195,8 +206,21 @@
       LoginwindowText = "Matt Handzel · handzelmatthew@gmail.com";
     };
     screensaver = {
+      # Still require auth after the screen sleeps — FileVault is on and this is
+      # the machine's real lock. What changed 2026-09-11 is the GRACE PERIOD.
+      #
+      # It was 0, meaning the instant the screen slept, Matt had to authenticate
+      # again. Step away for thirty seconds, come back, authenticate. That is
+      # the prompt that felt like "macOS asks for my password constantly".
+      # 300s means a short break costs nothing and a real absence still locks.
+      #
+      # This is the ONLY thing here worth loosening. Touch ID already covers
+      # sudo (security.pam.services.sudo_local below), the System Settings
+      # padlocks and the unlock prompt itself. Auto-login is deliberately NOT
+      # enabled and FileVault stays on; neither would remove a prompt that Touch
+      # ID cannot already answer, and both trade real security for nothing.
       askForPassword = true;
-      askForPasswordDelay = 0;
+      askForPasswordDelay = 300;
     };
     # Globe/Fn key does nothing on its own; kanata owns the layers.
     hitoolbox.AppleFnUsageType = "Do Nothing";
@@ -212,8 +236,81 @@
         AppleFnUsageType = 0; # same as hitoolbox.AppleFnUsageType, NSGlobalDomain copy
         "com.apple.sound.uiaudio.enabled" = 0; # UI sound effects off
         "com.apple.sound.beep.flash" = 0;
+        # "Boop" in System Settings is Tink.aiff on disk (the 14.x rename).
+        "com.apple.sound.beep.sound" = "/System/Library/Sounds/Tink.aiff";
         # The nix-darwin option only accepts 1; the live value is 0 (no corner click).
         "com.apple.trackpad.trackpadCornerClickBehavior" = 0;
+        # External-mouse tracking speed, the twin of trackpad.scaling above.
+        # macOS keeps a SEPARATE speed per input kind, so lowering the trackpad
+        # alone leaves a plugged-in mouse at the system default. There is no
+        # nix-darwin NSGlobalDomain option for this key (there is one for
+        # trackpad.scaling), so it goes through the raw-defaults escape hatch.
+        "com.apple.mouse.scaling" = 1.5;
+      };
+
+      # The "Reopen windows when logging back in" checkbox in the restart dialog.
+      # It is ticked by default and it is sticky, so every restart resurrected
+      # whatever happened to be open at the time — Zoom left over from a call,
+      # OBS from a recording, stray kitty windows. That is a DIFFERENT mechanism
+      # from Login Items (System Settings > General > Login Items, which holds
+      # only Raycast/Slack/Wispr Flow) and from NSQuitAlwaysKeepsWindows above,
+      # which only restores a single app's windows when that app is relaunched.
+      #
+      # nix-darwin's system.defaults.loginwindow set does not cover this key, so
+      # it goes through the raw-defaults escape hatch. It is the per-USER
+      # com.apple.loginwindow domain, which is what
+      # `defaults read com.apple.loginwindow TALLogoutSavesState` reads.
+      #
+      # NOT SUFFICIENT ON ITS OWN (found 2026-09-12): this key is only honoured
+      # on a loginwindow-driven logout. `sudo reboot` skips that, and macOS
+      # then replays its periodic running-apps snapshot at the next login. The
+      # real fix — the -currentHost copy of both keys plus an emptied, immutable
+      # snapshot file — lives in modules/home/darwin/no-app-resume.nix.
+      "com.apple.loginwindow".TALLogoutSavesState = false;
+      "com.apple.loginwindow".LoginwindowLaunchesRelaunchApps = false;
+
+      # Free cmd+H inside kitty so it can be Control-H.
+      #
+      # macOS Hide is an APP MENU key equivalent, and NSApplication resolves
+      # menu equivalents before the app ever sees the keystroke — which is why
+      # a plain `map cmd+h` in kitty.conf silently loses. NSUserKeyEquivalents
+      # is the supported way to reassign a menu item's shortcut (it is what
+      # System Settings > Keyboard > Keyboard Shortcuts > App Shortcuts writes).
+      #
+      # Parking "Hide kitty" on cmd-opt-ctrl-shift-H does not disable the menu
+      # item, it just moves it somewhere Matt will never press. The title must
+      # match kitty's menu entry EXACTLY, lowercase k included, or macOS
+      # silently ignores it. Takes effect when kitty next launches.
+      # Every kitty menu item below claims a Command key that Matt wants as a
+      # CONTROL chord in the terminal. Menu key equivalents are resolved by
+      # NSApplication BEFORE the app sees the keystroke, so kitty's own `map`
+      # silently loses to all of them — which is why cmd+w, cmd+d, cmd+k, cmd+l,
+      # cmd+r and cmd+v appeared dead while cmd+j/o/u/i worked fine. The working
+      # ones simply have no menu entry.
+      #
+      # Read the live list with:
+      #   osascript -e 'tell application "System Events" to tell process "kitty" ...'
+      #   (AXMenuItemCmdChar on each menu item)
+      #
+      # Each is PARKED on cmd-opt-ctrl-shift-<key>, not deleted: the menu item
+      # still works, it just no longer squats on a single-Command chord. Titles
+      # must match kitty's menu EXACTLY or macOS ignores the entry silently.
+      # Quit kitty, New Tab, New OS Window, Find and Minimize are left alone —
+      # nothing in kitty.nix wants those letters.
+      "net.kovidgoyal.kitty".NSUserKeyEquivalents = {
+        "Hide kitty" = "@~^$h";
+        "Close OS Window" = "@~^$w"; # frees cmd+w -> C-w
+        "Close Window" = "@~^$d"; # frees cmd+d -> C-d
+        "Clear Scrollback" = "@~^$k"; # frees cmd+k -> C-k
+        "Clear Screen" = "@~^$l"; # frees cmd+l -> C-l
+        "Reset" = "@~^$r"; # frees cmd+r -> C-r
+        "Paste" = "@~^$v"; # frees cmd+v -> C-v (clipboard is cmd+shift+v)
+        # frees cmd+s -> C-s (Save in nvim). This one was worse than merely
+        # dead: Secure Keyboard Entry is a TOGGLE, so every cmd+s silently
+        # flipped kitty in or out of a mode that blocks other processes from
+        # reading the keyboard — which takes Karabiner and text expanders down
+        # with it.
+        "Secure Keyboard Entry" = "@~^$s";
       };
 
       "com.apple.dock".no-bouncing = true; # no Dock icon bounce for attention
@@ -274,6 +371,12 @@
       "com.apple.symbolichotkeys".AppleSymbolicHotKeys = {
         "64".enabled = false;
         "65".enabled = false;
+        # 32/34 = Ctrl+Up (Mission Control), 33/35 = Ctrl+Down (application
+        # windows). Off so kitty gets Ctrl+Up/Down for the font size.
+        "32".enabled = false;
+        "33".enabled = false;
+        "34".enabled = false;
+        "35".enabled = false;
       };
 
       # ── third-party apps whose prefs the personalize script set ──
@@ -362,7 +465,10 @@
   ];
 
   # screencapture.location above is only honoured if the directory exists.
-  system.activationScripts.screenshotsDir.text = ''
+  # postActivation, not a custom name: nix-darwin silently ignores
+  # activationScripts entries it does not know (found 2026-09-12 when the
+  # Dia policy under a custom name never ran; this one never had either).
+  system.activationScripts.postActivation.text = ''
     mkdir -p "/Users/${username}/Pictures/Screenshots"
     chown ${username} "/Users/${username}/Pictures/Screenshots" || true
   '';

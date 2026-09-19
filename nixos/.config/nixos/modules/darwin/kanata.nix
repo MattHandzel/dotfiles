@@ -69,12 +69,24 @@ in {
     fi
   '';
 
+  # DISABLED 2026-09-10 at Matt's request: he does not want home-row mods on the
+  # built-in MacBook keyboard, and home-row mods are the only thing kanata does
+  # here. The daemon is left defined (config still builds, still lints) but does
+  # not start, so the built-in keyboard is stock macOS: Control, Option and
+  # Command in their normal places, no hold-tap behaviour anywhere.
+  #
+  # The one casualty is the (lalt ralt) -> F14 chord that fired speech-to-text.
+  # Bind a plain hotkey inside Wispr Flow instead.
+  #
+  # To turn it back on: set RunAtLoad and KeepAlive back to true, then
+  #   sudo launchctl enable  system/com.matth.kanata
+  #   sudo launchctl bootstrap system /Library/LaunchDaemons/com.matth.kanata.plist
   launchd.daemons.kanata = {
     serviceConfig = {
       Label = "com.matthandzel.kanata";
       ProgramArguments = [stableBin "--cfg" "${cfg}" "--nodelay"];
-      RunAtLoad = true;
-      KeepAlive = true;
+      RunAtLoad = false;
+      KeepAlive = false;
       StandardOutPath = "/var/log/kanata.log";
       StandardErrorPath = "/var/log/kanata.log";
       ProcessType = "Interactive";
