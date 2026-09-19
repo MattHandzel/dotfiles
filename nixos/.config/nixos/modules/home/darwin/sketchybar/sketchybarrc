@@ -8,7 +8,8 @@
 # accent glyph per item so the right side scans without reading.
 #
 #   left    workspaces (AeroSpace)  ·  front app + window title
-#   centre  clock  ·  next calendar event
+#   notch   clock ◖notch◗ next calendar event   (q / e positions hug the notch;
+#           on a notch-less display they sit either side of the centre line)
 #   right   cpu  mem  battery  wifi  volume  tailscale
 #
 # Layout of this directory:
@@ -72,6 +73,8 @@ sketchybar --default \
 # AeroSpace fires this from `exec-on-workspace-change` in ~/.aerospace.toml
 # with FOCUSED_WORKSPACE in the environment.
 sketchybar --add event aerospace_workspace_change
+# ~/.local/bin/oops fires this when it starts a Claude repair session.
+sketchybar --add event oops_update
 
 # ═══════════════════════════════ LEFT ═════════════════════════════════════
 
@@ -88,25 +91,26 @@ sketchybar --add item aerospace.updater left \
   --subscribe aerospace.updater aerospace_workspace_change front_app_switched
 
 # A fixed anchor: workspace items are always inserted *before* this, so the
-# order left→right survives adds and removes.
+# order left→right survives adds and removes. label.max_chars is re-set by
+# front_app.sh from the room the workspace strip leaves before the clock.
+# front_app is now a HIDDEN ANCHOR only. The app name + window title used to
+# draw here; it was noise (you already know what you are looking at) so it is
+# switched off. The item itself stays because plugins/aerospace.sh inserts every
+# workspace pill `before front_app` to keep the strip ordered.
 sketchybar --add item front_app left \
   --set front_app \
-    updates=on \
-    update_freq=4 \
-    icon.font="$APP_FONT:Regular:15.0" \
-    icon.color="$TEXT" \
-    icon.padding_left=10 \
-    icon.padding_right=6 \
-    label.font="$FONT:Medium:12.0" \
-    label.color="$SUBTEXT1" \
-    label.max_chars=56 \
-    script="$PLUGIN_DIR/front_app.sh" \
-  --subscribe front_app front_app_switched aerospace_workspace_change
+    drawing=off \
+    updates=off \
+    icon.drawing=off \
+    label.drawing=off \
+    background.drawing=off \
+    width=0
 
-# ══════════════════════════════ CENTRE ════════════════════════════════════
+# ═══════════════════════════ AROUND THE NOTCH ═════════════════════════════
 
 # Clock: `EEE d MMM  HH:mm` — what the laptop showed, minus the seconds.
-sketchybar --add item clock center \
+# Position q = right-aligned against the left edge of the notch.
+sketchybar --add item clock q \
   --set clock \
     update_freq=10 \
     icon="󰃭" \
@@ -118,14 +122,16 @@ sketchybar --add item clock center \
 # Today's next event. Reads the read-only Google agenda the calendar-agenda
 # launchd agent writes (same file waybar read on the laptop); falls back to
 # icalBuddy against Calendar.app; hides itself when there is nothing.
-sketchybar --add item calendar center \
+# Position e = left-aligned against the right edge of the notch.
+sketchybar --add item calendar e \
   --set calendar \
     update_freq=120 \
     icon="󰸗" \
     icon.color="$TEAL" \
+    icon.padding_left=10 \
     label.color="$SUBTEXT1" \
-    label.max_chars=44 \
-    click_script="open -a Morgen" \
+    label.max_chars=34 \
+    click_script="open -a Calendar" \
     script="$PLUGIN_DIR/calendar.sh"
 
 # ══════════════════════════════ RIGHT ═════════════════════════════════════
@@ -184,6 +190,37 @@ sketchybar --add item cpu right \
     icon.color="$PEACH" \
     click_script="open -na kitty --args --title btop -e btop" \
     script="$PLUGIN_DIR/cpu.sh"
+
+# Oops: red life-ring + count while a Claude repair session runs (tmux -L oops);
+# hidden otherwise. Added last so it sits leftmost of the right cluster. Click
+# jumps to the "oops" workspace where the session's terminal is parked.
+sketchybar --add item oops right \
+  --set oops \
+    drawing=off \
+    update_freq=10 \
+    icon="" \
+    icon.color="$RED" \
+    icon.font="$FONT:Bold:13.0" \
+    label.color="$TEXT" \
+    click_script="$PLUGIN_DIR/oops.sh click" \
+    script="$PLUGIN_DIR/oops.sh" \
+  --subscribe oops oops_update
+
+# Focus Mode pill: peach "󱫠 Focus" when on, a dim glyph when off. Click to
+# toggle. Its 60 s timer also turns focus on during Deep work calendar blocks
+# (plugins/focus.sh). Added last so it sits leftmost of the right cluster.
+sketchybar --add item focus right \
+  --set focus \
+    update_freq=60 \
+    icon="󱫪" \
+    icon.font="$FONT:Bold:14.0" \
+    icon.padding_left=8 \
+    label.font="$FONT:SemiBold:12.0" \
+    label.drawing=off \
+    background.height=22 \
+    click_script="$PLUGIN_DIR/focus.sh click" \
+    script="$PLUGIN_DIR/focus.sh" \
+  --subscribe focus aerospace_workspace_change system_woke
 
 # ── go ────────────────────────────────────────────────────────────────────
 sketchybar --update

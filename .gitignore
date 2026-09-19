@@ -7,3 +7,6 @@ tmux/.tmux/plugins/
 # python bytecode from py_compile / test runs
 __pycache__/
 *.pyc
+
+# Claude Code per-machine permission grants
+.claude/settings.local.json

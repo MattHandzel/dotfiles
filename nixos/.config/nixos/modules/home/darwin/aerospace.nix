@@ -20,10 +20,30 @@
   ...
 }: let
   helpers = import ./aerospace-helpers.nix {inherit pkgs;};
+
+  # Numpad 4 (Hyprland KP_4): clipboard -> prompt-llm (picker for the prompt)
+  # -> clipboard. Unlike the Linux one-liner, an empty result (picker
+  # cancelled, LLM down) leaves the clipboard alone instead of wiping it.
+  promptLlmClipboard = pkgs.writeShellScript "prompt-llm-clipboard" ''
+    notify-send "prompt-llm" "Pick a prompt…" || true
+    out="$(wl-paste | ${pkgs.python3}/bin/python3 ${../scripts/scripts/prompt-llm.py} 2>>"''${TMPDIR:-/tmp}/prompt-llm.log")" || true
+    if [ -n "$out" ]; then
+      printf '%s' "$out" | wl-copy
+      notify-send "Copied to clipboard" "prompt-llm"
+    else
+      notify-send "prompt-llm" "No output (see \$TMPDIR/prompt-llm.log)"
+    fi
+  '';
 in {
+  # The bindings call the helpers by STORE PATH, not by name. home.packages
+  # land in /etc/profiles/per-user, which only nix-darwin (root) refreshes, so
+  # a home-manager-only activation used to leave the hotkeys on stale helper
+  # builds for hours (2026-09-12). Store paths change the moment the toml does.
   home.packages = [
     helpers.focus-app
     helpers.dwindle-open
+    helpers.aerospace-retile
+    helpers.monitor-mode
   ];
 
   home.file.".aerospace.toml".text = ''
@@ -51,6 +71,10 @@ in {
       # a 2px Hyprland border, but Retina + no gaps wants more).
       # borders is single-instance: this call re-configures the brew-services one.
       'exec-and-forget /opt/homebrew/bin/borders style=round width=4.0 hidpi=on active_color=0xffcba6f7 inactive_color=0xff45475a',
+      # Adopt windows that were already open before AeroSpace started. Without
+      # this they never get the on-window-detected catch-all and sit outside the
+      # layout, which reads as "tiling is broken" after every restart.
+      'exec-and-forget ${helpers.aerospace-retile}/bin/aerospace-retile',
     ]
 
     start-at-login = true
@@ -58,19 +82,52 @@ in {
     enable-normalization-opposite-orientation-for-nested-containers = true
 
     # Hyprland ran dwindle with 0 gaps. Same here.
-    accordion-padding = 0
+    # 30, not 0. Accordion stacks windows; at padding 0 they land EXACTLY on
+    # top of each other, which is visually indistinguishable from tiling being
+    # broken. A visible offset makes an accidental accordion obvious instead of
+    # looking like a bug. (alt-s returns a workspace to tiles.)
+    accordion-padding = 30
 
     default-root-container-layout = 'tiles'
     default-root-container-orientation = 'auto'
 
     # Follow focus between AeroSpace and macOS's own notion of the active window.
     on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+
+    # Mouse follows focus, as the counterpart to focus-follows-mouse above. Without
+    # it the two fight: anything that focuses a window programmatically (the KMS
+    # hotkey, focus-app, alt-<n>) sets focus, then the stationary pointer instantly
+    # takes it back to whatever it happens to be hovering. The `lazy` variant only
+    # moves the pointer when it is not already inside the target, which is what
+    # stops the two rules looping.
+    on-focus-changed = ['move-mouse window-lazy-center']
+
+    # Focus-follows-mouse is OFF on macOS, unlike the Hyprland config it was ported
+    # from. AeroSpace only knows about windows the Accessibility API reports, and
+    # overlay panels do not appear there: `aerospace list-windows --all` lists
+    # Wispr Flow but never Raycast. So while Raycast is up, the pointer is sitting
+    # "over" whatever tile is behind the panel, and the first mouse twitch makes
+    # AeroSpace focus that tile out from under it. Same story for any other
+    # non-activating panel. AeroSpace exposes no per-app exclusion — `enabled` is
+    # the only key under focus-follows-mouse — so the feature has to be off for
+    # Raycast to be usable. Mouse-follows-focus (on-focus-changed, above) stays on,
+    # which is the half that actually matters for keyboard-driven navigation.
+    # Flip this back to true if you ever want to re-test it.
+    focus-follows-mouse.enabled = false
     automatically-unhide-macos-hidden-apps = true
 
     # SketchyBar redraws its workspace strip on every switch; FOCUSED_WORKSPACE
     # rides along in the environment so the plugin does not have to ask again.
+    # The Oops recorder (~/.hammerspoon/oops.lua) rides the same hook, so its
+    # keystroke log knows which workspace each key landed in (2026-09-12).
+    # Focus Mode's 15 s gate (~/.hammerspoon/focus_gate.lua) rides it too: every
+    # route onto a distracting workspace — hotkey, bar click, alt-tab, Cmd-Tab —
+    # is a workspace change, so this is the one chokepoint (2026-09-14).
+    # Entering workspace "oops" opens the window of any Oops session started
+    # since (the launcher no longer opens one: it flashed on Matt's workspace,
+    # Oops 20260914-083945).
     exec-on-workspace-change = ['/bin/bash', '-c',
-      '/opt/homebrew/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE'
+      'if [ "$AEROSPACE_FOCUSED_WORKSPACE" = oops ]; then "$HOME/.local/bin/oops" --view >/dev/null 2>&1 & fi; /opt/homebrew/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE; /usr/bin/open -g "hammerspoon://oops-ws?prev=$AEROSPACE_PREV_WORKSPACE&cur=$AEROSPACE_FOCUSED_WORKSPACE"; /usr/bin/open -g "hammerspoon://focus-gate-ws?prev=$AEROSPACE_PREV_WORKSPACE&cur=$AEROSPACE_FOCUSED_WORKSPACE"'
     ]
 
     # Keep every bound workspace alive even when empty (config-version = 2 makes
@@ -92,20 +149,25 @@ in {
     outer.right = 0
 
     [exec]
-    env-vars = { PATH = '/opt/homebrew/bin:${config.home.homeDirectory}/.local/bin:/etc/profiles/per-user/matth/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin' }
+    env-vars = { PATH = '/opt/homebrew/bin:/Users/matth/.local/bin:/etc/profiles/per-user/matth/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin' }
 
     [mode.main.binding]
 
     # ── focus / move / resize ──────────────────────────────────────────────────
-    alt-h = 'focus left'
-    alt-j = 'focus down'
-    alt-k = 'focus up'
-    alt-l = 'focus right'
+    # At the workspace edge focus crosses onto the monitor in that direction
+    # (macOS display arrangement decides which key reaches the external).
+    alt-h = 'focus --boundaries all-monitors-outer-frame left'
+    alt-j = 'focus --boundaries all-monitors-outer-frame down'
+    alt-k = 'focus --boundaries all-monitors-outer-frame up'
+    alt-l = 'focus --boundaries all-monitors-outer-frame right'
 
-    alt-shift-h = 'move left'
-    alt-shift-j = 'move down'
-    alt-shift-k = 'move up'
-    alt-shift-l = 'move right'
+    # App workspace -> the whole workspace hops monitors; numbered workspace ->
+    # the window moves and crosses monitors at the edge (Hyprland parity,
+    # move-smart in aerospace-helpers.nix).
+    alt-shift-h = 'exec-and-forget ${helpers.move-smart}/bin/move-smart left'
+    alt-shift-j = 'exec-and-forget ${helpers.move-smart}/bin/move-smart down'
+    alt-shift-k = 'exec-and-forget ${helpers.move-smart}/bin/move-smart up'
+    alt-shift-l = 'exec-and-forget ${helpers.move-smart}/bin/move-smart right'
 
     alt-shift-left = 'resize width -50'
     alt-shift-right = 'resize width +50'
@@ -149,17 +211,20 @@ in {
     alt-tab = 'workspace-back-and-forth'
 
     # ── window control ─────────────────────────────────────────────────────────
-    alt-q = 'close'
+    # alt-q (close) lives in ~/.hammerspoon/hover_close.lua: it closes the window
+    # under the pointer, not the focused one (Oops 20260914-145958).
     alt-f = 'fullscreen'
-    alt-space = 'layout floating tiling'
+    alt-space = 'exec-and-forget ${helpers.float-toggle}/bin/float-toggle'   # = layout floating tiling, logged (Oops 20260913-155858)
     alt-s = 'layout tiles horizontal vertical'
 
     # ── launchers ──────────────────────────────────────────────────────────────
     # Super+T on Linux was `kitty -e tmux -L hypr new-session`; keep the socket name
     # so tmux-sessionizer and the M-n binding attach to the same server.
-    alt-t = 'exec-and-forget dwindle-open open -na kitty --args -e tmux -L hypr new-session'
-    alt-shift-t = ['layout floating', 'exec-and-forget open -na kitty']
-    alt-b = 'exec-and-forget dwindle-open open -a "Arc"'
+    alt-t = 'exec-and-forget ${helpers.dwindle-open}/bin/dwindle-open open -na kitty --args -e tmux -L hypr new-session'
+    # Floats the NEW kitty only. 'layout floating' first floated whatever was
+    # focused at the keypress (Oops 20260913-154056).
+    alt-shift-t = 'exec-and-forget ${helpers.float-open}/bin/float-open open -na kitty'
+    alt-b = 'exec-and-forget ${helpers.dwindle-open}/bin/dwindle-open open -a "Dia"'   # Dia from 2026-09-12 (Arc 2 h, Zen 09-10 → 09-12); Zen stays installed as rollback
 
     # Raycast takes Vicinae's slot (alt-d), plus emoji and clipboard history on the
     # same letters they had under Hyprland. These are raycast:// deeplinks rather
@@ -179,36 +244,163 @@ in {
     # which are Hyprland-specific.
 
     # ── modes ──────────────────────────────────────────────────────────────────
+    alt-shift-x = 'exec-and-forget password-picker copy'
+    # Option+C is the colour picker (Hyprland had hyprpicker -a here). colour-pick
+    # is a small Swift binary using macOS's native NSColorSampler eyedropper; it
+    # copies the hex to the clipboard, same contract as hyprpicker -a.
+    alt-c = 'exec-and-forget colour-pick'
+    alt-shift-c = 'exec-and-forget grammar-check'   # moved off Option+C
+    alt-shift-m = 'exec-and-forget clip2md'
+    alt-shift-s = 'exec-and-forget screenshot-search'
+    alt-shift-v = 'exec-and-forget link-search'
+    alt-slash = 'exec-and-forget /Users/matth/Projects/quick-reference-hotkey/quick-ref.sh'
+    # Oops (2026-09-12): last 90 s of keys + context -> Claude, logs + fixes. Was
+    # mac-assistant (hand-written port of nixos-assistant; its gum prompt had no TTY here).
+    # ⌥` is NOT bound here any more (2026-09-13): as `alt-backtick = exec-and-forget
+    # /usr/bin/open -g hammerspoon://oops` the first press was lost in 2 of 3 runs
+    # (AeroSpace -> open -> LaunchServices -> Hammerspoon; the recorder saw the key,
+    # no trigger ran). ~/.hammerspoon/oops.lua binds keycode 50 itself; binding it
+    # here too would leave two Carbon registrations fighting over one combo.
+    alt-shift-b = 'exec-and-forget /opt/homebrew/bin/sketchybar --reload'
+    alt-f1 = 'exec-and-forget ${helpers.keybinds}/bin/keybinds'   # cheatsheet; was an unmanaged ~/.local/bin copy until 2026-09-12
+    alt-n = 'exec-and-forget kms-capture'   # Hyprland SUPER+N (kms-capture)
+    # Sleep the machine. Hyprland had SUPER+Escape -> systemctl suspend.
+    # The 1 s delay lets ⌥/⎋ be released first: a key-up that lands after
+    # sleepnow has started counts as user activity and cancels the sleep.
+    alt-esc = 'exec-and-forget sleep 1 && /usr/bin/pmset sleepnow'
+    alt-w = 'exec-and-forget wallpaper-picker'
+    alt-shift-esc = 'exec-and-forget shutdown-script'
+    alt-shift-f = 'fullscreen --no-outer-gaps'
+    alt-ctrl-shift-1 = 'move-node-to-workspace 11'
+    alt-ctrl-shift-2 = 'move-node-to-workspace 12'
+    alt-ctrl-shift-3 = 'move-node-to-workspace 13'
+    alt-ctrl-shift-4 = 'move-node-to-workspace 14'
+    alt-ctrl-shift-5 = 'move-node-to-workspace 15'
+    alt-ctrl-shift-6 = 'move-node-to-workspace 16'
+    alt-ctrl-shift-7 = 'move-node-to-workspace 17'
+    alt-ctrl-shift-8 = 'move-node-to-workspace 18'
+    alt-ctrl-shift-9 = 'move-node-to-workspace 19'
+    alt-ctrl-shift-0 = 'move-node-to-workspace 20'
+    # Hyprland SUPER+SHIFT+R ran the `rebuild` alias silently. An alias is invisible
+    # to a script, and a silent unattended switch on a dirty tree is a bad hotkey, so
+    # this runs the same command in a visible kitty window instead.
+    alt-shift-r = 'exec-and-forget open -na kitty --args --title rebuild -e bash -lc "cd ~/dotfiles/nixos/.config/nixos && git add --all . && sudo -H darwin-rebuild switch --flake .#matts-mac; echo; read -p \"(enter to close)\""'
+    # ── prediction tracker (Hyprland SUPER+P / SUPER+SHIFT+P) ──────────────────
+    # Both halves already work on this Mac: the capture popup and the resolve UI
+    # live in the vault, and predict-ui runs as a launchd agent on port 7337.
+    # Only these two bindings were never ported.
+    alt-p = 'exec-and-forget /Users/matth/Obsidian/Main/scripts/predictions/predict-popup'
+    alt-shift-p = 'exec-and-forget open http://127.0.0.1:7337'
+
     alt-shift-space = 'mode leader'
     alt-g = 'mode translate'
     alt-shift-g = 'mode translate-alt'
 
     # App hotkeys, ported 1:1 from the laptop (SUPER ALT <key> = focus_app <app> name:<workspace>)
-    # Apple Calendar, not Morgen (Matt, 2026-09-10). Morgen stays installed;
-    # it just no longer owns this hotkey or the calendar workspace.
-    alt-ctrl-c = 'exec-and-forget focus-app "Calendar" calendar'
-    alt-ctrl-u = 'exec-and-forget focus-app "UltiMaker Cura" cura'
-    alt-ctrl-o = 'exec-and-forget focus-app "Obsidian" obsidian'
-    alt-ctrl-k = 'exec-and-forget focus-app "Slack" slack'
-    alt-ctrl-e = 'exec-and-forget focus-app "Finder" dolphin'
-    alt-ctrl-i = 'exec-and-forget focus-app "WhatsApp" wasistlos'
-    alt-ctrl-a = 'exec-and-forget focus-app "Anki" anki'
-    alt-ctrl-p = 'exec-and-forget focus-app "PrusaSlicer" PrusaSlicer'
-    alt-ctrl-d = 'exec-and-forget focus-app "Discord" discord'
-    alt-ctrl-m = 'exec-and-forget focus-app "Superhuman" superhuman'
-    alt-ctrl-g = 'exec-and-forget focus-app "GIMP" gimp'
-    alt-ctrl-y = 'exec-and-forget focus-app "Gemini" gemini'
-    alt-ctrl-h = 'exec-and-forget focus-app "Beeper Desktop" beeper'
-    alt-ctrl-s = 'exec-and-forget focus-app "Spotify" spotify'
-    alt-ctrl-t = 'exec-and-forget focus-app "Tasker" tasker'
-    alt-ctrl-l = 'exec-and-forget focus-app "Linear" linear'
-    alt-ctrl-z = 'exec-and-forget focus-app "zoom.us" zoom'
-    alt-ctrl-b = 'exec-and-forget focus-app --title "^btop" btop -- open -na kitty --args --title btop -e btop'
-    alt-ctrl-f = 'exec-and-forget focus-app --title "^yazi" yazi -- open -na kitty --args --title yazi -e yazi'
-    alt-ctrl-n = 'exec-and-forget focus-app --title "^notetaker" notetaker -- open -na kitty --args --title notetaker -e nvim ${config.home.homeDirectory}/Obsidian/Main'
-    alt-ctrl-w = 'exec-and-forget focus-app "Wispr Flow" wispr'
+    # Google Calendar as a Chrome --app window (calendar.sh), like the laptop's
+    # Chromium one; "^google calendar" skips Dia tabs ("Work: ...").
+    alt-ctrl-c = 'exec-and-forget ${helpers.focus-app}/bin/focus-app --title "^google calendar" calendar -- calendar'
+    alt-ctrl-u = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "UltiMaker Cura" cura'
+    alt-ctrl-o = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Obsidian" obsidian'
+    alt-ctrl-k = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Slack" slack'
+    alt-ctrl-e = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Finder" dolphin'
+    alt-ctrl-i = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "WhatsApp" wasistlos'
+    alt-ctrl-a = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Anki" anki'
+    alt-ctrl-p = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "PrusaSlicer" PrusaSlicer'
+    alt-ctrl-d = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Discord" discord'
+    alt-ctrl-m = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Superhuman" superhuman'
+    alt-ctrl-g = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "GIMP" gimp'
+    alt-ctrl-y = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Gemini" gemini'
+    # AeroSpace reports the app as "Beeper" (bundle "Beeper Desktop.app"), so the
+    # old "Beeper Desktop" match never found the window (2026-09-14).
+    alt-ctrl-h = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Beeper" beeper -- open -a "Beeper Desktop"'
+    alt-ctrl-s = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Spotify" spotify'
+    # Ctrl-Opt-T: kitty running nvim on the Taskwarrior list, the Linux setup's
+    # task view. FIXED 2026-09-12: this used to read
+    #   focus-app "Tasker" tasker
+    # which could never work. focus-app's second positional is a WORKSPACE, not
+    # a command, and its window match is on macOS APP NAME — which for a kitty
+    # window is "kitty", never "Tasker". So it matched nothing, tried to switch
+    # to a workspace called "tasker", and never launched anything.
+    # Matching on window TITLE is right here, because `tasker` sets
+    # `--title tasker` on the kitty window it opens.
+    # 2026-09-13 (Oops 175757): Matt wants it on its OWN workspace. Without a
+    # workspace argument focus-app dwindle-opened it next to whatever was
+    # focused (ws 1), so the workspace is now passed explicitly.
+    alt-ctrl-t = 'exec-and-forget ${helpers.focus-app}/bin/focus-app --title "^tasker" tasker -- tasker'
+    alt-ctrl-l = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Linear" linear'
+    alt-ctrl-z = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "zoom.us" zoom'
+    alt-ctrl-b = 'exec-and-forget ${helpers.focus-app}/bin/focus-app --title "^btop" btop -- open -na kitty --args --title btop -e btop'
+    alt-ctrl-f = 'exec-and-forget ${helpers.focus-app}/bin/focus-app --title "^yazi" yazi -- open -na kitty --args --title yazi -e yazi'
+    # Passing the vault as an ARGUMENT to nvim opened the right tree but left
+    # the WORKING DIRECTORY wherever AeroSpace was launched from (launchd, so
+    # effectively /). Everything that resolves paths against cwd — :grep, the
+    # telescope pickers, :find, relative :e — searched the wrong tree.
+    # `--working-directory` makes kitty cd before it execs, so nvim inherits the
+    # vault as cwd, and `nvim .` then opens the directory listing as before.
+    alt-ctrl-n = 'exec-and-forget ${helpers.focus-app}/bin/focus-app --title "^notetaker" notetaker -- open -na kitty --args --title notetaker --working-directory /Users/matth/Obsidian/Main -e nvim .'
+    alt-ctrl-w = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Wispr Flow" wispr'
     alt-ctrl-v = 'exec-and-forget smart-clipboard-picker'
     alt-ctrl-r = 'exec-and-forget open -a Raycast'
+
+    # Outer-RIGHT pinky (pos 31) tap -> focus Claude.
+    # The keyboard sends Option+Ctrl+F13 for this. It joins the same
+    # Option+Ctrl family as the nineteen app hotkeys above rather than
+    # inventing a second convention, and unlike a bare F13 no app can
+    # claim it for itself. Every free letter in the family was taken.
+    alt-ctrl-f13 = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Claude" claude'
+
+    # Print Screen, ported from Hyprland (",Print" and "ALT, Print").
+    # A PC Print Screen key arrives on macOS as F13; karabiner.nix additionally
+    # folds a literal print_screen keycode onto F13, so both spellings land here
+    # and a MacBook without the key can still reach it from Raycast.
+    #   bare Print   -> drag a region; PNG saved to ~/Pictures/Screenshots AND
+    #                   put on the clipboard
+    #   Option+Print -> drag a region; tesseract OCRs it and the TEXT lands on
+    #                   the clipboard
+    # Both are kbshot, already packaged in the flake — the same binary the
+    # Hyprland CTRL,Print and CTRL ALT,Print bindings called. ESC aborts and
+    # writes nothing.
+    f13 = 'exec-and-forget kbshot'
+    alt-f13 = 'exec-and-forget kbshot --ocr && /usr/bin/pbpaste > "$HOME/Pictures/Screenshots/$(date +%Y-%m-%d-%Ih%Mm%Ss).txt"'   # + dated .txt, as ALT,Print did on Linux
+
+    # The same two, reachable from the BUILT-IN keyboard, which has no F13 and
+    # no Print Screen key at all — so the pair above is dead whenever the
+    # programmable keyboard is unplugged. Three modifiers deliberately: a bare
+    # alt-o would eat Option+O, which types 'ø'. Mnemonic S = screenshot,
+    # O = OCR. Change the letters here if they clash with muscle memory.
+    alt-ctrl-shift-s = 'exec-and-forget kbshot'
+    alt-ctrl-shift-o = 'exec-and-forget kbshot --ocr'
+
+    # ── Ported 2026-09-12 from the Hyprland binds the migration audit found
+    # missing (modules/home/hyprland/config.nix:420-435, 561-599, 584). ──
+    # Print (shift-f13): drag a region -> PNG in ~/Pictures/Screenshots AND on
+    # the clipboard, like `grimblast copy area` + wl-paste on Linux.
+    shift-f13 = 'exec-and-forget f="$HOME/Pictures/Screenshots/$(date +%Y-%m-%d-%Ih%Mm%Ss).png"; mkdir -p "$(dirname "$f")"; /usr/bin/screencapture -i "$f" && [ -s "$f" ] && /usr/bin/osascript -e "set the clipboard to (read (POSIX file \"$f\") as «class PNGf»)"'
+    ctrl-shift-f13 = 'exec-and-forget kbshot --corners'   # Hyprland CTRL SHIFT,Print
+    alt-shift-f13 = 'exec-and-forget kbshot --abort'      # Hyprland SUPER SHIFT,Print
+    # Paste the 2nd-most-recent clip without reordering history (CONTROL ALT,V on
+    # Linux; alt-ctrl-v here is the smart clipboard picker, so shift joins).
+    alt-ctrl-shift-v = 'exec-and-forget paste-second-clip'
+    # read-aloud (Linux CONTROL ALT R/SPACE/S/,/.): every alt-ctrl letter is an
+    # app hotkey here, so it is a submap: alt-ctrl-shift-r then r=read,
+    # space=pause/resume, s=stop, ,/.=seek 15 s (stays in the mode), m=menu.
+    alt-ctrl-shift-r = 'mode read'
+    # Numpad keys, exactly as on the Linux desktop keyboard. The Totem sends
+    # KP_N1/KP_N2/KP_N4 from its system layer; the rest need a real numpad.
+    # 1/2/3 = dictation. On Linux 1/2 ran the stt-tune v2 whisper pipeline and
+    # SHIFT the v1 backup; on the Mac toggle-stt drives Wispr Flow for all of
+    # them (copy = also put the transcript on the clipboard).
+    keypad1 = 'exec-and-forget toggle-stt --copy'
+    keypad2 = 'exec-and-forget toggle-stt --type'
+    keypad3 = 'exec-and-forget toggle-stt --live'
+    shift-keypad1 = 'exec-and-forget toggle-stt --copy'
+    shift-keypad2 = 'exec-and-forget toggle-stt --type'
+    keypad4 = 'exec-and-forget ${promptLlmClipboard}'
+    keypad5 = 'exec-and-forget prompt-picker'
+    keypad8 = 'exec-and-forget pl-capture'
+    keypad9 = 'exec-and-forget read-aloud --menu'
+    keypad7 = 'exec-and-forget open -a Dia "https://gemini.google.com/gem/6dbcf84e326c"'
 
     [mode.leader.binding]
     # N-minute timer, the SUPER+SHIFT+SPACE leader submap from Hyprland.
@@ -224,6 +416,18 @@ in {
     0 = ['exec-and-forget leader-timer 10', 'mode main']
     esc = 'mode main'
 
+    [mode.read.binding]
+    # read-aloud transport (see alt-ctrl-shift-r above). Seeks stay in the mode
+    # so ,,,, walks back a minute; everything else returns to main.
+    r = ['exec-and-forget read-aloud', 'mode main']
+    space = ['exec-and-forget read-aloud --toggle', 'mode main']
+    s = ['exec-and-forget read-aloud --stop', 'mode main']
+    comma = 'exec-and-forget read-aloud --seek -15'
+    period = 'exec-and-forget read-aloud --seek 15'
+    m = ['exec-and-forget read-aloud --menu', 'mode main']
+    esc = 'mode main'
+    enter = 'mode main'
+
     [mode.translate.binding]
     # Raycast's Translate extension replaces the dialect/crow-translate popups.
     enter = ['exec-and-forget open -g "raycast://extensions/raycast/translator/translate"', 'mode main']
@@ -234,91 +438,203 @@ in {
     esc = 'mode main'
 
     # one workspace per hotkey app (laptop: windowrule = workspace name:<ws>, match:class/title)
+    # ── THE tiling guarantee ───────────────────────────────────────────────────
+    # AeroSpace runs only the FIRST matching on-window-detected callback unless the
+    # rule asks it to keep going. So this catch-all sits at the top, forces every
+    # newly detected window into the tiling layer, and then hands off to the
+    # app-specific workspace rules below via check-further-callbacks.
+    #
+    # Without it, anything macOS reports as a dialog/utility (System Settings, save
+    # panels, app preference windows) is detected as floating and silently refuses
+    # to split. That was the "two windows on workspace 1 but no split" bug.
+    # ── Exceptions that must run BEFORE the catch-all ────────────────────────
+    # These stop at the first match (no check-further-callbacks), so the forced
+    # `layout tiling` below never touches them. Found 2026-09-12 by listing the
+    # live tree: Wispr's "Meeting Recorder" popup, Anki's "Update Add-ons"
+    # dialog and a browser "Sign In" sheet had all been tiled as full columns and
+    # yanked to another workspace — that is what "tiling looks broken" was.
+
+    # Zoom: the meeting window is a normal window and tiles on its own; its
+    # floating toolbars, share bars and "you are muted" popups must NOT be
+    # forced into the tree. macOS's own dialog/utility verdict is right here.
     [[on-window-detected]]
-    if.app-name-regex-substring = '^Calendar$'
-    run = 'move-node-to-workspace calendar'
+    if.app-name-regex-substring = '^zoom\.us$'
+    run = ['summon-workspace zoom', 'move-node-to-workspace --focus-follows-window zoom']
 
     [[on-window-detected]]
-    if.app-name-regex-substring = '^UltiMaker\ Cura$'
-    run = 'move-node-to-workspace cura'
-
-    [[on-window-detected]]
-    if.app-name-regex-substring = '^Obsidian$'
-    run = 'move-node-to-workspace obsidian'
-
-    [[on-window-detected]]
-    if.app-name-regex-substring = '^Slack$'
-    run = 'move-node-to-workspace slack'
-
-    [[on-window-detected]]
-    if.app-name-regex-substring = '^Finder$'
-    run = 'move-node-to-workspace dolphin'
-
-    [[on-window-detected]]
-    if.app-name-regex-substring = '^WhatsApp$'
-    run = 'move-node-to-workspace wasistlos'
+    if.app-name-regex-substring = '^Wispr\ Flow$'
+    if.window-title-regex-substring = 'Recorder|Recording|Onboarding|Login|Sign'
+    run = 'layout floating'
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^Anki$'
-    run = 'move-node-to-workspace anki'
+    if.window-title-regex-substring = '^(Update Add-ons|Sync|Add|Preferences|About)'
+    run = 'layout floating'
+
+    [[on-window-detected]]
+    if.window-title-regex-substring = '^Sign [Ii]n( to| with)? '
+    run = 'layout floating'
+
+    # The Oops note box ("Oops — what went wrong?") is an osascript `display
+    # dialog`; tiled by the catch-all it filled the whole workspace (front.txt
+    # 2026-09-13: 1728x1084). A dialog floats.
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^osascript$'
+    run = 'layout floating'
+
+    # Chromium browsers open extension popups (Curius "Page Saved!"), toasts and
+    # other transient helper windows as UNTITLED windows. Tiled by the catch-all
+    # they split workspace 1 and vanish a moment later, so the page jumps back
+    # and forth (Oops 20260913-124439; a File > New Window alone spawned one).
+    # A real browser window already has a title ("Work: New Tab") when detected.
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^(Dia|Google Chrome)$'
+    if.window-title-regex-substring = '^$'
+    run = 'layout floating'
+
+    # ── The catch-all ────────────────────────────────────────────────────────
+    [[on-window-detected]]
+    check-further-callbacks = true
+    run = 'layout tiling'
+
+    # 2026-09-14: every app rule first runs `summon-workspace X`, which brings
+    # workspace X to the FOCUSED monitor, so Beeper opened while working on the
+    # external monitor appears there instead of on the laptop. Numbered
+    # workspaces (Dia on 1) are not summoned: they keep their monitor.
+    # --focus-follows-window on every app rule (2026-09-12). Without it a window
+    # launched from Raycast, Spotlight, the Dock, a link or Cmd+N was moved to
+    # its workspace and simply VANISHED from the screen you were looking at —
+    # the "apps are not being moved to the proper workspaces" report. Hyprland's
+    # `workspace name:X` rule (non-silent) followed the window; so does this.
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Calendar$'
+    run = ['summon-workspace calendar', 'move-node-to-workspace --focus-follows-window calendar']
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^UltiMaker\ Cura$'
+    run = ['summon-workspace cura', 'move-node-to-workspace --focus-follows-window cura']
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Obsidian$'
+    run = ['summon-workspace obsidian', 'move-node-to-workspace --focus-follows-window obsidian']
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Slack$'
+    run = ['summon-workspace slack', 'move-node-to-workspace --focus-follows-window slack']
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Finder$'
+    run = ['summon-workspace dolphin', 'move-node-to-workspace --focus-follows-window dolphin']
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^WhatsApp$'
+    run = ['summon-workspace wasistlos', 'move-node-to-workspace --focus-follows-window wasistlos']
+
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Anki$'
+    run = ['summon-workspace anki', 'move-node-to-workspace --focus-follows-window anki']
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^PrusaSlicer$'
-    run = 'move-node-to-workspace PrusaSlicer'
+    run = ['summon-workspace PrusaSlicer', 'move-node-to-workspace --focus-follows-window PrusaSlicer']
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^Discord$'
-    run = 'move-node-to-workspace discord'
+    run = ['summon-workspace discord', 'move-node-to-workspace --focus-follows-window discord']
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^Superhuman$'
-    run = 'move-node-to-workspace superhuman'
+    run = ['summon-workspace superhuman', 'move-node-to-workspace --focus-follows-window superhuman']
+
+    # Dia (the browser) lives on workspace 1 — alt-1 is "the browser" in muscle
+    # memory. Before this rule it had no home: Dia was relaunched three times on
+    # 2026-09-12 (18:58, 19:11, 19:41) and the 19:41 window landed on whatever
+    # workspace was focused (2), so alt-1 showed an empty desktop (Oops
+    # 20260912-205347). dwindle-open (alt-b) is unaffected: it only join-withs
+    # when the new window shares the launcher's workspace; otherwise it just
+    # times out quietly. Sign-in sheets still float (rule above the catch-all).
+    [[on-window-detected]]
+    if.app-id = 'company.thebrowser.dia'
+    run = 'move-node-to-workspace --focus-follows-window 1'
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^GIMP$'
-    run = 'move-node-to-workspace gimp'
+    run = ['summon-workspace gimp', 'move-node-to-workspace --focus-follows-window gimp']
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^Gemini$'
-    run = 'move-node-to-workspace gemini'
+    run = ['summon-workspace gemini', 'move-node-to-workspace --focus-follows-window gemini']
 
     [[on-window-detected]]
-    if.app-name-regex-substring = '^Beeper\ Desktop$'
-    run = 'move-node-to-workspace beeper'
+    if.app-id = 'com.automattic.beeper.desktop'
+    run = ['summon-workspace beeper', 'move-node-to-workspace --focus-follows-window beeper']
+
+    # Wispr Flow. alt-ctrl-w already pointed at a 'wispr' workspace, but nothing
+    # ever MOVED the window there, so it stayed wherever it opened (workspace 1)
+    # and the binding focused an empty workspace. Added 2026-09-12.
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^Wispr\ Flow$'
+    run = ['summon-workspace wispr', 'move-node-to-workspace --focus-follows-window wispr']
+
+    # The prediction capture popup (alt-p) is a transient kitty window running a
+    # gum form. Hyprland floated it via a WM_CLASS rule; macOS kitty rejects
+    # --class outright, so predict-popup passes only --title there and this rule
+    # matches that instead. Without it the popup joins the tiling tree and
+    # reshuffles every window on the workspace for the few seconds it is up.
+    [[on-window-detected]]
+    if.window-title-regex-substring = 'predict-popup'
+    run = 'layout floating'
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^Spotify$'
-    run = 'move-node-to-workspace spotify'
+    run = ['summon-workspace spotify', 'move-node-to-workspace --focus-follows-window spotify']
 
+    # The tasker window is kitty titled "tasker" (tasker.sh); the old rule
+    # matched app name '^Tasker$', which a kitty window never has, so it never
+    # moved anything (Oops 20260913-175757).
     [[on-window-detected]]
-    if.app-name-regex-substring = '^Tasker$'
-    run = 'move-node-to-workspace tasker'
+    if.app-name-regex-substring = '^kitty$'
+    if.window-title-regex-substring = '^tasker'
+    run = ['summon-workspace tasker', 'move-node-to-workspace --focus-follows-window tasker']
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^Linear$'
-    run = 'move-node-to-workspace linear'
+    run = ['summon-workspace linear', 'move-node-to-workspace --focus-follows-window linear']
 
+    # The Oops Claude terminal is parked on its own workspace WITHOUT taking
+    # focus (2026-09-13, Matt: "I would want that terminal to go to a different
+    # workspace … a notification on my bar that shows it's running"). The
+    # sketchybar `oops` item (plugins/oops.sh) shows the live count; clicking it
+    # or the workspace pill goes there. Before this it floated over the broken app.
     [[on-window-detected]]
-    if.app-name-regex-substring = '^zoom\.us$'
-    run = 'move-node-to-workspace zoom'
+    if.app-name-regex-substring = '^kitty$'
+    if.window-title-regex-substring = '^oops( |$)'
+    run = 'move-node-to-workspace oops'
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^kitty$'
     if.window-title-regex-substring = '^btop'
-    run = 'move-node-to-workspace btop'
+    run = ['summon-workspace btop', 'move-node-to-workspace --focus-follows-window btop']
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^kitty$'
     if.window-title-regex-substring = '^yazi'
-    run = 'move-node-to-workspace yazi'
+    run = ['summon-workspace yazi', 'move-node-to-workspace --focus-follows-window yazi']
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^kitty$'
     if.window-title-regex-substring = '^notetaker'
-    run = 'move-node-to-workspace notetaker'
+    run = ['summon-workspace notetaker', 'move-node-to-workspace --focus-follows-window notetaker']
+
+    # Dayflow had no home, so it tiled onto whatever workspace was focused and
+    # shared ws notetaker with the notes (Oops 20260913-175833: "Dayflow should
+    # have its own workspace").
+    [[on-window-detected]]
+    if.app-id = 'teleportlabs.com.Dayflow'
+    run = ['summon-workspace dayflow', 'move-node-to-workspace --focus-follows-window dayflow']
 
     [[on-window-detected]]
     if.app-name-regex-substring = '^Claude$'
-    run = 'move-node-to-workspace claude'
+    run = ['summon-workspace claude', 'move-node-to-workspace --focus-follows-window claude']
   '';
 }

@@ -13,6 +13,30 @@
     input_file="$${1/#\~/$HOME}"
     curl -sS http://${sharedVariables.serverIpAddress}/v1/audio/transcriptions -F file=@"$input_file"
   '';
+  # macOS half of `md2substack`. On Wayland `wl-copy -t text/html` puts the HTML
+  # on the clipboard as an HTML *flavour*, which is what makes Substack/Gmail
+  # paste it as formatted text. macOS has no pbcopy equivalent -- pbcopy writes
+  # one flavour and cannot be told to write public.html -- so `pandoc | pbcopy`
+  # pasted literal <h1> tags instead. AppleScript can write the flavour, via a
+  # hex `«data HTML...»` literal; the markdown rides along as the plain-text
+  # flavour so a paste into a terminal still gets something sensible.
+  # Same job as nvim's <leader>yH (dotfiles/nvim/.config/nvim/lua/configs/yank.lua).
+  md2html-clip-script = pkgs.writeShellScript "md2html_clip.sh" ''
+    set -euo pipefail
+    md=$(mktemp)
+    scpt=$(mktemp)
+    trap 'rm -f "$md" "$scpt"' EXIT
+    cat > "$md"
+    {
+      printf 'set h to «data HTML'
+      ${pkgs.pandoc}/bin/pandoc -f markdown -t html "$md" | /usr/bin/xxd -p | tr -d '\n'
+      printf '»\n'
+      printf 'set t to (read POSIX file "%s" as «class utf8»)\n' "$md"
+      printf 'set the clipboard to {«class HTML»:h, string:t}\n'
+    } > "$scpt"
+    /usr/bin/osascript "$scpt"
+  '';
+
   second-brain-archive-script = pkgs.writeShellScript "second_brain_archive.sh" ''
     #!/usr/bin/env bash
     mv $1 ~/notes/archive/"$1"
@@ -106,6 +130,14 @@ in {
         bindkey -v
         export KEYTIMEOUT=1
 
+        # Turn off terminal flow control. kitty maps cmd+s to \x13 so that it
+        # saves in nvim (kitty.nix), but \x13 is also XOFF: at a plain shell
+        # prompt the tty line discipline would eat it and freeze all output
+        # until C-q, which looks exactly like a hung terminal. nvim puts the tty
+        # in raw mode and reads the byte itself, so it never saw this; only the
+        # shell did. -ixoff drops the incoming half too.
+        [[ -t 0 ]] && stty -ixon -ixoff 2>/dev/null
+
         # Suggestion autofill: when a command fails with a "you probably meant X"
         # hint, put X on the NEXT prompt line, pre-filled and editable — one Enter
         # runs it. No retyping.
@@ -186,6 +218,28 @@ in {
         fi
       '')
       (lib.mkBefore ''
+        # oh-my-zsh appends its "#omz revision:" / "#omz fpath:" metadata block
+        # (~2.6 KB here) to $ZSH_COMPDUMP with `tee -a`, and tee writes in 1 KB
+        # chunks. Two shells starting at the same moment interleave those
+        # writes and tear a line in half. compinit *sources* the dump, so the
+        # orphaned fragment is then run as a command by every later shell:
+        #   .zcompdump-matts-mac-5.9:2126: no such file or directory:
+        #   er-user/matth/share/zsh/vendor-completions
+        # omz never repairs this -- its staleness check greps for intact copies
+        # of the two metadata lines and those are still in the file -- so the
+        # error is permanent once a tear happens (2026-09-16 problem log).
+        # Name the dump ourselves (omz honours a pre-set ZSH_COMPDUMP; $HOST is
+        # a zsh builtin and matches its `scutil --get LocalHostName` here), then
+        # drop it when anything after the metadata marker is not a comment,
+        # which is exactly the torn-append signature. compinit rebuilds it.
+        : ''${ZSH_COMPDUMP:=$HOME/.zcompdump-''${HOST%%.*}-$ZSH_VERSION}
+        if [[ -s "$ZSH_COMPDUMP" ]] && ! command awk '
+              /^#omz revision:/ { seen = 1; next }
+              seen && NF && $0 !~ /^#/ { exit 1 }
+            ' "$ZSH_COMPDUMP"; then
+          command rm -f "$ZSH_COMPDUMP" "$ZSH_COMPDUMP.zwc"
+        fi
+
         DISABLE_MAGIC_FUNCTIONS=true
         export "MICRO_TRUECOLOR=1"
         # Set window title to the current directory
@@ -356,10 +410,13 @@ in {
         # `record`/`icat` are dropped: wf-recorder is Wayland-only and screen
         # recording on the Mac is `screencapture -v`.
 
-        # NO sudo: nix-darwin elevates itself, and `sudo darwin-rebuild` writes
-        # root-owned files into ~/.local/state that break every later switch.
-        rebuild = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && darwin-rebuild switch --flake .#matts-mac && popd";
-        rebuildu = "pushd ~/dotfiles/nixos/.config/nixos && cp flake.lock flake.$(date +%Y-%m-%d).lock && git add --all . && nix flake update && darwin-rebuild switch --flake .#matts-mac && popd";
+        # nix-darwin (since mid-2026) refuses to run unless it is root:
+        # "system activation must now be run as root". `sudo -H` so root's
+        # HOME is /var/root and nothing root-owned lands in ~/.cache or
+        # ~/.local/state (the failure the previous no-sudo note was about).
+        # git add + flake update still run as Matt, before the sudo.
+        rebuild = "pushd ~/dotfiles/nixos/.config/nixos && git add --all . && sudo -H darwin-rebuild switch --flake .#matts-mac && popd";
+        rebuildu = "pushd ~/dotfiles/nixos/.config/nixos && cp flake.lock flake.$(date +%Y-%m-%d).lock && git add --all . && nix flake update && sudo -H darwin-rebuild switch --flake .#matts-mac && popd";
         # Home-only switch, same shape as the NixOS one: builds the Home Manager
         # generation this config defines and activates it in the live session
         # without touching the system generation.
@@ -369,7 +426,7 @@ in {
         darwin-gens = "darwin-rebuild --list-generations";
         word-count = "clip-paste | wc";
         paste-image = "clip-paste -t image/png >";
-        md2substack = "pandoc -f markdown -t html | clip-copy";
+        md2substack = "${md2html-clip-script}";
       };
   };
 

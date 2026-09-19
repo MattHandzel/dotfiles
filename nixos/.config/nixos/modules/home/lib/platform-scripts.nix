@@ -56,10 +56,16 @@ in {
   notify =
     if isDarwin
     then
+      # NOT terminal-notifier. The nix build of it never returns on macOS 26
+      # (its unsigned bundle can never be granted Notification permission, so it
+      # waits forever — 2026-09-12 found four stuck copies, including grammar-
+      # check's, and every leader-timer job hung behind it). osascript posts
+      # through Script Editor's registration, which macOS allows by default,
+      # and returns immediately.
       bin "notify" ''
         title="''${1:-Notification}"
         shift || true
-        exec ${pkgs.terminal-notifier}/bin/terminal-notifier -title "$title" -message "$*"
+        exec /usr/bin/osascript -e 'on run argv' -e 'display notification (item 2 of argv) with title (item 1 of argv)' -e 'end run' "$title" "$*"
       ''
     else
       bin "notify" ''
