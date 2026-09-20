@@ -85,7 +85,7 @@
       - trigger: ";;github"
         replace: "https://github.com/MattHandzel/"
       - trigger: ";;blog"
-        replace: "https://systemsforsecondbrain.substack.com/"
+        replace: "https://www.matthandzel.com/blog"
       - trigger: ";;bweb"
         replace: "https://www.handzelsystems.com/"
       - trigger: ";;career"
