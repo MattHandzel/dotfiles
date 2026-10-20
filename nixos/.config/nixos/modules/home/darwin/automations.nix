@@ -22,12 +22,37 @@
       google-api-python-client
     ]);
 
+  # Subscribed calendars that are NOT Matt's commitments. The read-only token
+  # sees every calendar in his sidebar, so someone else's personal calendar can
+  # win the sketchybar "now" slot (2026-09-20: "dust hair" from
+  # nataliahandzel1@gmail.com, whose 18 class events a week were also filling
+  # the agenda). Matched case-insensitively against id / summary /
+  # summaryOverride by FOCUS_AGENDA_EXCLUDE in resolver/agenda.py.
+  agendaExcludeCalendars = [
+    "nataliahandzel1@gmail.com" # Natalia Handzel — Matt's sister
+  ];
+
+  # The only calendars the agenda reads (FOCUS_AGENDA_INCLUDE, same matching).
+  # An exclude list kept losing to new subscriptions: 2026-09-22 "Mox Events"
+  # (a venue feed) held the "now" slot with a 3-day coworking event. Keep in
+  # sync with the icalBuddy fallback in sketchybar/plugins/calendar.sh.
+  agendaIncludeCalendars = [
+    "handzelmatthew@gmail.com"
+    "Generator Extension Calendar Core"
+    "Generator Extension Calendar Unofficial/Social"
+    "Life Scheduler"
+    "The Mil"
+    "Swapcard calendar"
+  ];
+
   # READ-ONLY: walks every calendar the read-only gcal token can see and writes
   # a merged agenda to ~/.local/state/focus/agenda.json. Exit 2 = missing token
   # (the consumer renders "stale", so it is not a failure).
   calendarAgendaRun = pkgs.writeShellScript "calendar-agenda-run" ''
     agenda="${home}/Projects/system-wide-focus/resolver/agenda.py"
     [ -f "$agenda" ] || { echo "calendar-agenda: $agenda not found." >&2; exit 2; }
+    export FOCUS_AGENDA_EXCLUDE=${lib.escapeShellArg (lib.concatStringsSep "," agendaExcludeCalendars)}
+    export FOCUS_AGENDA_INCLUDE=${lib.escapeShellArg (lib.concatStringsSep "," agendaIncludeCalendars)}
     exec ${googlePython}/bin/python3 "$agenda"
   '';
 

@@ -8,7 +8,9 @@
 # (flow.sqlite History) against the saved buffer and writes each bounded word
 # substitution into the Dictionary table exactly as Wispr's learner would
 # (source=user_edits, observedSource=<what it heard>); Wispr pushes those rows to
-# the server on its next dictionary sync. ~/dotfiles/nvim/.config/nvim/plugin/
+# the server on its next dictionary sync. Claude (`claude -p --model sonnet`)
+# vets every candidate first, so a change of mind ("10" -> "25") is not learned
+# as a misrecognition (2026-10-06 Oops). ~/dotfiles/nvim/.config/nvim/plugin/
 # wispr-learn.lua runs it on BufWritePost for prose buffers (:WisprLearn to run
 # by hand, :WisprLearnWord to add one phrase).
 {pkgs, ...}: let

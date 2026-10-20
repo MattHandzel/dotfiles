@@ -3,11 +3,11 @@
 # duplicating any of that here would produce two remappers fighting over the
 # same keypress.
 #
-#   1. Caps ⇄ Esc — a real SWAP, not just caps→esc.
-#      `system.keyboard.remapCapsLockToEscape` (modules/darwin/system-defaults.nix)
-#      already gives caps→esc at the firmware level, which is what makes Esc
-#      work before kanata has loaded at boot. The other half of the swap
-#      (esc→caps) has no nix-darwin option, so it lives here.
+#   1. Caps ⇄ Esc — a real SWAP, both halves here (simple_modifications).
+#      Do NOT bring back `system.keyboard.remapCapsLockToEscape`: its hidutil
+#      mapping is global, applies to Karabiner's virtual keyboard too, and
+#      turns the Esc key's caps_lock back into Escape (Oops 2026-10-09).
+#      Option+Caps is therefore Option+Escape (AeroSpace alt-esc = sleep).
 #
 #   2. Alt+Caps → toggle the input source between US and Polish.
 #      This replaces the xkb `us,pl` group toggle from the Hyprland config.
@@ -28,8 +28,11 @@
 # Karabiner-Elements is a cask (modules/darwin/homebrew.nix) because it ships a
 # DriverKit system extension that has to be Apple-notarized.
 #
-# NOTE: complex modifications run BEFORE simple modifications in Karabiner, so
-# the Alt+Caps rule sees a real caps_lock and wins over the esc swap below.
+# NOTE: Karabiner applies simple modifications FIRST and complex ones to the
+# result (karabiner-elements.pqrs.org/docs/json/complex-modifications-manipulator-evaluation-priority).
+# So the "Alt+Caps" rule below sees the caps_lock the swap made from the
+# physical Esc key: on the internal keyboard the toggle is Alt+Esc, and
+# Alt+Caps stays Alt+Escape (sleep; Matt's ⌥⎋ at 07:52 on 2026-10-09).
 _: let
   kittyBundleId = "^net\\.kovidgoyal\\.kitty$";
 
@@ -141,16 +144,65 @@ _: let
   #
   # This is a key-level remap rather than one manipulator per chord, so every
   # Ctrl-something binding works without enumerating them.
+  #
+  # The one exception is V: left Cmd+V goes out as Cmd+V, so kitty's cmd+v
+  # paste map (kitty.nix) fires, same as on the Totem (Matt, 2026-09-24).
+  # Rules match on the already-remapped modifiers, so the V manipulator sees
+  # left_control; the variable tells it apart from the physical Control key.
   cmdIsCtrlInKitty = {
     description = "kitty: left Command acts as Control (Linux nvim/tmux chords)";
     manipulators = [
       {
         type = "basic";
         from = {
+          key_code = "v";
+          modifiers = {
+            mandatory = ["left_control"];
+            optional = ["caps_lock"];
+          };
+        };
+        to = [
+          {
+            key_code = "v";
+            modifiers = ["left_command"];
+          }
+        ];
+        conditions = [
+          {
+            type = "frontmost_application_if";
+            bundle_identifiers = [kittyBundleId];
+          }
+          {
+            type = "variable_if";
+            name = "kitty_left_command_held";
+            value = 1;
+          }
+        ];
+      }
+      {
+        type = "basic";
+        from = {
           key_code = "left_command";
           modifiers.optional = ["any"];
         };
-        to = [{key_code = "left_control";}];
+        # left_control last: Karabiner holds only the final `to` key down.
+        to = [
+          {
+            set_variable = {
+              name = "kitty_left_command_held";
+              value = 1;
+            };
+          }
+          {key_code = "left_control";}
+        ];
+        to_after_key_up = [
+          {
+            set_variable = {
+              name = "kitty_left_command_held";
+              value = 0;
+            };
+          }
+        ];
         conditions = [
           {
             type = "frontmost_application_if";

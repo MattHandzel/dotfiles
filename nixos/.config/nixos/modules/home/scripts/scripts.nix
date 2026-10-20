@@ -100,6 +100,11 @@
     ./scripts/lofi.sh
   ];
 
+  # macOS-only: pmset + launchd.
+  darwinScripts = [
+    ./scripts/lid-awake.sh # keep running with the lid closed, optional timer (Raycast: "Lid Awake")
+  ];
+
   # Hyprland / Wayland / NixOS-specific: these talk to hyprctl, the Wayland
   # compositor, chromium --app wrappers, or systemd. macOS equivalents are
   # Phase 6 work on the Mac — see docs/mac-migration/TODO-path-inputs.md.
@@ -121,7 +126,7 @@
     ./scripts/hyprland-session-restore.sh # relaunch saved windows on their workspaces
   ];
 
-  shellScripts = sharedScripts ++ macPortableScripts ++ lib.optionals isLinux linuxScripts;
+  shellScripts = sharedScripts ++ macPortableScripts ++ lib.optionals isLinux linuxScripts ++ lib.optionals isDarwin darwinScripts;
 
   # Create shell script bins
   shellScriptBins = map makeShellScriptBin shellScripts;

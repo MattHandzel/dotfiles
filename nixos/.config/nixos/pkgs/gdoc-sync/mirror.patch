@@ -1,0 +1,729 @@
+diff --git a/README.md b/README.md
+index 94d7e63..af63c19 100644
+--- a/README.md
++++ b/README.md
+@@ -12,6 +12,7 @@ gdoc-sync create draft.md   # new Google Doc: styled, shared, URL on your clipbo
+ gdoc-sync push  draft.md    # local edits go to the same doc (URL and sharing survive)
+ gdoc-sync pull  draft.md    # doc edits and reviewer comments come back into your Markdown
+ gdoc-sync import <url>      # start from someone else's doc: new Markdown file, already linked
++gdoc-sync mirror ~/notes/gdocs  # every doc you own or opened, kept current (pull-only)
+ ```
+ 
+ Here's what a pushed doc looks like (the default `professional` theme):
+@@ -76,7 +77,18 @@ gdoc-sync doctor           # confirms everything is wired up
+   registered, so `sync`/`watch` adopt it immediately with nothing to resolve.
+   `--dest DIR` (or `import_dir:` in the config) picks the folder, `-o FILE`
+   names it yourself, `--no-frontmatter` skips the header. A tabbed doc imports
+-  two-way, one `# [TAB]` section per tab — see [Tabs](#tabs).
++  two-way, one `# [TAB]` section per tab — see [Tabs](#tabs). Importing a doc
++  that is already linked to a file prints that file instead of writing a
++  second copy (`--force` or `-o` to import one anyway).
++- **mirror DIR** is `import` for the whole account: every Google Doc you own
++  or have opened that is not linked yet lands in `DIR` as a pull-only file,
++  and a mirrored file is pulled again when its doc changes. A pass is one
++  Drive listing (a thousand docs per request) plus a render of only the docs
++  whose modified time moved, so an idle pass over a thousand docs costs two
++  requests. `sync --all` and `watch --all` leave mirrored files to `mirror`.
++  `--limit N` caps new imports per pass (default 50), `--dry-run` shows what
++  would happen. Deleting a mirrored file drops that doc from the mirror.
++  Run it on a timer (`gdoc-sync mirror ~/notes/google-docs; gdoc-sync sync --all`).
+ - **push** replaces the linked doc's content in place. The doc id, URL, and
+   sharing are untouched. If someone edited the doc since your last pull, you
+   get warned before overwriting (`--yes` for scripts). A file that was only
+diff --git a/src/gdoc_sync/cli.py b/src/gdoc_sync/cli.py
+index feaaecd..334898c 100644
+--- a/src/gdoc_sync/cli.py
++++ b/src/gdoc_sync/cli.py
+@@ -68,6 +68,15 @@ def build_parser() -> argparse.ArgumentParser:
+                         help="clear a previous --pull-only mark (the default)")
+     p.add_argument("--open", action="store_true", help="open the doc in the browser")
+ 
++    p = sub.add_parser("mirror", help="import every Google Doc you own or opened into one "
++                                      "folder (pull-only) and keep them current")
++    p.add_argument("dest", help="folder the mirrored markdown files live in")
++    p.add_argument("--limit", type=int, default=50, metavar="N",
++                   help="import at most N new docs this pass (default 50; changed "
++                        "docs are always refreshed)")
++    p.add_argument("--dry-run", action="store_true",
++                   help="list what would be imported or refreshed, write nothing")
++
+     p = sub.add_parser("push", help="push local markdown to its linked Google Doc")
+     p.add_argument("file", type=_existing_file)
+     p.add_argument("--yes", "-y", action="store_true",
+@@ -269,6 +278,10 @@ def _dispatch(args: argparse.Namespace) -> None:
+ 
+         _api_guard(run_import)
+ 
++    elif args.command == "mirror":
++        from .mirror import mirror
++        _api_guard(lambda: mirror(Path(args.dest), limit=args.limit, dry_run=args.dry_run))
++
+     elif args.command == "push":
+         from .push import push
+         _check_theme(args.theme)
+@@ -395,9 +408,15 @@ def _sync_targets(args, verb: str) -> list[Path]:
+     noticing until the doc and the file have drifted apart for weeks.
+     """
+     from .config import all_mappings
++    from .mirror import mirrored_paths
+     if args.all:
+         files = []
++        # `gdoc-sync mirror` keeps its own files current from one Drive listing;
++        # peeking each of them here would cost a Docs read per mirrored doc.
++        mirrored = mirrored_paths()
+         for mapped in all_mappings():
++            if mapped in mirrored:
++                continue
+             path = Path(mapped)
+             if path.exists():
+                 files.append(path)
+diff --git a/src/gdoc_sync/importer.py b/src/gdoc_sync/importer.py
+index 9aa5be3..2050a54 100644
+--- a/src/gdoc_sync/importer.py
++++ b/src/gdoc_sync/importer.py
+@@ -22,6 +22,7 @@ from pathlib import Path
+ import yaml
+ 
+ from .config import (
++    all_mappings,
+     atomic_write,
+     extract_doc_id_from_url,
+     set_doc_id,
+@@ -115,9 +116,20 @@ def import_doc(
+     has lost its ``[TAB]`` headers, so the mark is no longer the thing keeping
+     a tabbed doc safe. Pass ``True`` to make any document one-way anyway.
+ 
+-    Returns the path written.
++    A doc that is already linked to a file is not imported again unless
++    ``output`` or ``force`` asks for it: the existing file is reported and
++    returned instead. A second two-way copy of the same doc is how a note and
++    its duplicate start overwriting each other's pushes.
++
++    Returns the path written (or the existing linked file).
+     """
+     doc_id = extract_doc_id_from_url(target)
++    if output is None and not force:
++        for existing, linked_id in all_mappings().items():
++            if linked_id == doc_id and Path(existing).exists():
++                say(f"  Already linked to {existing} — not importing a second copy "
++                    f"(--force imports one anyway).")
++                return Path(existing)
+     title = fetch_title(doc_id)
+     path = target_path(title, output, dest)
+ 
+diff --git a/src/gdoc_sync/mirror.py b/src/gdoc_sync/mirror.py
+new file mode 100644
+index 0000000..c0193c1
+--- /dev/null
++++ b/src/gdoc_sync/mirror.py
+@@ -0,0 +1,277 @@
++"""Keep one folder in step with every Google Doc in the account.
++
++`import` brings in a doc you name. `mirror` brings in all of them: each Google
++Doc the account owns or has opened that is not linked to a file yet becomes a
++pull-only file in one folder, and a mirrored file is pulled again when its doc
++changes.
++
++Cost decides the design. `sync --all` asks the Docs API for every linked doc's
++revisionId on every pass — one request per file — and Google moves that id on
++autosave, cursor movement and presence, so many of those "changes" cost a full
++render for nothing. Over a whole account (about a thousand docs) that is a
++thousand Docs reads per pass against a per-user quota of 300 a minute.
++`mirror` makes one paged Drive ``files.list`` instead (a thousand docs per
++page), which returns every doc's ``modifiedTime``, and renders only the docs
++whose time moved since the last pass. An idle pass over a thousand docs is two
++requests.
++
++Mirrored files are recorded under ``mirrored:`` in the state file, keyed by
++doc id. `sync --all` and `watch --all` skip them, so they never cost a peek.
++A mirrored file that has been deleted or moved is left alone, never imported
++again: removing it is how a doc is dropped from the mirror.
++"""
++
++from __future__ import annotations
++
++import contextlib
++import datetime
++import os
++from dataclasses import dataclass, field
++from pathlib import Path
++
++from .config import (
++    expand_state_key,
++    load_state,
++    mutate_state,
++    set_revision,
++    state_key,
++    state_path,
++)
++from .importer import import_doc, slugify
++from .pull import render_doc
++from .services import NUM_RETRIES, get_services
++from .sync import reconcile
++
++DOC_MIME = "application/vnd.google-apps.document"
++
++# A doc made by `gdoc-sync create` exists in Drive for a moment before its
++# mapping is saved. A pass that lands in that window would import a second
++# copy of a file the user already has, so brand-new docs wait for the next pass.
++MIN_AGE = datetime.timedelta(minutes=10)
++
++# A doc that failed to import (no read access to its content, a render error)
++# is retried once a day rather than on every pass.
++RETRY_FAILED_AFTER = datetime.timedelta(days=1)
++
++DEFAULT_LIMIT = 50
++
++
++@dataclass
++class MirrorReport:
++    listed: int = 0
++    imported: list[str] = field(default_factory=list)
++    refreshed: list[str] = field(default_factory=list)
++    failed: list[str] = field(default_factory=list)
++    conflicted: list[str] = field(default_factory=list)
++    pending: int = 0
++
++    def summary(self) -> str:
++        return (f"mirror: {self.listed} docs in Drive — imported {len(self.imported)}, "
++                f"refreshed {len(self.refreshed)}, failed {len(self.failed)}, "
++                f"conflicted {len(self.conflicted)}, still to import {self.pending}")
++
++
++def _now() -> datetime.datetime:
++    return datetime.datetime.now(datetime.timezone.utc)
++
++
++def _parse_time(value: str) -> datetime.datetime:
++    return datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
++
++
++def list_docs(drive) -> list[dict]:
++    """Every Google Doc the account owns or has opened, most recent first.
++
++    Docs that were only shared with the account and never opened are left out:
++    they are in Drive's "Shared with me" list, not in anything the user would
++    call their documents.
++    """
++    docs: list[dict] = []
++    token = None
++    while True:
++        resp = drive.files().list(
++            q=f"mimeType='{DOC_MIME}' and trashed=false",
++            fields="nextPageToken, files(id,name,createdTime,modifiedTime,"
++                   "ownedByMe,viewedByMeTime)",
++            pageSize=1000,
++            pageToken=token,
++            corpora="allDrives",
++            includeItemsFromAllDrives=True,
++            supportsAllDrives=True,
++        ).execute(num_retries=NUM_RETRIES)
++        docs.extend(resp.get("files", []))
++        token = resp.get("nextPageToken")
++        if not token:
++            break
++    mine = [d for d in docs if d.get("ownedByMe") or d.get("viewedByMeTime")]
++    mine.sort(key=lambda d: max(d.get("viewedByMeTime") or "", d.get("modifiedTime") or ""),
++              reverse=True)
++    return mine
++
++
++def mirrored_paths() -> set[str]:
++    """Absolute paths of the files the mirror owns (for `sync --all` to skip)."""
++    entries = load_state().get("mirrored") or {}
++    return {expand_state_key(e["file"]) for e in entries.values()
++            if isinstance(e, dict) and e.get("file")}
++
++
++def _record(doc_id: str, entry: dict) -> None:
++    def apply(state: dict) -> bool:
++        state.setdefault("mirrored", {})[doc_id] = entry
++        return True
++    mutate_state(apply)
++
++
++def _free_path(dest: Path, title: str, doc_id: str, taken: set[Path]) -> Path:
++    """``<slug>.md`` in ``dest``, or ``<slug>-<id prefix>.md`` when that is taken.
++
++    Many docs share a title ("Untitled document", a recurring meeting name), and
++    the import must never overwrite a file it did not write.
++    """
++    slug = slugify(title)
++    for stem in (slug, f"{slug}-{doc_id[:8]}", f"{slug}-{doc_id}"):
++        candidate = (dest / f"{stem}.md").resolve()
++        if candidate not in taken and not candidate.exists():
++            return candidate
++    raise FileExistsError(f"no free filename for {title!r} in {dest}")
++
++
++def _refresh(path: Path, doc_id: str, say) -> object:
++    """Pull one mirrored doc through the normal merge (never pushes)."""
++    def never_push(*_a, **_k):
++        raise RuntimeError("mirror never pushes")
++
++    outcome = reconcile(
++        path, doc_id,
++        render=lambda p: render_doc(doc_id, asset_path=p),
++        push=never_push,
++        allow_push=False,
++        say=say,
++    )
++    if outcome.revision:
++        set_revision(str(path), outcome.revision)
++    return outcome
++
++
++@contextlib.contextmanager
++def _pass_lock():
++    """Hold the mirror's own lock for a whole pass; yield False if it is taken.
++
++    Two overlapping passes (a long first import and the next timer tick) would
++    both see the same unlinked doc and both import it, the second under a
++    ``-<id>`` name. The state lock cannot prevent that: it only spans each
++    single write, not the list-then-import of a pass.
++    """
++    try:
++        import fcntl
++    except ImportError:  # not POSIX: no lock, as with the state lock
++        yield True
++        return
++    lock_path = state_path().with_name(state_path().name + ".mirror.lock")
++    lock_path.parent.mkdir(parents=True, exist_ok=True)
++    fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
++    try:
++        try:
++            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
++        except BlockingIOError:
++            yield False
++            return
++        try:
++            yield True
++        finally:
++            fcntl.flock(fd, fcntl.LOCK_UN)
++    finally:
++        os.close(fd)
++
++
++def mirror(dest: Path, *, limit: int = DEFAULT_LIMIT, dry_run: bool = False,
++           say=print, drive=None) -> MirrorReport:
++    """One mirror pass: import unlinked docs into ``dest``, refresh changed ones."""
++    with _pass_lock() as acquired:
++        if not acquired:
++            say("mirror: another pass is still running — skipping this one")
++            return MirrorReport()
++        report = _mirror(dest, limit=limit, dry_run=dry_run, say=say, drive=drive)
++    say(("dry run, nothing written — " if dry_run else "") + report.summary())
++    return report
++
++
++def _mirror(dest: Path, *, limit: int, dry_run: bool, say, drive) -> MirrorReport:
++    dest = Path(dest).expanduser().resolve()
++    if drive is None:
++        drive, _ = get_services(interactive=False)
++    docs = list_docs(drive)
++    report = MirrorReport(listed=len(docs))
++
++    state = load_state()
++    linked = set((state.get("mappings") or {}).values())
++    ledger = dict(state.get("mirrored") or {})
++    now = _now()
++    taken: set[Path] = set()
++
++    for doc in docs:
++        doc_id, title = doc["id"], doc.get("name") or "Untitled"
++        modified = doc.get("modifiedTime") or ""
++        entry = ledger.get(doc_id)
++
++        # --- Already mirrored: pull only when Drive says the doc moved ------
++        if isinstance(entry, dict) and entry.get("file"):
++            path = Path(expand_state_key(entry["file"]))
++            if not path.exists() or modified <= entry.get("modified", ""):
++                continue
++            if dry_run:
++                report.refreshed.append(str(path))
++                continue
++            try:
++                outcome = _refresh(path, doc_id, say=lambda *_: None)
++            except Exception as e:  # noqa: BLE001 — one bad doc must not stop the pass
++                say(f"  refresh failed: {path.name}: {e}")
++                report.failed.append(str(path))
++                continue
++            if outcome.conflicted:
++                # Leave `modified` alone: the pass after the conflict is
++                # resolved has to pull again.
++                report.conflicted.append(str(path))
++                say(f"  conflict: {path.name}: {outcome.detail}")
++                continue
++            _record(doc_id, {**entry, "modified": modified})
++            if outcome.wrote_local:
++                report.refreshed.append(str(path))
++                say(f"  refreshed {path.name}")
++            continue
++
++        # --- Not ours to import -------------------------------------------
++        if doc_id in linked:
++            continue  # the user already has this doc linked somewhere
++        if isinstance(entry, dict) and entry.get("failed"):
++            if now - _parse_time(entry["failed"]) < RETRY_FAILED_AFTER:
++                continue
++        if doc.get("createdTime") and now - _parse_time(doc["createdTime"]) < MIN_AGE:
++            continue
++
++        # --- New doc -------------------------------------------------------
++        if len(report.imported) + len(report.failed) >= limit:
++            report.pending += 1
++            continue
++        try:
++            path = _free_path(dest, title, doc_id, taken)
++        except FileExistsError as e:
++            say(f"  skipped {title!r}: {e}")
++            continue
++        taken.add(path)
++        if dry_run:
++            report.imported.append(str(path))
++            continue
++        try:
++            import_doc(doc_id, output=path, pull_only=True, say=lambda *_: None)
++        except Exception as e:  # noqa: BLE001
++            say(f"  import failed: {title!r} ({doc_id}): {e}")
++            report.failed.append(title)
++            _record(doc_id, {"failed": now.isoformat(), "error": str(e)[:200]})
++            continue
++        _record(doc_id, {"file": state_key(path), "modified": modified})
++        report.imported.append(str(path))
++        say(f"  imported {path.name}")
++
++    return report
+diff --git a/src/gdoc_sync/sync.py b/src/gdoc_sync/sync.py
+index fd14fd1..6b6bf9b 100644
+--- a/src/gdoc_sync/sync.py
++++ b/src/gdoc_sync/sync.py
+@@ -262,13 +262,16 @@ def _reconcile(
+         return SyncOutcome(PUSHED, "pushed local changes", pushed=True)
+ 
+     # Remote moved. Replay the doc's edits onto the local file rather than
+-    # overwriting it, so local-only formatting survives.
++    # overwriting it, so local-only formatting survives. The YAML header is
++    # local-only too, so it stays out of the merge (see _split_header).
++    header, body = _split_header(local, bases.remote)
+     merged = merge3(
+-        local, bases.remote, remote_md,
++        body, bases.remote, remote_md,
+         label_ours=f"{path.name} (local)",
+         label_base="last synced",
+         label_theirs="Google Doc",
+     )
++    merged.text = header + merged.text
+ 
+     if merged.conflicted:
+         return _record_conflict(path, local, merged, rendered, say)
+@@ -328,6 +331,28 @@ def _reconcile(
+     )
+ 
+ 
++def _split_header(local: str, base_remote: str) -> tuple[str, str]:
++    """Split off the file's YAML frontmatter when the doc side has none.
++
++    A doc has nowhere to store frontmatter, so in a three-way merge the header
++    reads as a local insertion at line 0 — and every remote edit above the
++    doc's old first line inserts at that same spot and conflicts. Every
++    `import`ed file carries such a header. Returned as (header, body) with the
++    blank lines after the closing ``---`` kept in the header, so
++    ``header + body == local``. A base that has a header of its own (a doc
++    whose first line renders as ``---``) is merged whole, as before.
++    """
++    if not local.startswith("---\n") or base_remote.startswith("---\n"):
++        return "", local
++    end = local.find("\n---\n", 4)
++    if end == -1:
++        return "", local
++    end += len("\n---\n")
++    while local.startswith("\n", end):
++        end += 1
++    return local[:end], local[end:]
++
++
+ def record_sync_baseline(path: Path, doc_id: str, local_text: str | None = None) -> bool:
+     """Record the merge ancestors for a file whose doc now matches it.
+ 
+diff --git a/tests/test_mirror.py b/tests/test_mirror.py
+new file mode 100644
+index 0000000..9857bc4
+--- /dev/null
++++ b/tests/test_mirror.py
+@@ -0,0 +1,233 @@
++"""`gdoc-sync mirror`: every doc in the account as a pull-only file, cheaply."""
++
++import argparse
++import datetime
++
++import pytest
++
++from gdoc_sync import cli, config, importer, mirror
++from gdoc_sync.pull import RenderedDoc
++
++
++@pytest.fixture(autouse=True)
++def isolated_env(tmp_path, monkeypatch):
++    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
++    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
++    monkeypatch.delenv("GDOC_SYNC_CONFIG", raising=False)
++    config.set_config_override(None)
++    yield
++    config.set_config_override(None)
++
++
++OLD = "2026-01-01T00:00:00.000Z"
++
++
++def doc(doc_id, name, *, modified="2026-09-01T00:00:00.000Z", created=OLD,
++        owned=True, viewed=None):
++    return {"id": doc_id, "name": name, "modifiedTime": modified,
++            "createdTime": created, "ownedByMe": owned, "viewedByMeTime": viewed}
++
++
++class FakeDrive:
++    """files().list(...).execute() over fixed pages, counting the calls."""
++
++    def __init__(self, *pages):
++        self.pages = [list(p) for p in pages]
++        self.calls = 0
++
++    def files(self):
++        return self
++
++    def list(self, **kwargs):
++        self.kwargs = kwargs
++        page = int(kwargs.get("pageToken") or 0)
++        drive = self
++
++        class Req:
++            def execute(self, num_retries=0):
++                drive.calls += 1
++                out = {"files": drive.pages[page]}
++                if page + 1 < len(drive.pages):
++                    out["nextPageToken"] = str(page + 1)
++                return out
++        return Req()
++
++
++@pytest.fixture
++def renders(monkeypatch):
++    """Stub every Google call behind import and refresh; record what rendered."""
++    bodies = {}
++    rendered = []
++
++    def render(doc_id, **_kwargs):
++        rendered.append(doc_id)
++        return RenderedDoc(markdown=bodies.get(doc_id, f"# {doc_id}\n"),
++                           revision_id="rev", title=doc_id, tabs=1, comments=0,
++                           images=0, fingerprint=bodies.get(doc_id, doc_id))
++
++    monkeypatch.setattr(importer, "fetch_title", lambda doc_id: doc_id)
++    monkeypatch.setattr(importer, "render_doc", render)
++    monkeypatch.setattr(mirror, "render_doc", render)
++    return bodies, rendered
++
++
++def run(dest, drive, **kw):
++    return mirror.mirror(dest, drive=drive, say=lambda *_: None, **kw)
++
++
++# --- listing ---------------------------------------------------------------
++
++def test_lists_owned_or_opened_docs_newest_first_across_pages():
++    drive = FakeDrive(
++        [doc("a", "A", modified="2026-01-01T00:00:00Z"),
++         doc("never-opened", "N", owned=False, viewed=None)],
++        [doc("b", "B", modified="2026-02-01T00:00:00Z", owned=False,
++             viewed="2026-10-01T00:00:00Z")],
++    )
++    assert [d["id"] for d in mirror.list_docs(drive)] == ["b", "a"]
++    assert drive.calls == 2
++    assert "trashed=false" in drive.kwargs["q"]
++
++
++# --- importing -------------------------------------------------------------
++
++def test_imports_unlinked_docs_as_pull_only(tmp_path, renders):
++    dest = tmp_path / "mirror"
++    report = run(dest, FakeDrive([doc("DOC1", "Weekly Plan")]))
++
++    path = (dest / "weekly-plan.md").resolve()
++    assert report.imported == [str(path)]
++    assert path.read_text().startswith("---\n")
++    assert config.get_doc_id(path) == "DOC1"
++    assert config.is_pull_only(path)
++    assert str(path) in mirror.mirrored_paths()
++
++
++def test_skips_docs_the_user_already_linked(tmp_path, renders):
++    note = tmp_path / "my-note.md"
++    note.write_text("x")
++    config.set_doc_id(note, "DOC1")
++
++    report = run(tmp_path / "mirror", FakeDrive([doc("DOC1", "Weekly Plan")]))
++    assert report.imported == []
++    assert not (tmp_path / "mirror").exists()
++
++
++def test_brand_new_doc_waits_for_its_mapping(tmp_path, renders):
++    """`create` saves its mapping a moment after the doc exists in Drive."""
++    just_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
++    report = run(tmp_path / "m", FakeDrive([doc("NEW", "Fresh", created=just_now)]))
++    assert report.imported == []
++
++
++def test_same_title_gets_an_id_suffix_instead_of_overwriting(tmp_path, renders):
++    dest = tmp_path / "m"
++    dest.mkdir()
++    (dest / "untitled-document.md").write_text("someone else's file\n")
++
++    report = run(dest, FakeDrive([doc("AAAAAAAAAA1", "Untitled document"),
++                                  doc("BBBBBBBBBB2", "Untitled document")]))
++
++    names = sorted(p.split("/")[-1] for p in report.imported)
++    assert names == ["untitled-document-AAAAAAAA.md", "untitled-document-BBBBBBBB.md"]
++    assert (dest / "untitled-document.md").read_text() == "someone else's file\n"
++
++
++def test_limit_caps_imports_per_pass(tmp_path, renders):
++    drive = FakeDrive([doc(f"D{i}", f"Doc {i}") for i in range(5)])
++    first = run(tmp_path / "m", drive, limit=2)
++    assert len(first.imported) == 2 and first.pending == 3
++    second = run(tmp_path / "m", drive, limit=10)
++    assert len(second.imported) == 3 and second.pending == 0
++
++
++def test_dry_run_writes_nothing(tmp_path, renders):
++    report = run(tmp_path / "m", FakeDrive([doc("DOC1", "Plan")]), dry_run=True)
++    assert len(report.imported) == 1
++    assert not (tmp_path / "m").exists()
++    assert config.load_state() == {}
++
++
++def test_failed_import_is_not_retried_every_pass(tmp_path, monkeypatch, renders):
++    def boom(*_a, **_k):
++        raise RuntimeError("403 no access")
++    monkeypatch.setattr(importer, "render_doc", boom)
++    drive = FakeDrive([doc("DOC1", "Locked")])
++
++    assert run(tmp_path / "m", drive).failed == ["Locked"]
++    assert run(tmp_path / "m", drive).failed == []  # within the retry window
++    assert "403" in config.load_state()["mirrored"]["DOC1"]["error"]
++
++
++# --- keeping mirrored files current ----------------------------------------
++
++def test_idle_pass_renders_nothing(tmp_path, renders):
++    _, rendered = renders
++    drive = FakeDrive([doc("DOC1", "Plan")])
++    run(tmp_path / "m", drive)
++    rendered.clear()
++
++    report = run(tmp_path / "m", drive)
++    assert rendered == [] and report.refreshed == [] and report.imported == []
++
++
++def test_changed_doc_is_pulled_again(tmp_path, renders):
++    bodies, _ = renders
++    bodies["DOC1"] = "# Plan\n\nold\n"
++    run(tmp_path / "m", FakeDrive([doc("DOC1", "Plan", modified="2026-09-01T00:00:00Z")]))
++
++    bodies["DOC1"] = "# Plan\n\nnew\n"
++    report = run(tmp_path / "m",
++                 FakeDrive([doc("DOC1", "Plan", modified="2026-10-06T00:00:00Z")]))
++
++    path = (tmp_path / "m" / "plan.md").resolve()
++    assert report.refreshed == [str(path)]
++    assert path.read_text().rstrip().endswith("new")
++    assert config.load_state()["mirrored"]["DOC1"]["modified"] == "2026-10-06T00:00:00Z"
++
++
++def test_deleted_mirror_file_is_not_brought_back(tmp_path, renders):
++    drive = FakeDrive([doc("DOC1", "Plan")])
++    run(tmp_path / "m", drive)
++    (tmp_path / "m" / "plan.md").unlink()
++
++    report = run(tmp_path / "m", drive)
++    assert report.imported == [] and not (tmp_path / "m" / "plan.md").exists()
++
++
++# --- the rest of the CLI ---------------------------------------------------
++
++def test_sync_all_skips_mirrored_files(tmp_path, renders):
++    run(tmp_path / "m", FakeDrive([doc("DOC1", "Plan")]))
++    own = tmp_path / "own.md"
++    own.write_text("x")
++    config.set_doc_id(own, "DOC2")
++
++    targets = cli._sync_targets(argparse.Namespace(all=True, files=[]), "sync")
++    assert [p.resolve() for p in targets] == [own.resolve()]
++
++
++def test_import_of_an_already_linked_doc_returns_the_existing_file(tmp_path, monkeypatch):
++    note = tmp_path / "meeting.md"
++    note.write_text("x")
++    config.set_doc_id(note, "DOC1")
++
++    def no_api(*_a, **_k):
++        raise AssertionError("must not touch the API")
++    monkeypatch.setattr(importer, "fetch_title", no_api)
++
++    said = []
++    path = importer.import_doc("https://docs.google.com/document/d/DOC1/edit",
++                               dest=tmp_path / "elsewhere", say=said.append)
++    assert path.resolve() == note.resolve()
++    assert any("Already linked to" in s for s in said)
++    assert not (tmp_path / "elsewhere").exists()
++
++
++def test_overlapping_pass_is_skipped(tmp_path, renders):
++    """A tick that starts while a long first import runs must not import twice."""
++    with mirror._pass_lock() as held:
++        assert held
++        report = run(tmp_path / "m", FakeDrive([doc("DOC1", "Plan")]))
++    assert report.imported == [] and not (tmp_path / "m").exists()
++    assert len(run(tmp_path / "m", FakeDrive([doc("DOC1", "Plan")])).imported) == 1
+diff --git a/tests/test_sync.py b/tests/test_sync.py
+index b8d7d68..b908876 100644
+--- a/tests/test_sync.py
++++ b/tests/test_sync.py
+@@ -715,3 +715,37 @@ def test_a_plain_push_also_checks_the_fingerprint(tmp_path):
+     assert result.action == sync.SKIPPED
+     assert doc.pushes == 0
+     assert "Typed in the browser." in doc.markdown
++
++
++# ---------------------------------------------------------------------------
++# Local-only frontmatter (every `import`ed and mirrored file has one)
++# ---------------------------------------------------------------------------
++
++HEADER = "---\ntitle: Plan\ngdoc_id: doc-id\n---\n\n"
++
++
++def test_remote_edit_at_the_top_merges_under_local_frontmatter(tmp_path):
++    """The doc cannot hold the header, so it is not part of the merge.
++
++    Merged as body text it was a local insertion at line 0, and any remote
++    edit above the doc's old first line collided with it (found by mirroring
++    a real doc, 2026-10-06).
++    """
++    path, doc = linked(tmp_path, HEADER + "first line\n", doc_text="first line\n")
++    doc.edit("new top line\nfirst line\n")
++
++    result = run(path, doc, allow_push=False)
++
++    assert not result.conflicted
++    assert path.read_text() == HEADER + "new top line\nfirst line\n"
++
++
++def test_local_frontmatter_edit_and_remote_top_edit_both_survive(tmp_path):
++    path, doc = linked(tmp_path, HEADER + "first line\n", doc_text="first line\n")
++    path.write_text(HEADER.replace("Plan", "Plan v2") + "first line\n")
++    doc.edit("new top line\nfirst line\n")
++
++    result = run(path, doc, allow_push=False)
++
++    assert not result.conflicted
++    assert path.read_text() == HEADER.replace("Plan", "Plan v2") + "new top line\nfirst line\n"

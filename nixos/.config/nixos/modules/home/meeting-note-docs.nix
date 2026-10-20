@@ -1,9 +1,15 @@
 # Give every upcoming meeting note a shareable Google Doc (MAT-1185, MAT-1813).
 #
-# The meeting-note generator is split across two machines on purpose:
+# On Linux the meeting-note generator is split across two machines on purpose:
 #
 #   matts-server  reads the calendar and writes capture/meetings/*.md  (every 30m)
 #   this laptop   gives each of those notes a Google Doc                (here)
+#
+# On the Mac (host "mac") this unit runs the WHOLE generator — calendar -> note ->
+# Doc — because the server that wrote the notes is down (2026-09-24 Oops: no
+# note since 2026-09-09). The Mac already has both credentials: the read-only
+# calendar token at ~/.config/focus-mode-resolver/token.json (shared with the
+# calendar-agenda agent) and gdoc-sync's own. Same 7-day window the server used.
 #
 # The server half needs a calendar token; the Doc half needs gdoc-sync, which
 # is installed and authenticated here and NOT there. Rather than copy OAuth
@@ -33,12 +39,31 @@
 
   script = "${config.home.homeDirectory}/Obsidian/Main/scripts/calendar/meeting_notes.py";
 
+  # The full generator reads the calendar, so it needs the Google client libs.
+  googlePython = pkgs.python3.withPackages (ps:
+    with ps; [
+      google-auth
+      google-auth-oauthlib
+      google-api-python-client
+    ]);
+
   # The script runs from a literal vault path, so edits to it take effect on the
   # next tick without a rebuild — same convention as the server unit.
-  run = pkgs.writeShellScript "meeting-note-docs-run" ''
-    export PATH=${gdoc-sync}/bin:${pkgs.pandoc}/bin:$PATH
-    exec ${pkgs.python3}/bin/python3 ${script} --docs-only
-  '';
+  run =
+    if isDarwin
+    then
+      # ripgrep: when a rescheduled meeting's note is renamed, the generator
+      # points every [[link]] to it at the new name (note_sync.rewrite_backlinks).
+      pkgs.writeShellScript "meeting-note-docs-run" ''
+        export PATH=${gdoc-sync}/bin:${pkgs.pandoc}/bin:${pkgs.ripgrep}/bin:$PATH
+        export MEETING_NOTES_DAYS=7
+        exec ${googlePython}/bin/python3 ${script}
+      ''
+    else
+      pkgs.writeShellScript "meeting-note-docs-run" ''
+        export PATH=${gdoc-sync}/bin:${pkgs.pandoc}/bin:$PATH
+        exec ${pkgs.python3}/bin/python3 ${script} --docs-only
+      '';
 
   inherit (import ./lib/scheduled.nix {inherit lib pkgs config isDarwin;}) scheduled;
 in {
@@ -66,7 +91,7 @@ in {
     timerDescription = "Periodic Google Doc creation for upcoming meeting notes";
 
     everySeconds = 1800;
-    path = [gdoc-sync pkgs.pandoc pkgs.python3 pkgs.coreutils];
+    path = [gdoc-sync pkgs.pandoc pkgs.ripgrep pkgs.python3 pkgs.coreutils];
     logFile = "%h/.local/state/meeting-note-docs.log";
 
     serviceExtra = {

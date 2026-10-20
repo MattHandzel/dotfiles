@@ -7,7 +7,11 @@
 # (--user-data-dir ~/.config/chromium-app), which starts with no extensions;
 # a machine-wide policy covers it and Chrome's Default profile alike
 # (Oops run 20260914-095413). Same mechanism and caveats as dia-policy.nix.
-{pkgs, lib, ...}: let
+{
+  pkgs,
+  lib,
+  ...
+}: let
   plist = pkgs.writeText "com.google.Chrome.plist" (lib.generators.toPlist {escape = true;} {
     ExtensionSettings = {
       nngceckbapebfimnlniiiahkandclblb = {
@@ -16,12 +20,28 @@
       };
     };
   });
-in {
-  system.activationScripts.postActivation.text = ''
+  install = pkgs.writeShellScript "chrome-policy-install" ''
+    dst="/Library/Managed Preferences/com.google.Chrome.plist"
+    /usr/bin/cmp -s ${plist} "$dst" && exit 0
     /bin/mkdir -p "/Library/Managed Preferences"
-    /bin/cp ${plist} "/Library/Managed Preferences/com.google.Chrome.plist"
-    /usr/sbin/chown root:wheel "/Library/Managed Preferences/com.google.Chrome.plist"
-    /bin/chmod 644 "/Library/Managed Preferences/com.google.Chrome.plist"
+    /bin/cp ${plist} "$dst"
+    /usr/sbin/chown root:wheel "$dst"
+    /bin/chmod 644 "$dst"
     /usr/bin/killall cfprefsd 2>/dev/null || true
   '';
+in {
+  system.activationScripts.postActivation.text = ''
+    ${install}
+  '';
+
+  # The boot-time wipe of /Library/Managed Preferences hits this plist too;
+  # see launchd.daemons.dia-policy in dia-policy.nix.
+  launchd.daemons.chrome-policy = {
+    command = "${install}"; # nix-darwin wraps it in wait4path /nix/store
+    serviceConfig = {
+      RunAtLoad = true;
+      WatchPaths = ["/Library/Managed Preferences"];
+      StartInterval = 300;
+    };
+  };
 }

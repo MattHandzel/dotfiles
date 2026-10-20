@@ -73,13 +73,22 @@
       "superhuman" # mail client (NOT Thunderbird — Matt, 2026-09-09)
       "linear"
       "morgen" # calendar; also the default .ics/webcal handler
-      "spotify"
+      # "spotify" — now nix-built with ads blocked: modules/darwin/spicetify.nix
       "whatsapp"
       "discord"
       "zoom"
       "clockify"
       "claude" # Claude Desktop
-      "claude-code@latest" # the CLI, so `rebuild` keeps it current
+      # claude-code is deliberately NOT a cask. This tap is pinned to a flake
+      # input (mutableTaps = false, autoUpdate/upgrade = false), so a cask only
+      # moves when `nix flake update homebrew-cask` runs — but the CLI ships
+      # several versions a week and gates new models on the build (2026-09-22:
+      # brew frozen at 2.1.273 while Opus 5.5 needed 2.1.280+, and no amount of
+      # `brew upgrade` could move it). It comes from Anthropic's native
+      # installer instead, which self-updates into ~/.local/share/claude and
+      # repoints ~/.local/bin/claude — which zsh.nix puts AHEAD of
+      # /opt/homebrew/bin. A fast-moving self-updater does not belong in a
+      # frozen channel.
       "cursor"
       "windsurf"
       "devin-desktop"
@@ -94,6 +103,7 @@
       "homerow" # keyboard-click any UI element
       "kitty" # the cask, not nixpkgs: the nix build loses code signing and
       # with it Accessibility/Screen-Recording grants
+      "warp" # 2026-10-03 Oops: on trial beside kitty, NOT the default terminal (kitty keeps every hotkey and file binding)
       # Espanso IS in use (reality check 2026-09-12): the 2026-09-10 note here
       # claimed Raycast Snippets had replaced it, but Espanso.app was installed,
       # its LaunchAgent (com.federicoterzi.espanso) running and 33 triggers live.
@@ -106,6 +116,7 @@
       "google-drive"
       "tailscale-app"
       "utm"
+      "home-assistant" # 2026-10-05: companion app for the HA server on the old laptop (vault: areas/second-brain/home-assistant.md)
 
       # ── media, docs, making ──
       "anki"
@@ -123,7 +134,7 @@
       "transmission"
 
       # ── menu bar / desktop polish ──
-      "aldente" # battery charge limit — the tlp 60/80 thresholds
+      "aldente" # battery charge limit app, not started at login; the live cap is macOS's own (modules/home/darwin/charge-limit.nix)
       "stats" # menu-bar sensors, replacing waybar's
       "shottr" # OCR + annotated screenshots (satty + ocr-screenshot)
       "jordanbaird-ice" # hide menu-bar clutter; cask is "jordanbaird-ice"
@@ -131,6 +142,7 @@
       "linearmouse" # trackpad/mouse speed past the System Settings cap (2026-09-13, carolannejiang.com/computer-things)
       "flux-app" # f.lux: sunset colour shift; goes warmer (1900K) than Night Shift and ramps (2026-09-13 Oops)
       "bluesnooze" # Bluetooth off while asleep: the Totem's BLE link woke the Mac every 60 s after lid close (2026-09-14 Oops)
+      "betterdisplay" # HiDPI scaled resolutions macOS will not offer on the DELL U3225QE, plus per-display DDC brightness/dimming (2026-09-19 Oops). Ships betterdisplaycli.
 
       # ── fonts and glyphs ──
       "font-jetbrains-mono-nerd-font"

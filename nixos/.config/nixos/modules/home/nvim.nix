@@ -76,6 +76,17 @@
       jupyter
     ];
     extraConfig = ''
+      " fff.nvim ships a Rust backend (libfff_nvim.dylib). The plugin's own
+      " installer would `cargo build --release` or download a GitHub release at
+      " runtime -- neither works here (cargo is not on PATH, and a downloaded
+      " binary is not declarative). nixpkgs' vimPlugins.fff-nvim is the prebuilt
+      " plugin with its `get_binary_dir` patched to the store path of the dylib,
+      " so the only thing lua needs is where that store path is. lazy.nvim picks
+      " it up as `dir = vim.g.fff_nvim_dir` (lua/plugins/init.lua); it cannot come
+      " in via `programs.neovim.plugins` because lazy resets the runtimepath
+      " (performance.rtp.reset defaults to true) and would drop the packpath.
+      " Must be set BEFORE the luafile below, which is where lazy.setup runs.
+      lua vim.g.fff_nvim_dir = "${pkgs.vimPlugins.fff-nvim}"
       luafile ${config.home.homeDirectory}/dotfiles/nvim/.config/nvim/nvim.lua
     '';
   };

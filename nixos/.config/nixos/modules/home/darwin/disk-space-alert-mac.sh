@@ -29,6 +29,14 @@ STATE_FILE="$STATE_DIR/last-alert-level"
 # swap headroom this 32 GB machine used that morning (9 GiB) plus margin.
 WARN_GIB=40
 URGENT_GIB=15
+# Matt, 2026-10-06: "lets me know when I have less than 10 GB of storage
+# remaining so that I can work on this". Dayflow has saved a frame every 1 s
+# since that day (dayflow-guard.nix), about 0.5 GB a day, and nothing deletes
+# them. So 10 GiB is its own level, and every alert says how big Dayflow is
+# and how fast it grows.
+CRITICAL_GIB=10
+DAYFLOW_DIR="$HOME/Library/Application Support/Dayflow/recordings"
+DAYFLOW_SIZES="$STATE_DIR/dayflow-sizes" # "<YYYY-MM-DD> <KiB>", one line a day
 
 mkdir -p "$STATE_DIR"
 
@@ -47,7 +55,9 @@ case "$avail_gib" in
 esac
 
 current_level="none"
-if [ "$avail_gib" -le "$URGENT_GIB" ]; then
+if [ "$avail_gib" -lt "$CRITICAL_GIB" ]; then
+  current_level="critical"
+elif [ "$avail_gib" -le "$URGENT_GIB" ]; then
   current_level="urgent"
 elif [ "$avail_gib" -le "$WARN_GIB" ]; then
   current_level="warn"
@@ -55,9 +65,28 @@ fi
 
 echo "$(date -Iseconds) data=${avail_gib}G root=${root_gib}G level=$current_level prev=$prev_level"
 
+# Dayflow's size, sampled once a day, and its growth over the last week.
+dayflow_kib="$(/usr/bin/du -sk "$DAYFLOW_DIR"/ 2>/dev/null | awk '{print $1}')"
+dayflow_note=""
+if [ -n "$dayflow_kib" ]; then
+  today="$(date +%F)"
+  grep -q "^$today " "$DAYFLOW_SIZES" 2>/dev/null || echo "$today $dayflow_kib" >>"$DAYFLOW_SIZES"
+  dayflow_note="$(tail -8 "$DAYFLOW_SIZES" | awk -v now="$dayflow_kib" '
+    NR == 1 { first = $2; d0 = $1 } { d1 = $1 }
+    END {
+      cmd = "date -d " d0 " +%s"; cmd | getline a; close(cmd)
+      cmd = "date -d " d1 " +%s"; cmd | getline b; close(cmd)
+      days = (b - a) / 86400
+      s = sprintf("Dayflow recordings: %.1f GB", now / 1048576)
+      if (days >= 1) s = s sprintf(", growing %.2f GB/day", (now - first) / 1048576 / days)
+      print s "."
+    }')"
+fi
+echo "${dayflow_note:-Dayflow recordings: unknown}"
+
 # Urgent: reclaim regenerable caches on every run (idempotent, cheap when
 # empty). On 2026-09-15 this gave back 11 GiB (Homebrew 9.5, uv 1.8).
-if [ "$current_level" = "urgent" ]; then
+if [ "$current_level" = "urgent" ] || [ "$current_level" = "critical" ]; then
   HOMEBREW_NO_AUTO_UPDATE=1 /opt/homebrew/bin/brew cleanup --prune=all -s 2>&1 | tail -1
   "$HOME/.nix-profile/bin/uv" cache prune 2>&1 | tail -1
   avail_gib="$(/bin/df -k -P /System/Volumes/Data | tail -1 | awk '{printf "%d", $4/1048576}')"
@@ -132,19 +161,21 @@ if [ "$current_level" = "none" ]; then
   exit 0
 fi
 
-if [ "$current_level" = "urgent" ]; then
+if [ "$current_level" = "critical" ]; then
+  priority="urgent"; title="Under ${CRITICAL_GIB} GB free: time to deal with Dayflow's recordings"; tags="rotating_light"
+elif [ "$current_level" = "urgent" ]; then
   priority="urgent"; title="URGENT: Disk space critically low"; tags="rotating_light"
 else
   priority="high"; title="Disk space warning"; tags="warning"
 fi
 
-local_notify "$title" "${avail_gib}G free. Below ${URGENT_GIB}G macOS cannot grow swap and pauses apps. Biggest: /Volumes/LinuxHome, ~/Projects, ~/Videos."
+local_notify "$title" "${avail_gib}G free. Below ${URGENT_GIB}G macOS cannot grow swap and pauses apps. ${dayflow_note} Biggest: /Volumes/LinuxHome, ~/Projects, ~/Videos."
 
 curl -sS --max-time 15 \
   -H "Title: $title" \
   -H "Priority: $priority" \
   -H "Tags: $tags" \
-  -d "$host: ${avail_gib}G free on the data volume (root reports ${root_gib}G)." \
+  -d "$host: ${avail_gib}G free on the data volume (root reports ${root_gib}G). ${dayflow_note}" \
   "$NTFY_URL" >/dev/null || true
 
 echo "Sent $current_level notification."

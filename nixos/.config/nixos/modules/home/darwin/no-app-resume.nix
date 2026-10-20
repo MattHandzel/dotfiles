@@ -43,7 +43,14 @@
       $DRY_RUN_CMD /usr/bin/defaults $dom write com.apple.loginwindow LoginwindowLaunchesRelaunchApps -bool false
     done
 
-    if [ -z "''${DRY_RUN:-}" ]; then
+    # macOS App Data protection refuses even a read of another app's Group
+    # Container to a process without that permission (kitty/tmux, where Oops
+    # sessions activate from: "Operation not permitted", 2026-09-19). Aborting
+    # here skipped every later step, launchd agents included, so skip instead;
+    # the snapshot keeps its last empty + uchg state.
+    if [ -e "$snapshot" ] && ! /bin/cat "$snapshot" >/dev/null 2>&1; then
+      echo "disableAppResume: no access to $snapshot from this process; left as is" >&2
+    elif [ -z "''${DRY_RUN:-}" ]; then
       /bin/mkdir -p "$(/usr/bin/dirname "$snapshot")"
       /usr/bin/chflags nouchg "$snapshot" 2>/dev/null || true
       /bin/cat > "$snapshot" <<'PLIST'

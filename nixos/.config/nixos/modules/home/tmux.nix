@@ -41,7 +41,7 @@ in {
           # found" inside tmux on 2026-09-10 while resolving fine in the same
           # kitty window. Two belts: hand the server the real PATH, and start
           # each pane as a login shell so a future server still gets it.
-          set-environment -g PATH "${config.home.homeDirectory}/.nix-profile/bin:/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/opt/homebrew/bin:${config.home.homeDirectory}/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+          set-environment -g PATH "${config.home.homeDirectory}/.nix-profile/bin:/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:${config.home.homeDirectory}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
           set -g default-command "${pkgs.zsh}/bin/zsh -l"
         ''
         else ""

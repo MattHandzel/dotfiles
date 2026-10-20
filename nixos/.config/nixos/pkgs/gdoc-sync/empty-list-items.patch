@@ -1,0 +1,137 @@
+diff --git a/src/gdoc_sync/mdutils.py b/src/gdoc_sync/mdutils.py
+index 83672c1..1c8191e 100644
+--- a/src/gdoc_sync/mdutils.py
++++ b/src/gdoc_sync/mdutils.py
+@@ -243,6 +243,40 @@ def link_footnotes(ast: dict) -> dict:
+     return {**ast, "blocks": walk(ast.get("blocks", []), False)}
+ 
+ 
++#: A list marker alone on its line (``1.``, ``-``), i.e. a placeholder item
++#: still to be filled in. Like :data:`_FOOTNOTE_DEF` it only decides whether a
++#: push takes the AST pass.
++_EMPTY_LIST_ITEM = re.compile(r"(?m)^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]*$")
++
++
++def fill_empty_list_items(ast: dict) -> dict:
++    """Give every empty list item a paragraph, so it reaches the doc.
++
++    Pandoc parses ``1.`` alone on its line as an item with no blocks, and the
++    docx writer (and :mod:`.mdrequests`) write nothing at all for such an
++    item: the list vanishes from the doc. An empty ``Plain`` is dropped too;
++    ``Plain [Str ""]`` is what makes pandoc write an empty numbered paragraph.
++    """
++    empty_item = [{"t": "Plain", "c": [{"t": "Str", "c": ""}]}]
++
++    def walk(node):
++        if isinstance(node, list):
++            return [walk(n) for n in node]
++        if not isinstance(node, dict):
++            return node
++        t = node.get("t")
++        if t == "BulletList":
++            return {**node, "c": [walk(item) or empty_item for item in node["c"]]}
++        if t == "OrderedList":
++            attrs, items = node["c"]
++            return {**node, "c": [attrs, [walk(item) or empty_item for item in items]]}
++        if "c" in node:
++            return {**node, "c": walk(node["c"])}
++        return node
++
++    return {**ast, "blocks": walk(ast.get("blocks", []))}
++
++
+ def _run_pandoc(args: list[str], stdin: str, cwd: str | None) -> subprocess.CompletedProcess:
+     """Run pandoc, turning both ways it can fail into a useful message."""
+     try:
+@@ -297,15 +331,17 @@ def pandoc_to_docx(markdown_body: str, output_path: Path,
+         writer += ["--highlight-style", str(highlight_style)]
+     cwd = str(resource_dir) if resource_dir else None
+ 
+-    if n_callouts or _FOOTNOTE_DEF.search(markdown_body):
++    if (n_callouts or _FOOTNOTE_DEF.search(markdown_body)
++            or _EMPTY_LIST_ITEM.search(markdown_body)):
+         # A callout has to be rebuilt as a table in the AST, because there is
+         # no markdown pandoc's docx writer turns into a coloured box (see
+-        # :mod:`.callouts`), and a footnote marker only becomes a link there
+-        # (see :func:`link_footnotes`). Only pay for the second pandoc process
+-        # when the document actually contains one.
++        # :mod:`.callouts`), a footnote marker only becomes a link there
++        # (see :func:`link_footnotes`), and an empty list item only survives
++        # there (see :func:`fill_empty_list_items`). Only pay for the second
++        # pandoc process when the document actually contains one.
+         ast = json.loads(_run_pandoc(reader + ["-t", "json"], markdown_body, cwd).stdout)
+-        proc = _run_pandoc(["-f", "json"] + writer,
+-                           json.dumps(link_footnotes(transform_ast(ast))), cwd)
++        ast = fill_empty_list_items(link_footnotes(transform_ast(ast)))
++        proc = _run_pandoc(["-f", "json"] + writer, json.dumps(ast), cwd)
+     else:
+         proc = _run_pandoc(reader + writer, markdown_body, cwd)
+ 
+@@ -333,7 +369,7 @@ def pandoc_to_ast(markdown_body: str, resource_dir: Path | None = None) -> dict:
+     cwd = str(resource_dir) if resource_dir else None
+     proc = _run_pandoc(["-f", "gfm+yaml_metadata_block", "-t", "json"],
+                        markdown_body, cwd)
+-    ast = json.loads(proc.stdout)
++    ast = fill_empty_list_items(json.loads(proc.stdout))
+     return transform_ast(ast) if n_callouts else ast
+ 
+ 
+diff --git a/tests/test_mdutils.py b/tests/test_mdutils.py
+index 7929e5f..3acf388 100644
+--- a/tests/test_mdutils.py
++++ b/tests/test_mdutils.py
+@@ -1,6 +1,17 @@
+ """Frontmatter and title-derivation helpers."""
+ 
+-from gdoc_sync.mdutils import derive_title, strip_frontmatter
++import re
++import shutil
++import zipfile
++
++import pytest
++
++from gdoc_sync.mdutils import (
++    derive_title,
++    fill_empty_list_items,
++    pandoc_to_docx,
++    strip_frontmatter,
++)
+ 
+ 
+ def test_strip_frontmatter_removes_leading_block():
+@@ -25,3 +36,35 @@ def test_derive_title_falls_back_to_yaml():
+ 
+ def test_derive_title_falls_back_to_filename():
+     assert derive_title("just text\n", "my-note") == "my-note"
++
++
++# An empty list item (`1.` under a heading, to be filled in later) used to
++# vanish from the doc: pandoc gives it no blocks and writes nothing for it
++# (Oops 2026-10-08).
++EMPTY_ITEMS = "### Mine\n\n1.\n\n### Theirs\n\n-\n\n## Next\n\n1. kept\n"
++
++
++@pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc not installed")
++def test_pushed_docx_keeps_empty_list_items(tmp_path):
++    docx = tmp_path / "out.docx"
++    pandoc_to_docx(EMPTY_ITEMS, docx)
++    with zipfile.ZipFile(docx) as z:
++        body = z.read("word/document.xml").decode("utf-8")
++    items = re.findall(r"<w:p>(?:(?!</w:p>).)*?<w:numPr>(?:(?!</w:p>).)*</w:p>", body, re.S)
++    assert len(items) == 3
++    assert "<w:t" not in items[0] and "<w:t" not in items[1]
++    assert "kept" in items[2]
++
++
++def test_tab_requests_keep_empty_list_items():
++    from gdoc_sync.mdrequests import Para, markdown_to_blocks
++    paras = [b for b in markdown_to_blocks(EMPTY_ITEMS) if isinstance(b, Para) and b.list_kind]
++    assert [p.list_kind for p in paras] == ["ol", "ul", "ol"]
++
++
++def test_fill_empty_list_items_leaves_full_items_alone():
++    ast = {"blocks": [{"t": "OrderedList", "c": [[1, {"t": "Decimal"}, {"t": "Period"}],
++                                                 [[{"t": "Plain", "c": [{"t": "Str", "c": "x"}]}], []]]}]}
++    items = fill_empty_list_items(ast)["blocks"][0]["c"][1]
++    assert items[0] == [{"t": "Plain", "c": [{"t": "Str", "c": "x"}]}]
++    assert items[1] == [{"t": "Plain", "c": [{"t": "Str", "c": ""}]}]

@@ -130,7 +130,12 @@ in {
         logFile = "%h/.local/state/taskwarrior-export.log";
       })
 
-      (scheduled {
+      # Mac only. Two hosts running this is destructive, not redundant: each
+      # run's prune_missing_content_file_documents deletes every content row
+      # whose metadata.file_path does not exist on *that* host, so the laptop
+      # (/home/matth/...) and the Mac (/Users/matth/...) deleted each other's
+      # rows every hour. On 2026-10-11 every blog post on the site 404'd.
+      (lib.optionalAttrs isDarwin (scheduled {
         name = "personal-website-sync";
         description = "Sync Obsidian Vault to Personal Website MongoDB";
         command = ["${pkgs.bash}/bin/bash" "${personalWebsiteSyncScript}"];
@@ -159,7 +164,14 @@ in {
         logMaxBytes = 50 * 1024 * 1024;
         path = [pkgs.bash pkgs.nix pkgs.coreutils];
         serviceExtra.StandardError = "append:${config.home.homeDirectory}/Projects/website/sync.error.log";
-      })
+        # Not scheduled.nix's Background: launchd's background clamp throttles
+        # the job's I/O while Matt is active, and a cold run (nix-shell copying
+        # all of nixpkgs into the store whenever nixpkgs-weekly moves) sat at
+        # 10 s of CPU in 25 min; the same evaluation took 108 s at normal
+        # priority (Oops 20261015-175208). Matt also starts it on demand from
+        # Raycast ("Vault → Website Sync") and waits on it.
+        launchdExtra.ProcessType = "Standard";
+      }))
 
       # birthday-check — daily birthday check + notify from the vault. Until
       # 2026-09-10 this was a hand-`systemctl --user enable`d unit on the laptop

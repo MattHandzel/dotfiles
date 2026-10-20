@@ -14,6 +14,54 @@
 {pkgs, ...}: let
   platform = import ../lib/platform-scripts.nix {inherit pkgs;};
   bin = pkgs.writeShellScriptBin;
+  # BSD pkill/pgrep stop reading options at the first pattern; the GNU ones
+  # read them anywhere. So the Linux habit `pkill -f 'pat' -U $(id -u)` makes
+  # "-U" and "501" two MORE patterns here, and with -f every process whose
+  # command line contains either is signalled: Chromium's --lang=en-US hits
+  # every Electron/Chrome helper, plus Karabiner-Console-User-Server. An agent
+  # did exactly that twice on 2026-10-06 (~50 processes, "things keep
+  # crashing", problem log 11:21). Put the options first, the way GNU reads
+  # them, and leave the patterns untouched.
+  gnuArgOrder = name:
+    bin name ''
+      opts=() pats=() moved=()
+      is_signal() {
+        [[ $1 =~ ^-([0-9]+|([Ss][Ii][Gg])?(HUP|INT|QUIT|ILL|TRAP|ABRT|EMT|FPE|KILL|BUS|SEGV|SYS|PIPE|ALRM|TERM|URG|STOP|TSTP|CONT|CHLD|TTIN|TTOU|IO|XCPU|XFSZ|VTALRM|PROF|WINCH|INFO|USR1|USR2|hup|int|quit|kill|term|stop|cont|usr1|usr2))$ ]]
+      }
+      # BSD pkill only takes -signal as the very first argument.
+      if [ ${name} = pkill ] && [ $# -gt 0 ] && is_signal "$1"; then
+        opts+=("$1")
+        shift
+      fi
+      while [ $# -gt 0 ]; do
+        a=$1
+        shift
+        case $a in
+          --)
+            pats+=("$@")
+            break
+            ;;
+          -?*)
+            if [ ''${#pats[@]} -gt 0 ]; then moved+=("$a"); fi
+            if [ ${name} = pkill ] && is_signal "$a"; then
+              opts=("$a" "''${opts[@]}")
+            else
+              opts+=("$a")
+            fi
+            if [[ $a == -[FGPUdgtu] ]] && [ $# -gt 0 ]; then
+              opts+=("$1")
+              if [ ''${#pats[@]} -gt 0 ]; then moved+=("$1"); fi
+              shift
+            fi
+            ;;
+          *) pats+=("$a") ;;
+        esac
+      done
+      if [ ''${#moved[@]} -gt 0 ]; then
+        echo "${name}: treating ''${moved[*]} as options, not patterns (macOS ${name} wants options before the pattern)" >&2
+      fi
+      exec /usr/bin/${name} "''${opts[@]}" -- "''${pats[@]}"
+    '';
 in {
   home.packages = [
     (bin "wl-copy" ''exec ${platform.clip-copy}/bin/clip-copy "$@"'')
@@ -44,5 +92,7 @@ in {
       # a launcher invocation, which is Raycast's job on macOS.
       exec ${platform.pick}/bin/pick
     '')
+    (gnuArgOrder "pkill")
+    (gnuArgOrder "pgrep")
   ];
 }

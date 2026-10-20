@@ -44,9 +44,42 @@ probe() {
   wait "$pid"
 }
 
+# Third failure: answering, but on the app's built-in default config. At boot
+# start-at-login launches AeroSpace before the encrypted Nix Store volume is
+# mounted (2026-09-19: AeroSpace 10:06:24, /nix 10:06:33), so ~/.aerospace.toml
+# — a symlink into /nix/store — dangles and AeroSpace silently loads
+# default-config.toml: workspaces A–Z, alt-f = workspace F, no app rules, no
+# borders, no retile. This agent runs from /nix/store, so it only starts once
+# the store is mounted and the link resolves. A restart (not reload-config)
+# replays after-startup-command too. At most once per 5 min, so a broken toml
+# cannot turn this into a restart loop.
+default_config_loaded() {
+  case "$(aerospace config --config-path 2>/dev/null)" in
+    */AeroSpace.app/*/default-config.toml) [ -r "$HOME/.aerospace.toml" ] ;;
+    *) return 1 ;;
+  esac
+}
+
 if probe; then
   [ -s "$FAILS" ] && log "server answering again"
   : >"$FAILS"
+  LAST="$STATE/last-config-restart"
+  if default_config_loaded && [ "$(( $(date +%s) - $(cat "$LAST" 2>/dev/null || echo 0) ))" -ge 300 ]; then
+    date +%s >"$LAST"
+    log "running on default-config.toml although ~/.aerospace.toml is readable — restarting AeroSpace"
+    pkill -x AeroSpace || true
+    sleep 3
+    pgrep -x AeroSpace >/dev/null 2>&1 && { pkill -9 -x AeroSpace || true; sleep 2; }
+    open -a AeroSpace
+    sleep 5
+    if probe && ! default_config_loaded; then
+      log "restart OK — config: $(aerospace config --config-path 2>/dev/null)"
+      notify "AeroSpace config reloaded" "It started before /nix was mounted and fell back to its defaults; restarted with ~/.aerospace.toml."
+    else
+      log "restart did not load ~/.aerospace.toml"
+      notify "AeroSpace on default config" "Restart did not pick up ~/.aerospace.toml; needs a look."
+    fi
+  fi
   exit 0
 fi
 

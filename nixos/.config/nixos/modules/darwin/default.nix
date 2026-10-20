@@ -10,5 +10,6 @@
     ./open-with-nvim.nix
     ./dia-policy.nix # Dia auto-installs Matt's extensions (managed-preferences policy)
     ./chrome-policy.nix # Chrome auto-installs Bitwarden (passkeys in the chromium-app windows)
+    ./spicetify.nix # Spotify with ads blocked (replaces the Spotify cask)
   ];
 }

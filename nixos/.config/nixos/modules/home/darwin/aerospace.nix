@@ -313,7 +313,16 @@ in {
     alt-ctrl-y = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Gemini" gemini'
     # AeroSpace reports the app as "Beeper" (bundle "Beeper Desktop.app"), so the
     # old "Beeper Desktop" match never found the window (2026-09-14).
-    alt-ctrl-h = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Beeper" beeper -- open -a "Beeper Desktop"'
+    # Ctrl-Opt-H opens message triage (message-triage.nix), not raw Beeper
+    # (2026-10-01, CFAR TAP: the urge-to-check hotkey lands on the batch-window
+    # gate). Raw Beeper moved to Ctrl-Opt-Shift-H.
+    # 2026-10-06: Triage is a native app (Triage.app, bundle com.matth.triage)
+    # on its own `triage` workspace. It used to share `beeper`, which put raw
+    # Beeper's unread list beside it (the "intentional view" capture) and sat
+    # behind focus_gate's 15 s countdown, whose list matches "beeper". Triage's
+    # own launcher ("Who are you here to message?") is the gate now.
+    alt-ctrl-h = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Triage" triage -- triage-app'
+    alt-ctrl-shift-h = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Beeper" beeper -- open -a "Beeper Desktop"'
     alt-ctrl-s = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Spotify" spotify'
     # Ctrl-Opt-T: kitty running nvim on the Taskwarrior list, the Linux setup's
     # task view. FIXED 2026-09-12: this used to read
@@ -338,8 +347,18 @@ in {
     # telescope pickers, :find, relative :e — searched the wrong tree.
     # `--working-directory` makes kitty cd before it execs, so nvim inherits the
     # vault as cwd, and `nvim .` then opens the directory listing as before.
-    alt-ctrl-n = 'exec-and-forget ${helpers.focus-app}/bin/focus-app --title "^notetaker" notetaker -- open -na kitty --args --title notetaker --working-directory /Users/matth/Obsidian/Main -e nvim .'
-    alt-ctrl-w = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Wispr Flow" wispr'
+    # nvim runs in the tmux session `notetaker` on its own socket (Oops
+    # 20261008-174225: closing the notetaker killed every Claude session in its
+    # :terminal buffers). Closing the window now only detaches; the next ⌃⌥N
+    # reattaches the same nvim. Its own server so focus-events (FocusGained:
+    # note_embeds, lifelog) can be on without touching other tmux sessions, and
+    # no status bar, so it looks as before. Attach by hand: tmux -L notetaker a
+    alt-ctrl-n = 'exec-and-forget ${helpers.focus-app}/bin/focus-app --title "^notetaker" notetaker -- open -na kitty --args --title notetaker --working-directory /Users/matth/Obsidian/Main -e ${pkgs.tmux}/bin/tmux -L notetaker new-session -A -s notetaker nvim . \; set -s focus-events on \; set status off'
+    # Ctrl-Opt-W: the Work Test app (work-test.nix), on its own `worktest`
+    # workspace. 2026-10-08 (Oops 084632): Matt asked for it here; this key used
+    # to focus Wispr Flow, which still gets its `wispr` workspace below but no
+    # longer has a hotkey.
+    alt-ctrl-w = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Work Test" worktest -- open -a "Work Test"'
     alt-ctrl-v = 'exec-and-forget smart-clipboard-picker'
     alt-ctrl-r = 'exec-and-forget open -a Raycast'
 
@@ -384,7 +403,10 @@ in {
     alt-ctrl-shift-v = 'exec-and-forget paste-second-clip'
     # read-aloud (Linux CONTROL ALT R/SPACE/S/,/.): every alt-ctrl letter is an
     # app hotkey here, so it is a submap: alt-ctrl-shift-r then r=read,
-    # space=pause/resume, s=stop, ,/.=seek 15 s (stays in the mode), m=menu.
+    # space=pause/resume, s=stop, ,/.=previous/next sentence (stays in the
+    # mode), m=read. The Mac read-aloud is the ~/Projects/readaloud prototype
+    # (~/.local/bin wins on the PATH below): no --menu or --seek, its floating
+    # reader window is the control panel (Oops 20261006-171347).
     alt-ctrl-shift-r = 'mode read'
     # Numpad keys, exactly as on the Linux desktop keyboard. The Totem sends
     # KP_N1/KP_N2/KP_N4 from its system layer; the rest need a real numpad.
@@ -399,7 +421,7 @@ in {
     keypad4 = 'exec-and-forget ${promptLlmClipboard}'
     keypad5 = 'exec-and-forget prompt-picker'
     keypad8 = 'exec-and-forget pl-capture'
-    keypad9 = 'exec-and-forget read-aloud --menu'
+    keypad9 = 'exec-and-forget read-aloud'
     keypad7 = 'exec-and-forget open -a Dia "https://gemini.google.com/gem/6dbcf84e326c"'
 
     [mode.leader.binding]
@@ -417,14 +439,14 @@ in {
     esc = 'mode main'
 
     [mode.read.binding]
-    # read-aloud transport (see alt-ctrl-shift-r above). Seeks stay in the mode
-    # so ,,,, walks back a minute; everything else returns to main.
+    # read-aloud transport (see alt-ctrl-shift-r above). Sentence skips stay in
+    # the mode so ,,,, walks back four sentences; everything else returns to main.
     r = ['exec-and-forget read-aloud', 'mode main']
     space = ['exec-and-forget read-aloud --toggle', 'mode main']
     s = ['exec-and-forget read-aloud --stop', 'mode main']
-    comma = 'exec-and-forget read-aloud --seek -15'
-    period = 'exec-and-forget read-aloud --seek 15'
-    m = ['exec-and-forget read-aloud --menu', 'mode main']
+    comma = 'exec-and-forget read-aloud --prev'
+    period = 'exec-and-forget read-aloud --next'
+    m = ['exec-and-forget read-aloud', 'mode main']
     esc = 'mode main'
     enter = 'mode main'
 
@@ -490,6 +512,13 @@ in {
     [[on-window-detected]]
     if.app-name-regex-substring = '^(Dia|Google Chrome)$'
     if.window-title-regex-substring = '^$'
+    run = 'layout floating'
+
+    # The phone mirror (scrcpy, Raycast "Phone", 2026-10-07) floats: tiled, it
+    # was stretched to a column and lost the phone's aspect ratio. open-phone.sh
+    # moves it to the focused workspace itself.
+    [[on-window-detected]]
+    if.app-name-regex-substring = '^\.?scrcpy'
     run = 'layout floating'
 
     # ── The catch-all ────────────────────────────────────────────────────────
@@ -568,6 +597,16 @@ in {
     [[on-window-detected]]
     if.app-id = 'com.automattic.beeper.desktop'
     run = ['summon-workspace beeper', 'move-node-to-workspace --focus-follows-window beeper']
+
+    # Triage.app (message-triage.nix) lives on its own workspace; see alt-ctrl-h.
+    [[on-window-detected]]
+    if.app-id = 'com.matth.triage'
+    run = ['summon-workspace triage', 'move-node-to-workspace --focus-follows-window triage']
+
+    # Work Test.app (work-test.nix) lives on its own workspace; see alt-ctrl-w.
+    [[on-window-detected]]
+    if.app-id = 'com.matth.worktest'
+    run = ['summon-workspace worktest', 'move-node-to-workspace --focus-follows-window worktest']
 
     # Wispr Flow. alt-ctrl-w already pointed at a 'wispr' workspace, but nothing
     # ever MOVED the window there, so it stayed wherever it opened (workspace 1)

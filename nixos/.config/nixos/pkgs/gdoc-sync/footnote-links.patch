@@ -1,0 +1,141 @@
+diff --git a/src/gdoc_sync/mdutils.py b/src/gdoc_sync/mdutils.py
+index 39ac6f9..83672c1 100644
+--- a/src/gdoc_sync/mdutils.py
++++ b/src/gdoc_sync/mdutils.py
+@@ -184,6 +184,65 @@ def ensure_table_blank_lines(markdown: str) -> str:
+     return "\n".join(out)
+ 
+ 
++#: A ``[^label]:`` footnote definition. It only decides whether a push takes
++#: the AST pass, so a false hit (one inside a code block) costs one pandoc run.
++_FOOTNOTE_DEF = re.compile(r"(?m)^\[\^[^\]\s]+\]:")
++
++#: Bookmark name for the n-th footnote. Word bookmark names are letters,
++#: digits and underscores, and must start with a letter.
++FOOTNOTE_BOOKMARK = "gdoc_sync_fn_{}"
++
++
++def _first_text_block(blocks: list) -> dict | None:
++    """The first ``Para``/``Plain`` in ``blocks``, however deeply nested."""
++    for node in blocks:
++        if isinstance(node, dict):
++            if node.get("t") in ("Para", "Plain"):
++                return node
++            found = _first_text_block([node.get("c")])
++        elif isinstance(node, list):
++            found = _first_text_block(node)
++        else:
++            continue
++        if found is not None:
++            return found
++    return None
++
++
++def link_footnotes(ast: dict) -> dict:
++    """Make every footnote marker a link that jumps to its footnote.
++
++    A Google Docs footnote reference is not clickable on its own. Each
++    ``Note`` is wrapped in a ``Link`` to a bookmark put at the start of the
++    footnote's text: pandoc writes a ``w:hyperlink`` around the
++    ``w:footnoteReference`` and a ``w:bookmarkStart`` inside the footnote, and
++    Drive's import keeps both, as a Docs bookmark and a marker linked to it.
++    Pull reads only the reference, so the link never reaches the markdown.
++
++    A note already inside a link is left alone (hyperlinks cannot nest), as
++    is one with no paragraph to hold the bookmark.
++    """
++    count = 0
++
++    def walk(node, in_link: bool):
++        nonlocal count
++        if isinstance(node, list):
++            return [walk(n, in_link) for n in node]
++        if not isinstance(node, dict) or "c" not in node:
++            return node
++        if node.get("t") == "Note":
++            target = None if in_link else _first_text_block(node["c"])
++            if target is None:
++                return node
++            count += 1
++            ident = FOOTNOTE_BOOKMARK.format(count)
++            target["c"].insert(0, {"t": "Span", "c": [[ident, [], []], []]})
++            return {"t": "Link", "c": [["", [], []], [node], ["#" + ident, ""]]}
++        return {**node, "c": walk(node["c"], in_link or node.get("t") == "Link")}
++
++    return {**ast, "blocks": walk(ast.get("blocks", []), False)}
++
++
+ def _run_pandoc(args: list[str], stdin: str, cwd: str | None) -> subprocess.CompletedProcess:
+     """Run pandoc, turning both ways it can fail into a useful message."""
+     try:
+@@ -238,14 +297,15 @@ def pandoc_to_docx(markdown_body: str, output_path: Path,
+         writer += ["--highlight-style", str(highlight_style)]
+     cwd = str(resource_dir) if resource_dir else None
+ 
+-    if n_callouts:
++    if n_callouts or _FOOTNOTE_DEF.search(markdown_body):
+         # A callout has to be rebuilt as a table in the AST, because there is
+         # no markdown pandoc's docx writer turns into a coloured box (see
+-        # :mod:`.callouts`). Only pay for the second pandoc process when the
+-        # document actually contains one.
++        # :mod:`.callouts`), and a footnote marker only becomes a link there
++        # (see :func:`link_footnotes`). Only pay for the second pandoc process
++        # when the document actually contains one.
+         ast = json.loads(_run_pandoc(reader + ["-t", "json"], markdown_body, cwd).stdout)
+         proc = _run_pandoc(["-f", "json"] + writer,
+-                           json.dumps(transform_ast(ast)), cwd)
++                           json.dumps(link_footnotes(transform_ast(ast))), cwd)
+     else:
+         proc = _run_pandoc(reader + writer, markdown_body, cwd)
+ 
+diff --git a/tests/test_footnotes.py b/tests/test_footnotes.py
+index 3efd634..dee5d95 100644
+--- a/tests/test_footnotes.py
++++ b/tests/test_footnotes.py
+@@ -9,6 +9,7 @@ rule and the count-preservation warning.
+ from __future__ import annotations
+ 
+ import json
++import re
+ import shutil
+ import subprocess
+ import zipfile
+@@ -18,6 +19,7 @@ import pytest
+ 
+ from gdoc_sync import pull as pull_mod
+ from gdoc_sync.convert import doc_to_markdown
++from gdoc_sync.mdutils import link_footnotes, pandoc_to_docx
+ 
+ FIXTURES = Path(__file__).parent / "fixtures"
+ 
+@@ -213,3 +215,30 @@ def test_emitted_markdown_becomes_real_docx_footnotes(tmp_path):
+     # text stays in the markdown file (which is the point — the pull no longer
+     # loses it); it just cannot be re-created in the doc it was orphaned in.
+     assert "Nobody points at this one." not in xml
++
++
++@pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc not installed")
++def test_pushed_footnote_markers_link_to_their_footnotes(tmp_path):
++    """Each marker is a hyperlink to a bookmark at the start of its own
++    footnote, which Drive's import turns into a clickable jump in the doc."""
++    md, _ = doc_to_markdown(_fixture("footnotes_doc.json"))
++    docx = tmp_path / "out.docx"
++    pandoc_to_docx(md, docx)
++    with zipfile.ZipFile(docx) as z:
++        body = z.read("word/document.xml").decode("utf-8")
++        notes = z.read("word/footnotes.xml").decode("utf-8")
++    links = re.findall(
++        r'<w:hyperlink w:anchor="(gdoc_sync_fn_\d+)">\s*<w:r>.*?'
++        r'<w:footnoteReference w:id="(\d+)"', body)
++    assert [a for a, _ in links] == ["gdoc_sync_fn_1", "gdoc_sync_fn_2"]
++    for anchor, note_id in links:
++        note = re.search(rf'<w:footnote w:id="{note_id}">(.*?)</w:footnote>',
++                         notes, re.S).group(1)
++        assert f'w:name="{anchor}"' in note
++
++
++def test_link_footnotes_skips_a_note_already_inside_a_link():
++    note = {"t": "Note", "c": [{"t": "Para", "c": [{"t": "Str", "c": "x"}]}]}
++    inner = {"t": "Link", "c": [["", [], []], [note], ["https://e.com", ""]]}
++    ast = {"blocks": [{"t": "Para", "c": [inner]}]}
++    assert link_footnotes(ast) == ast

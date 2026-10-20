@@ -119,7 +119,10 @@
       - trigger: ";;decline"
         replace: "Thanks for the invite — can't make this one but hope it goes well."
       - trigger: ";;meetprep"
-        replace: "So that I can provide the most value to you for our meeting, can you write out what you would like to get out of our meeting, what specific questions you’d like to ask, and if you’re satisfied with me answeering them async? Please send those over 24 hours before the meeting otherwise I will reschedule. Thanks!"
+        replace: "So that I can provide the most value to you for our meeting, can you write out what you would like to get out of our meeting, what specific questions / discussion points you have? If they are short and quick I would prefer to answer them async. Please send those 24 hours in advanced otherwise I will reschedule. Thanks!"
+
+      - trigger: ";;irlmeetprep"
+        replace: "So that I can provide the most value to you for our meeting, can you write out what you would like to get out of our meeting, what specific questions / discussion points you have? If they are short and quick I would prefer to answer them async. Please send those 24 hours in advanced otherwise I will reschedule. Thanks!"
 
       # === contact / identity ===
       # ;;phone, ;;addr, ;;dmd and ;;dms are PRIVATE (phone number, street
@@ -152,6 +155,7 @@
       - trigger: ";;intro20"
         ${cat "${vault}/areas/personal-brand/intros/cold-coffee-chat.md"}
 
+
       # === clip2md (MAT-572): rich text on the clipboard -> Markdown, inline ===
       - trigger: ";;md"
         ${script ["/bin/bash" "-c" "html=$(${bin}/wl-paste --type text/html 2>/dev/null); if [ -n \"$html\" ]; then printf '%s' \"$html\" | ${bin}/pandoc --from html --to gfm-raw_html --wrap=none; else ${bin}/wl-paste; fi"]}
@@ -167,10 +171,16 @@ in {
   '';
   # Dia's new-tab "Ask anything" composer accepts espanso's injected backspaces
   # but drops the injected unicode text, so the trigger vanishes and nothing is
-  # inserted (Oops 20260914-172633). Paste via the clipboard there instead.
+  # inserted (Oops 20260914-172633). Paste via the clipboard there instead —
+  # but ONLY in the new-tab window: on ordinary web pages the clipboard paste
+  # is silently dropped about a third of the time (Swapcard chat: 1 of 6
+  # `;;cal` landed; trail log 2026-10-08..18: 18 of 58 web-page pastes retried
+  # within 20 s vs 0 of 7 in New Tab — Oops 20261018-165007), while injected
+  # text works there. Espanso reads the title via Accessibility; filters AND.
   home.file.".config/espanso/config/dia.yml".text = ''
     # Managed by modules/home/darwin/espanso.nix — edit there and rebuild.
     filter_exec: "Dia\\.app"
+    filter_title: "New Tab$"
     backend: Clipboard
   '';
 }

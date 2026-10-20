@@ -15,6 +15,25 @@ python3Packages.buildPythonApplication {
 
   inherit src;
 
+  # Footnote markers in a pushed doc link to their footnotes (Oops
+  # 2026-09-24). Not upstream yet: the change is also in the
+  # `oops-footnote-links` worktree of ~/Projects/gdoc-sync. Drop this once
+  # that lands on main, or the patch will no longer apply.
+  #
+  # `gdoc-sync mirror DIR` imports every Doc in the account into one folder,
+  # pull-only, and keeps them current from one Drive listing; `import` of an
+  # already-linked doc returns the existing file; and sync merges the body
+  # without the local-only YAML header, which made every edit at the top of an
+  # imported doc a conflict (Oops 2026-10-06). Same story:
+  # worktree `~/Projects/gdoc-sync-mirror` (branch `oops-mirror`, uncommitted),
+  # written against this source with footnote-links.patch applied.
+  #
+  # An empty list item (`1.` alone under a heading) reaches the doc as an empty
+  # numbered paragraph instead of vanishing (Oops 2026-10-08). Worktree
+  # `~/Projects/gdoc-sync-empty-list` (branch `oops-empty-list`, uncommitted),
+  # written on top of the two patches above.
+  patches = [./footnote-links.patch ./mirror.patch ./empty-list-items.patch];
+
   build-system = [python3Packages.setuptools];
   nativeBuildInputs = [makeWrapper];
 

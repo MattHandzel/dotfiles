@@ -32,6 +32,9 @@ if [[ "$(uname)" == Darwin ]]; then
   SOUND_FILE=/System/Library/Sounds/Glass.aiff
   mac_notify() { /usr/bin/osascript -e 'on run argv' -e 'display notification (item 2 of argv) with title (item 1 of argv)' -e 'end run' "$1" "$2" >/dev/null 2>&1 || true; }
   _uid="$(id -u)"
+  # Redraw SketchyBar's timer pill now (sketchybar/plugins/timer.sh), so a timer
+  # that did or didn't start shows at once (Oops 20261014-132219).
+  bar_update() { [[ -x /opt/homebrew/bin/sketchybar ]] && /opt/homebrew/bin/sketchybar --trigger timer_update >/dev/null 2>&1 || true; }
 
   mac_units() { local f; for f in "$LT_DIR"/*.plist; do [[ -e "$f" ]] || continue; basename "$f" .plist; done; }
 
@@ -65,6 +68,7 @@ if [[ "$(uname)" == Darwin ]]; then
         n=0; while IFS= read -r u; do cancel_one "$u"; n=$((n + 1)); done <<<"$units"
         echo "cancelled $n timer(s)"
       fi
+      bar_update
       exit 0
       ;;
     "" | -h | --help) echo "usage: leader-timer MINUTES [LABEL...] | --list | --cancel [UNIT]" >&2; exit 2 ;;
@@ -86,11 +90,23 @@ if [[ "$(uname)" == Darwin ]]; then
   unit="leader-timer-${mins}min${slug}-$(date +%s)-$$"
   plist="$LT_DIR/$unit.plist"
   printf '%s' "$what" >"$LT_DIR/$unit.what"
-  printf '%s' "$(( $(date +%s) + secs ))" >"$LT_DIR/$unit.deadline"
+  deadline=$(( $(date +%s) + secs ))
+  printf '%s' "$deadline" >"$LT_DIR/$unit.deadline"
 
   # The finishing script: title/body/paths arrive as environment, never
   # interpolated into the command string (labels are free text).
-  finish='sleep "$LT_SECS"; /usr/bin/osascript -e "on run argv" -e "display notification (item 2 of argv) with title (item 1 of argv)" -e "end run" "$LT_TITLE" "$LT_BODY" >/dev/null 2>&1 || true; [ -r "$LT_SOUND" ] && /usr/bin/afplay "$LT_SOUND" >/dev/null 2>&1 || true; rm -f "$LT_PLIST" "${LT_PLIST%.plist}.what" "${LT_PLIST%.plist}.deadline"; launchctl bootout "gui/$(id -u)/$LT_UNIT" >/dev/null 2>&1 || true'
+  # 2026-09-22 (Oops 20260922-105249): the banner is a 5 s toast and afplay
+  # went to a muted headset, so Matt saw/heard nothing. Hammerspoon
+  # (~/.hammerspoon/timer_alert.lua) now shows an alert that stays until a key
+  # or click and plays the sound even on a muted output; afplay is only the
+  # fallback when Hammerspoon is not running. Title/body are percent-encoded
+  # byte by byte for the URL.
+  # 2026-09-23 (Oops 20260923-080211): the countdown waits for a wall-clock
+  # deadline, not `sleep $LT_SECS`. macOS sleep(1) counts only awake time, so a
+  # 60 min timer set before closing the lid fired 40 min after the next
+  # morning's wake. Short sleeps against `date +%s` count the time the Mac was
+  # asleep and fire within 15 s of waking once the deadline has passed.
+  finish='while now=$(/bin/date +%s); [ "$now" -lt "$LT_DEADLINE" ]; do left=$((LT_DEADLINE - now)); [ "$left" -gt 15 ] && left=15; sleep "$left"; done; enc() { printf %s "$1" | /usr/bin/xxd -p | /usr/bin/tr -d "\n" | /usr/bin/sed "s/../%&/g"; }; /usr/bin/osascript -e "on run argv" -e "display notification (item 2 of argv) with title (item 1 of argv)" -e "end run" "$LT_TITLE" "$LT_BODY" >/dev/null 2>&1 || true; if /usr/bin/pgrep -xq Hammerspoon; then /usr/bin/open -g "hammerspoon://leader-timer-done?title=$(enc "$LT_TITLE")&body=$(enc "$LT_BODY")" || true; elif [ -r "$LT_SOUND" ]; then /usr/bin/afplay "$LT_SOUND" >/dev/null 2>&1 || true; fi; rm -f "$LT_PLIST" "${LT_PLIST%.plist}.what" "${LT_PLIST%.plist}.deadline"; [ -x /opt/homebrew/bin/sketchybar ] && /opt/homebrew/bin/sketchybar --trigger timer_update >/dev/null 2>&1; launchctl bootout "gui/$(id -u)/$LT_UNIT" >/dev/null 2>&1 || true'
 
   xml_escape() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' <<<"$1"; }
   cat >"$plist" <<PLIST
@@ -101,7 +117,7 @@ if [[ "$(uname)" == Darwin ]]; then
   <key>RunAtLoad</key><true/>
   <key>ProgramArguments</key><array><string>/bin/bash</string><string>-c</string><string>$(xml_escape "$finish")</string></array>
   <key>EnvironmentVariables</key><dict>
-    <key>LT_SECS</key><string>$secs</string>
+    <key>LT_DEADLINE</key><string>$deadline</string>
     <key>LT_NOTIFY</key><string>$NOTIFY</string>
     <key>LT_TITLE</key><string>$(xml_escape "$title")</string>
     <key>LT_BODY</key><string>$(xml_escape "$body")</string>
@@ -112,6 +128,7 @@ if [[ "$(uname)" == Darwin ]]; then
 </dict></plist>
 PLIST
   launchctl bootstrap "gui/$_uid" "$plist"
+  bar_update
   mac_notify "⏱ Timer started" "$what"
   exit 0
 fi

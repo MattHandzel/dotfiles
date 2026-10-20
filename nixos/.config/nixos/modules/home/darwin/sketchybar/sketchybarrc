@@ -75,6 +75,8 @@ sketchybar --default \
 sketchybar --add event aerospace_workspace_change
 # ~/.local/bin/oops fires this when it starts a Claude repair session.
 sketchybar --add event oops_update
+# leader-timer fires this when a timer starts, is cancelled or finishes.
+sketchybar --add event timer_update
 
 # ═══════════════════════════════ LEFT ═════════════════════════════════════
 
@@ -108,20 +110,24 @@ sketchybar --add item front_app left \
 
 # ═══════════════════════════ AROUND THE NOTCH ═════════════════════════════
 
-# Clock: `EEE d MMM  HH:mm` — what the laptop showed, minus the seconds.
+# Clock: `EEE d MMM  HH:mm:ss`, ticking every second. label.width is pinned
+# because some digits round 1 px wider (item 182↔183 px), which nudged the icon
+# every few seconds; 163 = the widest label (two-digit day) incl. its padding.
 # Position q = right-aligned against the left edge of the notch.
 sketchybar --add item clock q \
   --set clock \
-    update_freq=10 \
+    update_freq=1 \
     icon="󰃭" \
     icon.color="$MAUVE" \
     label.font="$FONT:SemiBold:12.5" \
     label.padding_right=10 \
+    label.width=163 \
     script="$PLUGIN_DIR/clock.sh"
 
-# Today's next event. Reads the read-only Google agenda the calendar-agenda
-# launchd agent writes (same file waybar read on the laptop); falls back to
-# icalBuddy against Calendar.app; hides itself when there is nothing.
+# What is running now and what is next: "Deep work → 14:00 personal brand".
+# Reads the read-only Google agenda the calendar-agenda launchd agent writes
+# (same file waybar read on the laptop); falls back to icalBuddy against
+# Calendar.app; hides itself when there is nothing.
 # Position e = left-aligned against the right edge of the notch.
 sketchybar --add item calendar e \
   --set calendar \
@@ -130,8 +136,8 @@ sketchybar --add item calendar e \
     icon.color="$TEAL" \
     icon.padding_left=10 \
     label.color="$SUBTEXT1" \
-    label.max_chars=34 \
-    click_script="open -a Calendar" \
+    label.max_chars=40 \
+    click_script="$PLUGIN_DIR/bfy_click.sh; open -a Calendar" \
     script="$PLUGIN_DIR/calendar.sh"
 
 # ══════════════════════════════ RIGHT ═════════════════════════════════════
@@ -147,7 +153,7 @@ sketchybar --add item tailscale right \
     icon.padding_left=8 \
     icon.padding_right=6 \
     label.drawing=off \
-    click_script="open -a Tailscale" \
+    click_script="$PLUGIN_DIR/bfy_click.sh; open -a Tailscale" \
     script="$PLUGIN_DIR/tailscale.sh"
 
 sketchybar --add item volume right \
@@ -164,7 +170,7 @@ sketchybar --add item wifi right \
     update_freq=15 \
     icon.color="$BLUE" \
     label.max_chars=18 \
-    click_script="open 'x-apple.systempreferences:com.apple.wifi-settings-extension'" \
+    click_script="$PLUGIN_DIR/bfy_click.sh; open 'x-apple.systempreferences:com.apple.wifi-settings-extension'" \
     script="$PLUGIN_DIR/wifi.sh" \
   --subscribe wifi wifi_change system_woke
 
@@ -188,7 +194,7 @@ sketchybar --add item cpu right \
     update_freq=5 \
     icon="󰍛" \
     icon.color="$PEACH" \
-    click_script="open -na kitty --args --title btop -e btop" \
+    click_script="$PLUGIN_DIR/bfy_click.sh; open -na kitty --args --title btop -e btop" \
     script="$PLUGIN_DIR/cpu.sh"
 
 # Oops: red life-ring + count while a Claude repair session runs (tmux -L oops);
@@ -202,7 +208,7 @@ sketchybar --add item oops right \
     icon.color="$RED" \
     icon.font="$FONT:Bold:13.0" \
     label.color="$TEXT" \
-    click_script="$PLUGIN_DIR/oops.sh click" \
+    click_script="$PLUGIN_DIR/bfy_click.sh; $PLUGIN_DIR/oops.sh click" \
     script="$PLUGIN_DIR/oops.sh" \
   --subscribe oops oops_update
 
@@ -218,9 +224,30 @@ sketchybar --add item focus right \
     label.font="$FONT:SemiBold:12.0" \
     label.drawing=off \
     background.height=22 \
-    click_script="$PLUGIN_DIR/focus.sh click" \
+    click_script="$PLUGIN_DIR/bfy_click.sh; $PLUGIN_DIR/focus.sh click" \
     script="$PLUGIN_DIR/focus.sh" \
   --subscribe focus aerospace_workspace_change system_woke
+
+# Timer pill: "⏱ 4:07 brain dump" while a leader-timer countdown is pending,
+# hidden otherwise, so a timer that never started shows at a glance
+# (plugins/timer.sh). Click it for a popup of every timer. Added last so it
+# sits leftmost of the right cluster.
+sketchybar --add item timer right \
+  --set timer \
+    drawing=off \
+    update_freq=5 \
+    updates=on \
+    icon="⏱" \
+    icon.color="$PEACH" \
+    label.color="$TEXT" \
+    label.max_chars=28 \
+    popup.align=right \
+    popup.background.color="$MANTLE" \
+    popup.background.border_color="$SURFACE1" \
+    popup.background.border_width=1 \
+    popup.background.corner_radius=6 \
+    script="$PLUGIN_DIR/timer.sh" \
+  --subscribe timer timer_update system_woke mouse.clicked mouse.exited.global
 
 # ── go ────────────────────────────────────────────────────────────────────
 sketchybar --update

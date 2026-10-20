@@ -136,8 +136,15 @@
       # untouched and cmd+shift+c arrives. On the built-in keyboard Karabiner has
       # already rewritten Command to Control, so the same thumb produces
       # ctrl+shift+c. Mapping both makes the two keyboards behave identically.
+      #
+      # EXCEPT cmd+v, which pastes again (Matt, 2026-09-24: "I want Command-V to
+      # paste in kitty"). The kitten pastes text exactly like cmd+shift+v; when
+      # the clipboard holds only an image it still sends C-v, which nvim's
+      # insert-mode <C-v> (ObsidianPasteImg) and Claude Code (image attach)
+      # need. Real Ctrl+V keeps C-v / visual block. karabiner.nix passes the
+      # built-in keyboard's left Cmd+V through as Command so it lands here too.
       "cmd+c" = "send_text all \\x03";   # C-c  SIGINT, NOT copy
-      "cmd+v" = "send_text all \\x16";   # C-v  literal insert, NOT paste
+      "cmd+v" = "kitten paste_or_image.py";
       "cmd+shift+c" = "copy_to_clipboard";
       "cmd+shift+v" = "paste_from_clipboard";
       "ctrl+shift+c" = "copy_to_clipboard";
@@ -201,4 +208,30 @@
       "ctrl+down" = "change_font_size all -1.0";
     };
   };
+
+  # The cmd+v kitten (see the keybinding above). Runs inside kitty's process.
+  xdg.configFile."kitty/paste_or_image.py".text = ''
+    from kittens.tui.handler import result_handler
+    from kitty.clipboard import get_clipboard_string
+
+
+    def main(args):
+        pass
+
+
+    @result_handler(no_ui=True)
+    def handle_result(args, answer, target_window_id, boss):
+        window = boss.window_id_map.get(target_window_id)
+        if window is None:
+            return
+        # The body of kitty's paste_from_clipboard (cmd+shift+v), aimed at the
+        # window the key was pressed in.
+        if window.send_paste_event():
+            return
+        text = get_clipboard_string()
+        if text:
+            window.paste_with_actions(text)
+        else:
+            window.write_to_child(b"\x16")  # C-v: image paste in nvim / Claude Code
+  '';
 }

@@ -21,17 +21,35 @@
 #     bordersrc: not defaults keys; kitty and borders are owned by
 #     modules/home/{kitty,darwin/aerospace}.nix.
 {
+  lib,
   pkgs,
   username,
   ...
 }: {
   system.keyboard = {
+    # Karabiner (modules/home/darwin/karabiner.nix) owns the whole Caps ⇄ Esc
+    # swap. NO hidutil remap here: `hidutil property --set` is global, so it
+    # also rewrites Karabiner's virtual keyboard, turning the caps_lock that
+    # Karabiner sends for the Esc key straight back into Escape — the swap
+    # becomes "both keys are Escape" (Oops 2026-10-09). enableKeyMapping stays
+    # on with no mappings so every activation clears a stale UserKeyMapping.
     enableKeyMapping = true;
-    # Caps is Escape (kanata and Karabiner do the rest — see modules/darwin/kanata.nix
-    # and modules/home/darwin/karabiner.nix). This one is the firmware-level
-    # remap that survives even before kanata loads at boot.
-    remapCapsLockToEscape = true;
   };
+
+  # The same Caps ⇄ Esc swap, but ONLY on the internal keyboard's own event
+  # service (Apple 0x5ac/0x343, usage 1/6), never Karabiner's virtual keyboard
+  # (0x24f). Karabiner ungrabs the keyboard at every system_will_sleep and
+  # re-grabs 1.5-20 s after wake. In that gap the raw keys reach macOS, so the
+  # physical Caps key is a real Caps Lock. On 2026-10-19 an ⌥+Caps sleep left
+  # Caps Lock on (Oops 20261019-170220). While Karabiner holds the grab, this
+  # service sees no events: Karabiner reads the device raw and ignores
+  # service-level mappings. So the swap is never applied twice. mkAfter puts it
+  # after the global clear above, in both `activate` and the boot-time
+  # activate-system daemon.
+  system.activationScripts.keyboard.text = lib.mkAfter ''
+    hidutil property --matching '{"VendorID":0x5ac,"ProductID":0x343,"PrimaryUsagePage":1,"PrimaryUsage":6}' \
+      --set '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x700000029},{"HIDKeyboardModifierMappingSrc":0x700000029,"HIDKeyboardModifierMappingDst":0x700000039}]}' > /dev/null
+  '';
 
   system.startup.chime = false;
 
@@ -172,6 +190,8 @@
       type = "png";
       disable-shadow = true;
       show-thumbnail = false; # no floating preview to wait out
+      # target stays "file"; modules/home/darwin/screenshot-clipboard.nix also
+      # copies each capture to the clipboard.
     };
 
     # AeroSpace wants ONE space spanning both displays; with this off, moving a
@@ -225,7 +245,11 @@
     # Globe/Fn key does nothing on its own; kanata owns the layers.
     hitoolbox.AppleFnUsageType = "Do Nothing";
     LaunchServices.LSQuarantine = false;
-    SoftwareUpdate.AutomaticallyInstallMacOSUpdates = false;
+    # Minor/security updates install themselves overnight (on power). It was
+    # false until 2026-10-06: the Mac sat on 26.5.2 while 26.6.2, 26.7 and
+    # 26.7.1 (an actively exploited CoreGraphics fix, CVE-2026-86950) were
+    # offered and never installed. Major upgrades (27.x) are never automatic.
+    SoftwareUpdate.AutomaticallyInstallMacOSUpdates = true;
 
     CustomUserPreferences = {
       NSGlobalDomain = {
@@ -246,6 +270,12 @@
         # nix-darwin NSGlobalDomain option for this key (there is one for
         # trackpad.scaling), so it goes through the raw-defaults escape hatch.
         "com.apple.mouse.scaling" = 1.5;
+        # No "PL"/"US" input-source tag under the text cursor. HIToolbox shows
+        # it each time typing pauses (TSMFloatingIndicatorDurationOnIdle), so
+        # Raycast's search field flashed "PL" at every pause (Oops 2026-10-19).
+        # Polish Pro only differs from U.S. on Option-letters, so the tag gave
+        # little away.
+        TSMLanguageIndicatorEnabled = false;
       };
 
       # The "Reopen windows when logging back in" checkbox in the restart dialog.
@@ -304,7 +334,10 @@
         "Clear Scrollback" = "@~^$k"; # frees cmd+k -> C-k
         "Clear Screen" = "@~^$l"; # frees cmd+l -> C-l
         "Reset" = "@~^$r"; # frees cmd+r -> C-r
-        "Paste" = "@~^$v"; # frees cmd+v -> C-v (clipboard is cmd+shift+v)
+        # NOT "Paste" (removed 2026-09-24). kitty hands one paste_from_clipboard
+        # chord (cmd+shift+v) to Edit > Paste and drops it from its own keymap,
+        # so parking Paste made cmd+shift+v dead. cmd+v no longer needs freeing:
+        # kitty.nix maps it to a paste kitten, which kitty never gives the menu.
         # frees cmd+s -> C-s (Save in nvim). This one was worse than merely
         # dead: Secure Keyboard Entry is a TOGGLE, so every cmd+s silently
         # flipped kitty in or out of a mode that blocks other processes from
@@ -371,6 +404,13 @@
       "com.apple.symbolichotkeys".AppleSymbolicHotKeys = {
         "64".enabled = false;
         "65".enabled = false;
+        # 60 = Ctrl+Space (select the previous input source). With U.S. and
+        # Polish Pro both enabled, macOS ate Ctrl+Space before kitty saw it.
+        # That killed the tmux prefix (C-Space) on the built-in keyboard, where
+        # Karabiner makes left Cmd+Space into Ctrl+Space inside kitty (Oops
+        # 2026-10-19). The US/Polish toggle is ⌥+Esc (karabiner.nix); 61
+        # (Ctrl+Option+Space, next source) stays on as a fallback for the Totem.
+        "60".enabled = false;
         # 32/34 = Ctrl+Up (Mission Control), 33/35 = Ctrl+Down (application
         # windows). Off so kitty gets Ctrl+Up/Down for the font size.
         "32".enabled = false;
@@ -387,6 +427,8 @@
         "NSStatusItem Visible raycastIcon" = false;
       };
       "com.apphousekitchen.aldente-pro" = {
+        # Only applies while AlDente runs, and it is not started at login. The
+        # live cap is macOS's own Charge Limit: modules/home/darwin/charge-limit.nix.
         chargeVal = 80; # the tlp 60/80 threshold, upper half
         showDockIcon = false;
         launchOnLogin = true;

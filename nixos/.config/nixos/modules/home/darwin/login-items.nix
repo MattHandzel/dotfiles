@@ -37,11 +37,23 @@ in {
     # (/Applications/Beeper Desktop.app). Plain "Beeper" does not resolve.
     beeper = launchAtLogin "Beeper Desktop";
 
+    # Claude Desktop (cask "claude", /Applications/Claude.app). Its window rule
+    # in aerospace.nix parks it on workspace `claude`. Before this, every login
+    # meant opening it by hand from Raycast (2026-10-11 Oops: "make claude run
+    # on startup").
+    claude = launchAtLogin "Claude";
+
     # Hammerspoon owns alt-Y / alt-shift-Y (notification dismissal), the
     # Option+brightness jumps, and the Option+Arrow browser-history shim. All of
     # those are dead until it is running, and its own "Launch at login"
     # preference is a GUI checkbox this flake cannot set.
     hammerspoon = launchAtLogin "Hammerspoon";
+
+    # Display scaling + per-display DDC brightness for the DELL U3225QE. It is
+    # a menu-bar-only (LSUIElement) app, so it has no window to reopen and its
+    # own "start at login" is a GUI checkbox this flake cannot set
+    # (2026-09-19 Oops).
+    betterdisplay = launchAtLogin "BetterDisplay";
 
     # Turns Bluetooth off on sleep and back on at wake. Without it the Totem's
     # BLE link ("Bluetooth LE HID Activity") wakes the Mac every minute after

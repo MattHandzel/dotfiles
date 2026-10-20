@@ -74,6 +74,17 @@
     # modes at the recommended level, so this one stays in the managed plist.
     ExtensionSettings = settings;
   });
+  # Copies the plist only when it differs, so the WatchPaths daemon below does
+  # not re-trigger itself forever.
+  install = pkgs.writeShellScript "dia-policy-install" ''
+    dst="/Library/Managed Preferences/company.thebrowser.dia.plist"
+    /usr/bin/cmp -s ${plist} "$dst" && exit 0
+    /bin/mkdir -p "/Library/Managed Preferences"
+    /bin/cp ${plist} "$dst"
+    /usr/sbin/chown root:wheel "$dst"
+    /bin/chmod 644 "$dst"
+    /usr/bin/killall cfprefsd 2>/dev/null || true
+  '';
 in {
   system.defaults.CustomUserPreferences."company.thebrowser.dia" = searchProvider;
 
@@ -82,10 +93,21 @@ in {
   # activationScripts entry is silently never executed (2026-09-12: the
   # 19:22 switch produced a system with no trace of this policy).
   system.activationScripts.postActivation.text = ''
-    /bin/mkdir -p "/Library/Managed Preferences"
-    /bin/cp ${plist} "/Library/Managed Preferences/company.thebrowser.dia.plist"
-    /usr/sbin/chown root:wheel "/Library/Managed Preferences/company.thebrowser.dia.plist"
-    /bin/chmod 644 "/Library/Managed Preferences/company.thebrowser.dia.plist"
-    /usr/bin/killall cfprefsd 2>/dev/null || true
+    ${install}
   '';
+
+  # Activation alone does not survive a reboot. At boot macOS's ManagedClient
+  # rebuilds /Library/Managed Preferences from the installed configuration
+  # profiles and drops any hand-placed plist (2026-09-19 10:06:18). Dia then
+  # started with no policy and UNINSTALLED all 19 extensions from the Work
+  # profile, their data included (Oops run 20260919-105936). This daemon puts
+  # the plist back at boot and every time that directory changes.
+  launchd.daemons.dia-policy = {
+    command = "${install}"; # nix-darwin wraps it in wait4path /nix/store
+    serviceConfig = {
+      RunAtLoad = true;
+      WatchPaths = ["/Library/Managed Preferences"];
+      StartInterval = 300;
+    };
+  };
 }

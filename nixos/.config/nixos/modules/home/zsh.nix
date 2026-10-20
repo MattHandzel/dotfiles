@@ -297,7 +297,13 @@ in {
           rm -f -- "$tmp"
         }
 
-        export PATH="$HOME/.npm-packages/bin:$PATH"
+        # ~/.local/bin FIRST, ahead of /opt/homebrew/bin: Claude Code's native
+        # installer self-updates into ~/.local/share/claude/versions and
+        # repoints ~/.local/bin/claude. If a brew copy wins the PATH race it
+        # silently shadows every update — 2026-09-22 ran 2.1.273 for five days
+        # while 2.1.280 sat unused. Same footgun documented in
+        # modules/home/claude-autofix.nix for the NixOS hosts.
+        export PATH="$HOME/.local/bin:$HOME/.npm-packages/bin:$PATH"
         video-to-trasncript() { ffmpeg -i $1 -vn $(echo $1 | sed 's/\.mp4$/\.mp3/') } # useful function to convert video to audio
       '')
     ];

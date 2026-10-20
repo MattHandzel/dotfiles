@@ -18,11 +18,13 @@ if [[ "$(uname)" == Darwin ]]; then
     [ -n "$loc" ] && dir="${loc/#\~/$HOME}"
   fi
   [ -d "$dir" ] || { notify-send "screenshot-search" "No screenshot dir: $dir"; exit 1; }
-  # Newest first (BSD stat), NUL-delimited so odd names survive.
-  mapfile -d '' -t files < <(
+  # Newest first. Newline-delimited: BSD stat cannot end a record with NUL and
+  # BSD cut has no -z, so the old NUL pipeline saw ONE record and the picker
+  # showed a single stale name (2026-10-05). Screenshot names have no newlines.
+  mapfile -t files < <(
     find "$dir" -maxdepth 1 -type f \
-      \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \) -print0 \
-      | xargs -0 /usr/bin/stat -f '%m%t%N%z' | sort -z -rn -k1,1 | cut -z -f2-
+      \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \) \
+      -exec /usr/bin/stat -f '%m%t%N' {} + | sort -rn | cut -f2-
   )
   [ "${#files[@]}" -gt 0 ] || { notify-send "screenshot-search" "No screenshots in $dir"; exit 0; }
   # choose has no thumbnail protocol; names carry the timestamp anyway.

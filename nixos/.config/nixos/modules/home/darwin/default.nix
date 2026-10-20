@@ -17,19 +17,44 @@
     ./zen-config.nix # Zen prefs, macOS profile root
     ./automations.nix # calendar-agenda / disk-space-alert (system services on NixOS)
     ./memory-guard.nix # end a runaway batch job before macOS pauses apps on swap exhaustion
+    ./systemstatus-guard.nix # warn to reboot before a slow systemstatusd breaks the camera in calls
+    ./charge-limit.nix # battery charge cap (macOS's own Charge Limit): 100 % through 2026-10-24, then 80 %
+    ./dayflow-guard.nix # keep Dayflow's screenshot interval at 1 s; notify when frames stop or slow down
+    ./phone-lifelog.nix # copy the phone's location, app/screen events and Sleep Guard home log for lifelog
+    ./lifelog-store.nix # every message, email and log -> ~/.local/share/lifelog store every 5 min; nightly archive + storage limits
+    ./newsletter-page.nix # republish the unlisted newsletter page when its vault note or images change
+    ./display-arrangement.nix # keep the secondary display stacked above the built-in (alt-k/alt-j cross monitors)
     ./login-items.nix # Beeper + Hammerspoon at login (AeroSpace does its own)
     ./bitwarden.nix # Bitwarden.app at login + Dia native-messaging bridge (Touch ID unlock in Dia)
+    ./dia-extension-backup.nix # daily copy of Dia extension storage (logins) — net under dia-policy.nix
     ./no-app-resume.nix # kill "Reopen windows when logging back in", even after `sudo reboot`
     ./raycast-scripts.nix # Raycast Script Commands (timer & co.), twin of vicinae.nix
     ./wispr-clipboard-sync.nix # every Wispr Flow dictation -> clipboard -> Raycast history
     ./wispr-meeting-sync.nix # Wispr Flow meeting summaries + transcripts -> vault, calendar note, daily note
     ./wispr-learn.nix # corrections made in Neovim -> Wispr Flow dictionary (its own learner cannot see kitty)
     ./oops.nix # alt-backtick / Raycast "Oops": last 90 s of keys -> Claude -> problem log + fix
+    ./claude-api-resume.nix # every Claude Code session continues by itself after an API error, sleep or lost network
     ./espanso.nix # ;; text-expansion triggers (nix-managed base.yml; Espanso.app + its own agent)
     ./sketchybar.nix # the status bar (waybar's replacement): config + launchd agent
     ./borders.nix # JankyBorders colours/width (~/.config/borders/bordersrc)
     ./kms-ingest.nix # phone captures in ~/ShareComputer/kms-inbox -> vault raw_capture (kms ingest)
+    ./boox-sync.nix # BOOX cloud handwritten notes -> vault raw_capture/boox_notes (PDF + transcription), every 30 min
+    ./brain-search.nix # vault semantic search, local: incremental indexer agent (query daemon starts on demand)
+    ./rabbithole.nix # treadmill reader/listener web app on 127.0.0.1:8777 (tailnet :8778)
     ./downloads-to-phone.nix # new ~/Downloads files -> ~/ShareComputer/downloads -> phone
+    ./screenshot-clipboard.nix # every Screenshot.app capture (⌘⇧5, Raycast "Screenshot") also -> clipboard, like the Print key
+    ./morning-focus.nix # first laptop use each morning: quit messaging apps, open the daily note (CFAR TAP)
+    ./message-triage.nix # Claude-triaged Beeper inbox on 127.0.0.1:8771, Ctrl-Opt-H (CFAR TAP)
+    ./work-test.nix # the daily work test: Work Test.app + its server on 127.0.0.1:8772
+    ./bug-listener.nix # every bug capture -> sorted on areas/bugs/bug-board.md; owned-software bugs fixed by a background Claude
+    ./error-collector.nix # every error (failing agents, app logs, crashes, Hammerspoon) -> batched onto the bug board for his yes
+    ./meeting-listener.nix # each finished Wispr meeting -> Haiku "real meeting?" gate -> background Opus runs the process-meeting skill
+    ./shared-notes.nix # meeting notes/transcripts/docs people send Matt (Granola, Plaud, Gemini, Notion, Docs) -> stored + proposed, every 5 min
+    ./person-log-sync.nix # daily: meetings/emails/DMs/calls/calendar -> areas/relationships person files (person_log.py)
+    ./finance-daily.nix # daily bank sync + finance status/dashboard/audits/alerts (scripts/finance/fin daily)
+    ./sleep-check.nix # each morning: did last night slip (bed after 21:30 / up after 06:45)? draft for Jeremy, auto-send off
+    ./recall.nix # hourly: tag new notes with "useful when" cues, email a recall brief before each new situation on the calendar
+    ./built-for-you.nix # 06:20: what Claude built for Matt -> changelog + morning email (Raycast "What's new" reads the same registry)
   ];
 
   # Home Manager's syncthing module supports darwin (it emits a launchd agent).
@@ -51,6 +76,10 @@
         # Same ID the server declares (hosts/server/default.nix). The phone has
         # to accept "matts-mac" once, then accept the Recordings share.
         "Pixel 9a" = {id = "OUXTWJX-MARBGAE-ANVOBSS-ANCZDVY-QGJGWNC-YXK62MC-IPV22XX-PV3RMA5";};
+        # BOOX Note Air 5C (Syncthing-Fork). It sends its note store to boox-ksync
+        # below; boox-sync (boox-sync.nix) draws the notes from that copy.
+        # BOOX's app freezer once disabled the app: `adb shell pm list packages -d`.
+        "BOOX Note Air 5C" = {id = "F5DON6T-MEO7333-NFWDJZB-MYNKBOM-7Y3AEPQ-DNDJV24-W36U5SK-JZMRFAC";};
       };
       folders = {
         # The phone's "share computer" folder. Only kms-inbox/ (phone capture
@@ -67,9 +96,28 @@
             unit = "GB";
           };
         };
+        # The tablet's /sdcard/.ksync (its Notes app's sync store, ~11 MB), sent
+        # one way: send-only on the tablet, receive-only here, so nothing on the
+        # Mac can change the tablet's notes. Read by scripts/boox/boox-sync.
+        # Doc: areas/second-brain/boox-sync.md.
+        "boox-ksync" = {
+          label = "boox-ksync";
+          path = "~/.local/state/boox-sync/ksync";
+          type = "receiveonly";
+          devices = ["BOOX Note Air 5C"];
+        };
       };
     };
   };
+
+  # The tablet's SQLite shared-memory files change constantly and are never read.
+  home.activation.booxKsyncStignore = lib.hm.dag.entryBefore ["setupLaunchAgents"] ''
+    run mkdir -p "$HOME/.local/state/boox-sync/ksync"
+    run rm -f "$HOME/.local/state/boox-sync/ksync/.stignore"
+    run install -m 644 ${pkgs.writeText "boox-ksync-stignore" ''
+      *-shm
+    ''} "$HOME/.local/state/boox-sync/ksync/.stignore"
+  '';
 
   # A real file, not a store symlink: Syncthing won't follow a symlinked
   # .stignore. Written before launchd (re)starts syncthing.
@@ -102,6 +150,8 @@
     pkgs.pandoc
     # adb over Wireless debugging (phone Night Light, 2026-09-13 Oops)
     pkgs.android-tools
+    # Mirror + control the phone in a window (Raycast "Phone", 2026-10-07)
+    pkgs.scrcpy
     # DDC/CI brightness for the external monitor (DELL U3225QE): used by
     # ~/.local/bin/brightness and ~/.hammerspoon/brightness_blackout.lua
     pkgs.m1ddc

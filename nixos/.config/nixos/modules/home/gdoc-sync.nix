@@ -7,6 +7,15 @@
 #
 # Files imported from a tabbed doc are marked pull-only in the state file, so
 # this never pushes them back and never flattens their tabs.
+#
+# On the Mac each pass first runs `gdoc-sync mirror` (pkgs/gdoc-sync/
+# mirror.patch): every Google Doc Matt owns or has opened and that is not linked
+# yet lands in resources/google-docs/ as a pull-only file, so any doc can be
+# opened from the vault without a manual `:Gdoc import` (Oops 2026-10-06). One
+# Drive listing covers every doc, and only docs whose modifiedTime moved are
+# rendered; `sync --all` skips mirrored files, so ~800 extra docs add no
+# per-file Docs API reads. Mac only: two machines mirroring into one
+# Syncthing'd vault would each import the same new doc.
 {
   config,
   host,
@@ -26,11 +35,22 @@
   };
 
   inherit (import ./lib/scheduled.nix {inherit lib pkgs config isDarwin;}) scheduled;
+
+  # A failed mirror pass must not stop the reconcile, so no `set -e`; the
+  # exit status is still sync's (2 = a conflict waiting for Matt). 200 new
+  # docs a pass (~5 min) finishes the first ~800-doc import in about an hour.
+  mirrorThenSync = pkgs.writeShellScript "gdoc-sync-pass" ''
+    ${gdoc-sync}/bin/gdoc-sync mirror "$HOME/Obsidian/Main/resources/google-docs" --limit 200
+    exec ${gdoc-sync}/bin/gdoc-sync sync --all
+  '';
 in {
   config = scheduled {
     name = "gdoc-sync";
     description = "Reconcile linked Markdown files with their Google Docs";
-    command = ["${gdoc-sync}/bin/gdoc-sync" "sync" "--all"];
+    command =
+      if isDarwin
+      then ["${mirrorThenSync}"]
+      else ["${gdoc-sync}/bin/gdoc-sync" "sync" "--all"];
 
     after = ["network-online.target"];
     wants = ["network-online.target"];

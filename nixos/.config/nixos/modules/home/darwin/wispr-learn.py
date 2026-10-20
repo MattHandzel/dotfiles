@@ -17,6 +17,9 @@ This does what Wispr's learner does internally, from outside:
            own learner writes, so they show up as auto-learned entries in the
            app and are pushed to the server on Wispr's next dictionary sync
            (app start, opening the Dictionary page, or any dictionary edit).
+           Every candidate is first checked by Claude (`claude -p`): only an
+           edit that fixes a misrecognition is learned, not a change of mind
+           like "10" -> "25" (2026-10-06 Oops).
   add      add one phrase by hand (--heard "what Wispr wrote", --replacement)
   recent   list the most recently added entries
 
@@ -30,7 +33,9 @@ import difflib
 import json
 import os
 import re
+import shutil
 import sqlite3
+import subprocess
 import sys
 import time
 import urllib.request
@@ -68,6 +73,95 @@ MIN_DICTATION_WORDS = 4
 MIN_MATCH_RATIO = 0.6  # share of the dictation's words found in the text
 MIN_SOUND_ALIKE = 0.5  # difflib ratio heard~corrected for all-lowercase words
 ENGLISH_WORDS = "/usr/share/dict/words"  # macOS ships it; a lowercase real word is likely a rewording
+# The heuristics above only pre-filter. Each surviving candidate goes to Claude,
+# which tells a misrecognition ("Arian" -> "Aryan") from a change of mind
+# ("10" -> "25"), the judgement Wispr's server classifier makes for its own learner.
+JUDGE_MODEL = "sonnet"
+JUDGE_TIMEOUT = 90
+JUDGE_SYSTEM = """You review candidate entries for a speech-recognition personal \
+dictionary (Wispr Flow). Each candidate comes from one dictation: `dictated` is what \
+the recognizer typed, `edited` is the same passage after the user edited it by hand, \
+and the edit replaced `heard` with `corrected`.
+
+Answer learn=true only when the replacement fixes a RECOGNITION ERROR: the user said \
+`corrected` and the recognizer wrote something that sounds like it, typically a \
+misheard or misspelled name, proper noun, brand, acronym or jargon term.
+
+Answer learn=false when the user changed what they meant instead: a different number \
+or amount, a reworded or replaced phrase, added or removed detail, a word with a \
+different meaning, a fix to their own wording, or a half-typed word. When `heard` and \
+`corrected` do not sound alike it is almost always an edit, not a recognition error. \
+When unsure, answer learn=false: a wrong entry makes later dictation worse.
+
+Give a short reason for each verdict."""
+JUDGE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "verdicts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "learn": {"type": "boolean"},
+                    "reason": {"type": "string"},
+                },
+                "required": ["id", "learn", "reason"],
+            },
+        }
+    },
+    "required": ["verdicts"],
+}
+
+
+class JudgeError(Exception):
+    pass
+
+
+def claude_cli() -> str | None:
+    path = os.path.expanduser("~/.local/bin/claude")
+    return path if os.access(path, os.X_OK) else shutil.which("claude")
+
+
+def judge(cands: list[dict[str, str]]) -> dict[int, tuple[bool, str]]:
+    """Ask Claude which candidates are misrecognitions: {index: (learn, reason)}.
+
+    --safe-mode keeps the OAuth login but skips hooks, CLAUDE.md, plugins and MCP
+    servers, so the call is a bare model request (about 3 s). Raises JudgeError
+    when Claude cannot answer; the caller then learns nothing.
+    """
+    claude = claude_cli()
+    if not claude:
+        raise JudgeError("claude CLI not found")
+    payload = [{"id": i, **c} for i, c in enumerate(cands)]
+    os.makedirs(STATE_DIR, exist_ok=True)
+    try:
+        res = subprocess.run(
+            [
+                claude, "-p", "--safe-mode", "--model", JUDGE_MODEL,
+                "--tools", "", "--strict-mcp-config", "--no-session-persistence",
+                "--output-format", "json", "--json-schema", json.dumps(JUDGE_SCHEMA),
+                "--system-prompt", JUDGE_SYSTEM,
+            ],
+            input=json.dumps(payload, ensure_ascii=False),
+            capture_output=True,
+            text=True,
+            timeout=JUDGE_TIMEOUT,
+            cwd=STATE_DIR,
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise JudgeError(str(e)) from e
+    try:
+        out = json.loads(res.stdout)
+    except ValueError:
+        raise JudgeError(f"exit {res.returncode}: {(res.stderr or res.stdout).strip()[:200]}")
+    if res.returncode != 0 or out.get("is_error") or not isinstance(out.get("structured_output"), dict):
+        raise JudgeError(f"exit {res.returncode}: {str(out.get('result'))[:200]}")
+    verdicts: dict[int, tuple[bool, str]] = {}
+    for v in out["structured_output"].get("verdicts", []):
+        if isinstance(v.get("id"), int) and 0 <= v["id"] < len(cands):
+            verdicts[v["id"]] = (v.get("learn") is True, str(v.get("reason", "")))
+    return verdicts
 
 
 def english_words() -> set[str]:
@@ -209,12 +303,13 @@ def tokens(text: str) -> list[str]:
 
 def candidates_for(
     dictated: list[str], buffer: list[str]
-) -> list[tuple[str, str]] | None:
+) -> tuple[list[tuple[str, str]], tuple[int, int]] | None:
     """Word-align one dictation against the text. None = dictation not present.
 
     Returns (corrected phrase, what Wispr heard) pairs for every substitution
     that is bounded by matching words on both sides, the same shape Wispr's
-    learner extracts from its `[CMZ]S[CMZ]` word-label regex.
+    learner extracts from its `[CMZ]S[CMZ]` word-label regex, plus the
+    [start, end) word span of the text the dictation aligned to.
     """
     d_norm = [w.lower() for w in dictated]
     b_norm = [w.lower() for w in buffer]
@@ -241,11 +336,11 @@ def candidates_for(
         if not (1 <= len(heard) <= MAX_PHRASE_WORDS and 1 <= len(corrected) <= MAX_PHRASE_WORDS):
             continue
         out.append((" ".join(corrected), " ".join(heard)))
-    return out
+    return out, (blocks[0].b, blocks[-1].b + blocks[-1].size)
 
 
 def looks_like_transcription_fix(phrase: str, heard: str, english: set[str]) -> bool:
-    """Stand-in for Wispr's server-side candidate classifier.
+    """Cheap pre-filter in front of judge(), Wispr's classifier stand-in.
 
     Proper nouns / jargon (a capital or a digit: Neovim, Chrome, MATS, 6W2) are
     always plausible. An all-lowercase phrase is kept when it contains a word
@@ -263,7 +358,8 @@ def looks_like_transcription_fix(phrase: str, heard: str, english: set[str]) -> 
 
 def cmd_scan(args: argparse.Namespace) -> int:
     text = sys.stdin.read()
-    buffer = tokens(text)
+    spans = [m.span() for m in WORD_RE.finditer(text)]
+    buffer = [text[a:b] for a, b in spans]
     if len(buffer) < MIN_DICTATION_WORDS:
         print("[]" if args.json else "wispr-learn: text too short")
         return 0
@@ -287,15 +383,18 @@ def cmd_scan(args: argparse.Namespace) -> int:
     english = english_words()
     seen = load_seen()
     learned: list[dict[str, str]] = []
+    pending: list[tuple[sqlite3.Row, str, str, str]] = []  # row, phrase, heard, edited passage
     for row in rows:
         if not row["text"]:
             continue
         dictated = tokens(row["text"])
         if len(dictated) < MIN_DICTATION_WORDS:
             continue
-        cands = candidates_for(dictated, buffer)
-        if not cands:
+        aligned = candidates_for(dictated, buffer)
+        if not aligned or not aligned[0]:
             continue
+        cands, (j1, j2) = aligned
+        edited = text[spans[j1][0] : spans[j2 - 1][1]]
         picked: list[tuple[str, str]] = []
         for phrase, heard in cands:
             key = f"{row['id']}\t{phrase.lower()}"
@@ -313,17 +412,44 @@ def cmd_scan(args: argparse.Namespace) -> int:
         # Wispr sends capitalised candidates first and keeps at most 4.
         picked.sort(key=lambda ph: not any(c.isupper() for c in ph[0]))
         for phrase, heard in picked[:MAX_PER_DICTATION]:
-            key = f"{row['id']}\t{phrase.lower()}"
-            entry = {"phrase": phrase, "observedSource": heard, "transcriptEntityId": row["id"]}
-            if not args.dry_run:
-                entry["id"] = insert_phrase(con, phrase, heard, "user_edits", False, None)
-                known.add(phrase.lower())
-                seen.add(key)
-            learned.append(entry)
-            log(
-                f"{'DRY-RUN ' if args.dry_run else ''}learned {phrase!r} "
-                f"(heard {heard!r}) from dictation {row['id'][:8]} @ {row['timestamp']}"
+            pending.append((row, phrase, heard, edited))
+    verdicts: dict[int, tuple[bool, str]] = {}
+    if pending:
+        try:
+            verdicts = judge(
+                [
+                    {"dictated": row["text"].strip(), "edited": edited, "heard": heard, "corrected": phrase}
+                    for row, phrase, heard, edited in pending
+                ]
             )
+        except JudgeError as e:
+            # Unchecked candidates are not marked seen, so the next :w retries them.
+            log(f"judge failed, learned nothing from {len(pending)} candidate(s): {e}")
+            con.close()
+            print(f"wispr-learn: Claude could not check the candidates ({e}); nothing learned", file=sys.stderr)
+            return 2
+    dry = "DRY-RUN " if args.dry_run else ""
+    for i, (row, phrase, heard, _) in enumerate(pending):
+        key = f"{row['id']}\t{phrase.lower()}"
+        if i not in verdicts:
+            log(f"judge gave no verdict for {phrase!r} (heard {heard!r}); retried on the next scan")
+            continue
+        ok, reason = verdicts[i]
+        origin = f"from dictation {row['id'][:8]} @ {row['timestamp']}: {reason}"
+        if not ok:
+            if not args.dry_run:
+                seen.add(key)
+            log(f"{dry}rejected {phrase!r} (heard {heard!r}) {origin}")
+            continue
+        if phrase.lower() in known:  # learned from an earlier dictation in this scan
+            continue
+        entry = {"phrase": phrase, "observedSource": heard, "transcriptEntityId": row["id"], "reason": reason}
+        if not args.dry_run:
+            entry["id"] = insert_phrase(con, phrase, heard, "user_edits", False, None)
+            known.add(phrase.lower())
+            seen.add(key)
+        learned.append(entry)
+        log(f"{dry}learned {phrase!r} (heard {heard!r}) {origin}")
     if not args.dry_run:
         save_seen(seen)
     con.close()
