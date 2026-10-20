@@ -65,6 +65,26 @@ local function saveable(buf)
 	return vim.api.nvim_buf_get_name(buf) ~= ""
 end
 
+local function write(buf)
+	return pcall(vim.api.nvim_buf_call, buf, function()
+		vim.cmd("silent! write")
+	end)
+end
+
+--- Write one buffer if it is a modified file buffer. Returns true if written.
+--- For close/quit paths: a 5-minute timer means a buffer is routinely still
+--- dirty when you close it, and every close path in Neovim checks 'modified'
+--- before any autocmd we could hook.
+function M.save_buf(buf)
+	if not vim.g.timed_autosave_enabled or not saveable(buf) then
+		return false
+	end
+	local view = vim.fn.winsaveview()
+	local ok = write(buf)
+	pcall(vim.fn.winrestview, view)
+	return ok
+end
+
 --- Write every modified file buffer. Returns the number written.
 function M.save()
 	local saved = 0
@@ -73,13 +93,8 @@ function M.save()
 	local view = vim.fn.winsaveview()
 
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-		if saveable(buf) then
-			local ok = pcall(vim.api.nvim_buf_call, buf, function()
-				vim.cmd("silent! write")
-			end)
-			if ok then
-				saved = saved + 1
-			end
+		if saveable(buf) and write(buf) then
+			saved = saved + 1
 		end
 	end
 
@@ -125,7 +140,31 @@ vim.api.nvim_create_autocmd("InsertLeave", {
 	end,
 })
 
+-- Save before :q / :qa / :wq / ZZ decide whether they are allowed. VimLeavePre
+-- (below) alone was too late: it only fires once the quit has already passed
+-- the modified-buffer check, so a buffer edited in the last five minutes made
+-- :q fail with "E37: No write since last change" and :qa with E162. QuitPre
+-- and ExitPre both run before that check.
+vim.api.nvim_create_autocmd("QuitPre", {
+	group = group,
+	pattern = "*",
+	callback = function(ev)
+		M.save_buf(ev.buf)
+	end,
+})
+
+vim.api.nvim_create_autocmd("ExitPre", {
+	group = group,
+	pattern = "*",
+	callback = function()
+		if vim.g.timed_autosave_enabled then
+			M.save()
+		end
+	end,
+})
+
 -- Never lose work to a quit, regardless of where the timer happens to be.
+-- Still needed for exits that skip QuitPre/ExitPre (:qa!, :cq, signals).
 vim.api.nvim_create_autocmd("VimLeavePre", {
 	group = group,
 	pattern = "*",
@@ -135,6 +174,29 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 		end
 	end,
 })
+
+-- The tabline's close button (NvChad TbKillBuf -> tabufline.close_buffer) runs
+-- `confirm bd<N>`. On a dirty buffer that raises a "Save changes?" prompt in a
+-- noice popup; clicking the button again or pressing <Esc> cancels it, and
+-- NvChad lets the resulting "E516: No buffers were deleted" escape with a full
+-- Lua stack trace. Save first so the prompt never comes up. A cancel that
+-- still happens (unnamed scratch buffer) is a choice, not an error.
+--
+-- The original is kept on the module table: :ReloadConfig re-requires this
+-- file but not nvchad.tabufline, so without it every reload would wrap the
+-- previous wrapper.
+local tb_ok, tabufline = pcall(require, "nvchad.tabufline")
+if tb_ok then
+	tabufline.__close_buffer_orig = tabufline.__close_buffer_orig or tabufline.close_buffer
+	tabufline.close_buffer = function(bufnr)
+		bufnr = (bufnr and bufnr ~= 0) and bufnr or vim.api.nvim_get_current_buf()
+		M.save_buf(bufnr)
+		local ok, err = pcall(tabufline.__close_buffer_orig, bufnr)
+		if not ok and not tostring(err):find("E516") then
+			vim.notify(tostring(err), vim.log.levels.ERROR)
+		end
+	end
+end
 
 local timer = vim.uv.new_timer()
 _G.__timed_autosave_timer = timer

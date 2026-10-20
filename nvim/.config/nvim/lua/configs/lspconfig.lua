@@ -196,9 +196,25 @@ vim.api.nvim_create_autocmd("LspAttach", {
 				vim.cmd("normal! zz")
 			end
 		end
-		vim.keymap.set("n", "gD", run_zz_after_running_the_argument(vim.lsp.buf.declaration), opts)
-
-		vim.keymap.set("n", "gd", run_zz_after_running_the_argument(vim.lsp.buf.definition), opts)
+		local client = vim.lsp.get_client_by_id(ev.data.client_id)
+		-- Navigation maps follow the same rule as K below: only when the
+		-- attaching client implements the method. copilot and harper-ls attach
+		-- to every note and implement none of these, so an unconditional gr
+		-- was "method textDocument/references is not supported by any server
+		-- activated for this buffer". Unmapped, gr falls through to the Snacks
+		-- picker key in plugins/init.lua. (NvChad's own on_attach still maps
+		-- gd/gD/<leader>D unconditionally; after/ftplugin/markdown.lua takes gd
+		-- back for notes.)
+		local function map_if(method, lhs, fn)
+			if client and client:supports_method(method) then
+				vim.keymap.set("n", lhs, run_zz_after_running_the_argument(fn), opts)
+			end
+		end
+		map_if("textDocument/declaration", "gD", vim.lsp.buf.declaration)
+		map_if("textDocument/definition", "gd", vim.lsp.buf.definition)
+		map_if("textDocument/implementation", "gi", vim.lsp.buf.implementation)
+		map_if("textDocument/typeDefinition", "<leader>D", vim.lsp.buf.type_definition)
+		map_if("textDocument/references", "gr", vim.lsp.buf.references)
 
 		-- Map K/<M-K> ONLY when the attaching client actually implements the
 		-- method. Both clients that attach to a markdown buffer -- copilot and
@@ -208,7 +224,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		--    registered for the current buffer"
 		-- Leaving it unmapped falls back to Vim's builtin K (keywordprg), which
 		-- is the more useful behaviour in prose anyway.
-		local client = vim.lsp.get_client_by_id(ev.data.client_id)
 		if client and client:supports_method("textDocument/hover") then
 			-- focusable = false used to be applied globally in options.lua via the
 			-- deprecated vim.lsp.with(); it is a plain hover option now.
@@ -220,16 +235,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.keymap.set("n", "<M-K>", vim.lsp.buf.signature_help, opts)
 		end
 
-		vim.keymap.set("n", "gi", run_zz_after_running_the_argument(vim.lsp.buf.implementation), opts)
 		vim.keymap.set("n", "<leader>wa", vim.lsp.buf.add_workspace_folder, opts)
 		vim.keymap.set("n", "<leader>wr", vim.lsp.buf.remove_workspace_folder, opts)
 		vim.keymap.set("n", "<leader>wl", function()
 			print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
 		end, opts)
-		vim.keymap.set("n", "<leader>D", run_zz_after_running_the_argument(vim.lsp.buf.type_definition), opts)
 		vim.keymap.set("n", "<leader>cr", vim.lsp.buf.rename, opts)
 		vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, opts)
-		vim.keymap.set("n", "gr", run_zz_after_running_the_argument(vim.lsp.buf.references), opts)
 		vim.keymap.set("n", "<leader>f", function()
 			vim.lsp.buf.format({ async = true })
 		end, opts)

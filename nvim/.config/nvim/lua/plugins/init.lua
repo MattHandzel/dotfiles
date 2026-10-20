@@ -86,6 +86,37 @@ return {
 					return tty
 				end
 			end
+
+			-- Route kitty graphics through the TUI instead of writing them to fd 1.
+			-- Since Neovim 0.10 the TUI is a separate process, so image.nvim (in the
+			-- server) and the TUI are two writers on one terminal. On macOS the pty
+			-- buffer is small, so when kitty falls behind (a busy :terminal, a big
+			-- redraw) writes go partial and the two streams interleave: the TUI's
+			-- escapes land inside an image APC, kitty drops it, and the rest of its
+			-- base64 file-path payload prints as text ("…L252aW0ubWF0dGgv…" smeared
+			-- across windows). nvim_ui_send (0.12+) hands the bytes to the TUI,
+			-- which writes them in order with its own output -- the route
+			-- snacks.image uses. `write` is local to helpers, so swap its `stdout`
+			-- upvalue. The key must be the slash form image.nvim itself requires,
+			-- or this loads a second, unused copy of the module.
+			local ok_kitty, kitty = pcall(require, "image/backends/kitty/helpers")
+			if ok_kitty and vim.api.nvim_ui_send and type(kitty.write) == "function" then
+				for i = 1, math.huge do
+					local name = debug.getupvalue(kitty.write, i)
+					if name == nil then
+						vim.notify("image.nvim: kitty writer not patched (no stdout upvalue)", vim.log.levels.WARN)
+						break
+					end
+					if name == "stdout" then
+						debug.setupvalue(kitty.write, i, {
+							write = function(_, data)
+								vim.api.nvim_ui_send(data)
+							end,
+						})
+						break
+					end
+				end
+			end
 		end,
 	},
 	{
@@ -434,11 +465,12 @@ return {
 			"~/dotfiles/nvim/.config/nvim/patches/apply-obsidian-nakedurl-patch.sh",
 			"~/dotfiles/nvim/.config/nvim/patches/apply-obsidian-visual-line-patch.sh",
 		},
-		-- config = function()
-		-- 	require("obsidian").setup({
-		-- 		-- your configuration comes here
-		-- 	})
-		-- end,
+		config = function(_, opts)
+			require("obsidian").setup(opts)
+			-- [[ completion searched every note body (11 s for `[[ta`); it now
+			-- searches a cached index of note names. See the module.
+			require("configs.obsidian_link_index").setup()
+		end,
 
 		ft = { "markdown" },
 		dependencies = {
@@ -466,6 +498,25 @@ return {
 				{
 					name = "main",
 					path = "~/Obsidian/Main",
+				},
+			},
+			-- The defaults minus <cr>. obsidian.nvim re-sets these on EVERY
+			-- BufEnter, so its <cr> (follow link, else toggle a checkbox) used to
+			-- replace the note-wide <CR> in after/ftplugin/markdown.lua. That one
+			-- also knows footnotes, reference links, tags and anchors, and falls
+			-- back to the same checkbox toggle. A user `mappings` table replaces
+			-- the defaults outright, and obsidian isn't loaded yet when this spec
+			-- is read, hence the inline copies of its mapping entries.
+			mappings = {
+				["gf"] = {
+					action = function()
+						return require("obsidian.util").gf_passthrough()
+					end,
+					opts = { noremap = false, expr = true, buffer = true, desc = "Go to file" },
+				},
+				["<leader>ch"] = {
+					action = "<cmd>ObsidianToggleCheckbox<CR>",
+					opts = { buffer = true, desc = "Toggle Checkbox" },
 				},
 			},
 			attachments = {
@@ -1250,12 +1301,15 @@ return {
 				end,
 				desc = "Find Config File",
 			},
+			-- <leader>ff belongs to fff.nvim now (see its spec at the end of this
+			-- file). Snacks' own file picker stays reachable here as the fallback
+			-- for when fff's index is cold or its Rust backend fails to load.
 			{
-				"<leader>ff",
+				"<leader>fF",
 				function()
 					Snacks.picker.files()
 				end,
-				desc = "Find Files",
+				desc = "Find Files (Snacks)",
 			},
 			{
 				"<leader>fg",
@@ -2825,4 +2879,29 @@ return {
 		event = "InsertEnter",
 		opts = {},
 	},
+
+	-- fff.nvim -- the file picker on <leader>ff (was Snacks.picker.files, which
+	-- moved to <leader>fF). NOT fetched by lazy: `dir` points at the nixpkgs
+	-- vimPlugins.fff-nvim store path, which already contains the compiled Rust
+	-- backend. modules/home/nvim.nix sets vim.g.fff_nvim_dir; if that ever goes
+	-- missing the spec is skipped rather than erroring the whole plugin list.
+	vim.g.fff_nvim_dir and {
+		"dmtrKovalenko/fff.nvim",
+		dir = vim.g.fff_nvim_dir,
+		-- no `build`: the dylib is already in the store path above.
+		-- Upstream's own advice -- the plugin defers its indexing to UIEnter
+		-- itself (plugin/fff.lua), so lazy-loading it buys nothing and costs a
+		-- cold index on first use.
+		lazy = false,
+		opts = {},
+		keys = {
+			{
+				"<leader>ff",
+				function()
+					require("fff").find_files()
+				end,
+				desc = "Find Files (fff)",
+			},
+		},
+	} or nil,
 }

@@ -19,6 +19,12 @@ map("n", "<C-c>", "<cmd>%y+<CR>", { desc = "File Copy whole" })
 -- this file so every yank map lives in one place. See lua/configs/yank.lua.
 require("configs.yank").setup()
 
+-- z= opens spelling suggestions in a popup at the word instead of noice's
+-- split buffer. See lua/configs/spell_popup.lua.
+map("n", "z=", function()
+	require("configs.spell_popup").suggest()
+end, { desc = "Spelling suggestions" })
+
 map("n", "<leader>ch", "<cmd>NvCheatsheet<CR>", { desc = "Toggle NvCheatsheet" })
 
 -- global lsp mappings
@@ -267,7 +273,39 @@ map("n", "<C-i>", "<C-i>zz", { noremap = true })
 
 map("n", "<S-H>", ":bprev<CR>", silent_no_remap)
 map("n", "<S-L>", ":bnext<CR>", silent_no_remap)
-map("n", "<leader>qq", "<cmd>qa<CR>")
+-- A bare :qa ends every :terminal job without asking, and the Claude Code
+-- sessions run in those (Oops 20261008-174225: <leader>qq killed all of them).
+-- With jobs still running, ask first. Inside tmux (the ⌃⌥N notetaker) the
+-- default is to detach: the window closes, nvim and the sessions keep running,
+-- and the next ⌃⌥N reattaches.
+map("n", "<leader>qq", function()
+	local running = 0
+	for _, b in ipairs(vim.api.nvim_list_bufs()) do
+		local job = vim.bo[b].buftype == "terminal" and vim.b[b].terminal_job_id
+		if job and vim.fn.jobwait({ job }, 0)[1] == -1 then
+			running = running + 1
+		end
+	end
+	local quit = running == 0
+	if not quit then
+		local msg = running .. " terminal job(s) still running (Claude sessions?). Quitting kills them."
+		if vim.env.TMUX then
+			local c = vim.fn.confirm(msg, "&Detach, keep them\n&Quit anyway\n&Cancel", 1)
+			if c == 1 then
+				vim.fn.system({ "tmux", "detach-client" })
+			end
+			quit = c == 2
+		else
+			quit = vim.fn.confirm(msg, "&Cancel\n&Quit anyway", 1) == 2
+		end
+	end
+	if quit then
+		local ok, err = pcall(vim.cmd, "qa")
+		if not ok then
+			vim.notify((tostring(err):gsub("^Vim:", "")), vim.log.levels.ERROR)
+		end
+	end
+end, { desc = "Quit all (asks first if terminal jobs are running)" })
 map("n", "<leader>qw", "<cmd>wqa<CR>")
 map("n", "<leader>q!", "<cmd>qa!<CR>")
 map("n", "<C-Up>", "<cmd>resize +2<cr>", { desc = "Increase window height" })
@@ -853,3 +891,6 @@ end, { silent = true, desc = "Paste clipboard as ``` fence (cursor below fence)"
 vim.keymap.set("n", "<leader>P`", function()
 	paste_fenced_block(true)
 end, { silent = true, desc = "Paste clipboard as ``` fence (cursor stays)" })
+
+-- built-for-you: log presses of the keys under watch (~/.local/state/built-for-you/watch-nvim.json). Last, so every map above exists.
+require("configs.bfy_keys").setup()

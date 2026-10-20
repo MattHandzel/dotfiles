@@ -156,6 +156,7 @@ local function link_at(line, col)
 				text_e = be - 1,
 				url_s = be + 2,
 				url_e = e - 1,
+				kind = "md",
 			}
 		end
 		init = e + 1
@@ -180,6 +181,7 @@ local function link_at(line, col)
 				text_e = body_e,
 				url_s = body_s,
 				url_e = bar and (body_s + bar - 2) or body_e,
+				kind = "wiki",
 			}
 		end
 		init = e + 1
@@ -202,72 +204,502 @@ link_object("al", "outer_s", "outer_e", "a whole link")
 link_object("iu", "url_s", "url_e", "inner link url/target")
 link_object("au", "outer_s", "outer_e", "a whole link (url)")
 
--- --- Follow link (<CR> / gd) -------------------------------------------------
--- Works anywhere the cursor sits on a [text](target) or [[wikilink]] -- unlike
--- built-in gf, which needs the cursor on the path itself. Targets resolve
--- relative to THIS FILE's directory (gf uses cwd), URLs open in the browser,
--- and #anchors jump to the matching heading. obsidian.nvim only maps its
--- follower inside the vault workspace, so this covers every other repo too.
+-- --- Go to the thing under the cursor (<CR> / gd) ---------------------------
+-- One resolver for every "take me there" target in a note. It works anywhere
+-- on the target, unlike built-in gf, which needs the cursor on the path itself.
+--
+--   [^1]            footnote -> its definition; on the definition's own
+--                   [^1]: label, back to where it is cited
+--   [[note#head]]   wikilink. In the vault obsidian.nvim resolves it by name,
+--                   id or alias from anywhere; [[#head]] / [[#^block]] stay in
+--                   this note; ![[image.png]] opens the image
+--   [text](target)  markdown link; ![alt](img.png) opens the image
+--   [text][ref]     reference-style link -> the url on its `[ref]: url` line
+--   [ref]: url      a reference definition line -> the url
+--   https://...     bare url -> browser
+--   #tag            (vault) every note with that tag -- also a tag in the
+--                   frontmatter's `tags:` list
+--
+-- Urls open in the browser; images, PDFs and media in the system viewer;
+-- notes in a buffer. #heading and #^block anchors land on that line. Paths
+-- resolve relative to THIS FILE's directory (gf uses cwd), then the vault
+-- root, which is where Obsidian's assets/imgs/... paths start. Every jump sets
+-- the ' mark, so <C-o> comes back.
 
--- Jump to the heading a GitHub-style #anchor points at ("#build-order" ->
--- "## Build order"). Slug rule: lowercase, punctuation dropped, spaces -> "-".
-local function goto_anchor(slug)
-	slug = slug:lower()
+local md_buf = vim.api.nvim_get_current_buf()
+local vault_root = (function()
+	local dot = vim.fs.find(".obsidian", {
+		path = vim.fn.expand("%:p:h"),
+		upward = true,
+		type = "directory",
+		limit = 1,
+	})[1]
+	return dot and vim.fs.dirname(dot) or nil
+end)()
+
+local MEDIA = {}
+for ext in
+	("png jpg jpeg gif webp svg bmp tiff heic pdf mp4 mov webm mkv mp3 wav m4a ogg docx xlsx pptx zip"):gmatch("%S+")
+do
+	MEDIA[ext] = true
+end
+local function is_media(path)
+	local ext = path:match("%.(%w+)$")
+	return ext ~= nil and MEDIA[ext:lower()] == true
+end
+
+local function is_url(t)
+	return t:match("^%a[%w+.-]*://") or t:match("^www%.") or t:match("^mailto:") or t:match("^tel:")
+end
+
+local function warn(msg)
+	vim.notify(msg, vim.log.levels.WARN)
+end
+
+local function open_external(target)
+	if target:match("^www%.") then
+		target = "https://" .. target
+	end
+	local _, err = vim.ui.open(target)
+	if err then
+		warn(err)
+	end
+end
+
+-- Buffer lines outside fenced code, as { lnum, text }: a `# comment` in a bash
+-- block is not a heading, and a `[^1]:` there is not a footnote.
+local function prose_lines()
+	local out, in_fence = {}, false
 	for i, l in ipairs(vim.api.nvim_buf_get_lines(0, 0, -1, false)) do
-		local h = l:match("^#+%s+(.+)")
-		if h and h:lower():gsub("[^%w%s%-]", ""):gsub("%s", "-") == slug then
-			vim.cmd("normal! m'") -- keep <C-o> working back to the link
-			vim.api.nvim_win_set_cursor(0, { i, 0 })
-			return true
+		if l:match("^%s*```") or l:match("^%s*~~~") then
+			in_fence = not in_fence
+		elseif not in_fence then
+			out[#out + 1] = { i, l }
 		end
+	end
+	return out
+end
+
+local function jump(lnum, col0)
+	vim.cmd("normal! m'")
+	vim.api.nvim_win_set_cursor(0, { lnum, col0 or 0 })
+	vim.cmd("normal! zv")
+end
+
+-- Last line of the YAML frontmatter, or nil when the note has none.
+local function frontmatter_end()
+	if vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] ~= "---" then
+		return nil
+	end
+	for i, l in ipairs(vim.api.nvim_buf_get_lines(0, 1, -1, false)) do
+		if l == "---" or l == "..." then
+			return i + 1
+		end
+	end
+end
+
+local function in_frontmatter(row)
+	local e = frontmatter_end()
+	return e ~= nil and row <= e
+end
+
+-- GitHub-style slug: lowercase, punctuation dropped, spaces -> "-". Applied to
+-- BOTH sides, so "#build-order" (markdown link) and "#Build order" (wikilink)
+-- each find "## Build order".
+local function slug(s)
+	return (s:lower():gsub("[^%w%s%-]", ""):gsub("%s", "-"))
+end
+
+-- Jump to the heading, or the ^block id, that an anchor names in THIS buffer.
+local function goto_anchor(anchor)
+	if anchor:sub(1, 1) == "^" then
+		local id = vim.pesc(anchor:sub(2))
+		for _, p in ipairs(prose_lines()) do
+			if p[2]:match("%s%^" .. id .. "%s*$") or p[2]:match("^%^" .. id .. "%s*$") then
+				return jump(p[1])
+			end
+		end
+		return warn("no block " .. anchor .. " in this note")
+	end
+	local want = slug(anchor)
+	local loose = want:gsub("%-+", "-")
+	for _, p in ipairs(prose_lines()) do
+		local h = p[2]:match("^#+%s+(.+)")
+		if h then
+			local got = slug((h:gsub("%s+#+%s*$", "")))
+			if got == want or got:gsub("%-+", "-") == loose then
+				return jump(p[1])
+			end
+		end
+	end
+	warn("no heading matches #" .. anchor)
+end
+
+-- A path target -> a readable file: this note's directory first, then the
+-- vault root; as written, then with `.md` (wikilinks and many links omit it).
+local function resolve_path(path)
+	if path:sub(1, 1) == "~" then
+		path = vim.fs.normalize(path)
+	end
+	local absolute = path:sub(1, 1) == "/"
+	local bases = { absolute and "" or (vim.fn.expand("%:p:h") .. "/") }
+	if vault_root then
+		bases[#bases + 1] = vault_root .. (absolute and "" or "/")
+	end
+	for _, base in ipairs(bases) do
+		for _, cand in ipairs({ base .. path, base .. path .. ".md" }) do
+			if vim.fn.filereadable(cand) == 1 then
+				return vim.fn.fnamemodify(cand, ":p")
+			end
+		end
+	end
+end
+
+-- An embed like ![[pasted.png]] names a file somewhere in the vault, not a
+-- path. Try the paste folder (obsidian.nvim's img_folder), then search.
+local function find_media(name)
+	local hit = resolve_path(name) or (vault_root and resolve_path("assets/imgs/" .. name))
+	if hit or not vault_root or vim.fn.executable("fd") == 0 then
+		return hit or nil
+	end
+	-- stylua: ignore
+	local res = vim.system({
+		"fd", "--no-ignore", "--hidden", "--type", "f", "--max-results", "1",
+		"--exclude", ".git", "--exclude", ".claude", "--exclude", "node_modules",
+		"--glob", vim.fs.basename(name), vault_root,
+	}, { text = true }):wait(3000)
+	local out = res.code == 0 and vim.trim(res.stdout or "") or ""
+	return out ~= "" and out or nil
+end
+
+-- Open a link target: a url, an #anchor in this note, or path[#anchor].
+local function open_target(target, is_wiki)
+	if is_url(target) then
+		return open_external(target)
+	end
+	local path, anchor = target:match("^([^#]*)#?(.*)$")
+	if path == "" then
+		return goto_anchor(anchor)
+	end
+	-- Links are often url-encoded ("my%20note.md"); files on disk are not.
+	path = path:gsub("%%(%x%x)", function(h)
+		return string.char(tonumber(h, 16))
+	end)
+	if is_media(path) then
+		local file = find_media(path)
+		if not file then
+			return warn("can't find " .. path)
+		end
+		return open_external(file)
+	end
+	local file = resolve_path(path)
+	if not file then
+		-- Not written yet: open a new buffer for it next to this note.
+		file = path:match("^[/~]") and vim.fs.normalize(path) or vim.fs.joinpath(vim.fn.expand("%:p:h"), path)
+		if is_wiki and not path:match("%.%w+$") then
+			file = file .. ".md"
+		end
+	end
+	vim.cmd.edit(vim.fn.fnameescape(vim.fn.fnamemodify(file, ":p")))
+	if anchor ~= "" then
+		goto_anchor(anchor)
+	end
+end
+
+local function follow_wiki(target, link)
+	local name, anchor = target:match("^([^#]*)#?(.*)$")
+	if name == "" then
+		return goto_anchor(anchor) -- [[#Heading]], [[#^block]]
+	end
+	if is_media(name) or not vault_root or vim.fn.exists(":ObsidianFollowLink") ~= 2 then
+		return open_target(target, true)
+	end
+	-- Vault notes are found by name, id or alias from anywhere in the vault,
+	-- which obsidian.nvim already does (and it offers to create missing ones).
+	-- It reads the link under the cursor, so move the cursor off an embed's `!`.
+	vim.api.nvim_win_set_cursor(0, { vim.fn.line("."), link.url_s - 1 })
+	vim.cmd("ObsidianFollowLink")
+end
+
+-- --- Footnotes ---
+local function footnote_at(line, col)
+	local init = 1
+	while true do
+		local s, e, id = line:find("%[%^([^%]%s]+)%]", init)
+		if not s then
+			return nil
+		end
+		if col >= s and col <= e then
+			return s, e, id
+		end
+		init = e + 1
+	end
+end
+
+-- `[^id]:` at the start of a line is the definition; anywhere else, a citation.
+local function is_footnote_def(line, s, e)
+	return line:sub(e + 1, e + 1) == ":" and line:sub(1, s - 1):match("^%s*$") ~= nil
+end
+
+local function follow_footnote(line, col)
+	local s, e, id = footnote_at(line, col)
+	if not s then
+		return false
+	end
+	local label = vim.pesc("[^" .. id .. "]")
+	local on_def = is_footnote_def(line, s, e)
+	for _, p in ipairs(prose_lines()) do
+		local lnum, l = p[1], p[2]
+		if on_def then
+			local from = 1
+			while true do
+				local rs, re = l:find(label, from)
+				if not rs then
+					break
+				end
+				if not is_footnote_def(l, rs, re) then
+					jump(lnum, rs - 1)
+					return true
+				end
+				from = re + 1
+			end
+		else
+			local _, de = l:find("^%s*" .. label .. ":")
+			if de then
+				-- Land on the footnote's text, not its label.
+				jump(lnum, (l:find("%S", de + 1) or de) - 1)
+				return true
+			end
+		end
+	end
+	warn(on_def and ("[^" .. id .. "] is never cited") or ("no definition for [^" .. id .. "]"))
+	return true
+end
+
+-- --- Reference-style links ---
+-- CommonMark labels match case-insensitively, inner whitespace collapsed.
+local function ref_label(s)
+	return (vim.trim(s):lower():gsub("%s+", " "))
+end
+
+-- A `[label]: url` definition line -> label, url. Footnotes ([^id]:) excluded.
+local function ref_def(line)
+	local label, url = line:match("^%s*%[([^%]]+)%]:%s*<?([^%s>]+)>?")
+	if label and label:sub(1, 1) ~= "^" then
+		return label, url
+	end
+end
+
+local function ref_url(label)
+	local want = ref_label(label)
+	for _, p in ipairs(prose_lines()) do
+		local l, url = ref_def(p[2])
+		if l and ref_label(l) == want then
+			return url
+		end
+	end
+end
+
+-- [text][ref], [ref][] or a bare [ref] under the cursor -> the ref's url. A
+-- bracket pair only counts when a matching definition exists, so a [ ]
+-- checkbox or a stray [aside] falls through untouched.
+local function ref_link_url(line, col)
+	local init = 1
+	while true do
+		local s, e = line:find("%b[]", init)
+		if not s then
+			return nil
+		end
+		local second = line:match("^%b[]", e + 1)
+		local stop = second and e + #second or e
+		if col >= s and col <= stop then
+			local label = (second and second ~= "[]") and second:sub(2, -2) or line:sub(s + 1, e - 1)
+			return ref_url(label)
+		end
+		init = stop + 1
+	end
+end
+
+-- --- Bare urls ---
+local function url_at(line, col)
+	for _, pat in ipairs({ "%a[%w+.-]*://[^%s<>\"'`]+", "www%.[^%s<>\"'`]+" }) do
+		local init = 1
+		while true do
+			local s, e = line:find(pat, init)
+			if not s then
+				break
+			end
+			-- Sentence punctuation after a url is not part of it, and neither
+			-- is a ) or ] with no partner inside it: "(see https://x.io)".
+			local url = line:sub(s, e)
+			while true do
+				local last = url:sub(-1)
+				local unpaired = function(o, c)
+					return select(2, url:gsub(c, "")) > select(2, url:gsub(o, ""))
+				end
+				if
+					last:match("[.,;:!?*_'\"]")
+					or (last == ")" and unpaired("%(", "%)"))
+					or (last == "]" and unpaired("%[", "%]"))
+				then
+					url = url:sub(1, -2)
+				else
+					break
+				end
+			end
+			if col >= s and col < s + #url then
+				return url
+			end
+			init = e + 1
+		end
+	end
+end
+
+-- --- Tags ---
+-- #tag in the text: the # starts the line or follows a space, which rules out
+-- headings (#, then a space), url #fragments and link #anchors. Obsidian tags
+-- need at least one letter, so #1 is not one.
+local function tag_at(line, col)
+	local init = 1
+	while true do
+		local s, e, tag = line:find("#([%w_/%-]+)", init)
+		if not s then
+			return nil
+		end
+		if col >= s and col <= e and (s == 1 or line:sub(s - 1, s - 1):match("%s")) and tag:match("%a") then
+			return tag
+		end
+		init = e + 1
+	end
+end
+
+local function clean_tag(t)
+	t = vim.trim(t):gsub("^[\"']", ""):gsub("[\"']$", ""):gsub("^#", "")
+	return t ~= "" and t or nil
+end
+
+-- A tag in the frontmatter: `tags: [a, b]`, `tags: a`, or an item of a
+-- `tags:` list.
+local function frontmatter_tag(row, line, col)
+	if not in_frontmatter(row) then
+		return nil
+	end
+	local open = line:match("^tags:%s*()%[")
+	if open then
+		local body = line:sub(open + 1)
+		for s, item in body:gmatch("()([^,%]]+)") do
+			if col >= open + s and col < open + s + #item then
+				return clean_tag(item)
+			end
+		end
+		return nil
+	end
+	local scalar = line:match("^tags:%s*(%S.*)$")
+	if scalar then
+		return clean_tag(scalar)
+	end
+	local item = line:match("^%s*-%s+(.+)$")
+	if not item then
+		return nil
+	end
+	for i = row - 1, 1, -1 do
+		local key = vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1]:match("^([%w_-]+):")
+		if key then
+			return key == "tags" and clean_tag(item) or nil
+		end
+	end
+end
+
+-- Returns true when the cursor was on something to go to -- even when it then
+-- can't be found, which warns instead of falling through to the key's other
+-- job (for <CR> in the vault, that job is toggling a checkbox).
+local function go_to()
+	local row, col0 = unpack(vim.api.nvim_win_get_cursor(0))
+	local line = vim.api.nvim_get_current_line()
+	local col = col0 + 1
+	-- On the ! of an embed, act on the link it embeds.
+	if line:sub(col, col + 1) == "![" then
+		col = col + 1
+	end
+
+	if follow_footnote(line, col) then
+		return true
+	end
+
+	local l = link_at(line, col)
+	if l and l.url_e >= l.url_s then
+		local target = line:sub(l.url_s, l.url_e)
+		if l.kind == "wiki" then
+			follow_wiki(target, l)
+		else
+			-- `[x](<my file.md> "title")` -> my file.md
+			target = target:match("^%s*<([^>]*)>") or target:match("^%s*(%S+)") or ""
+			open_target(target)
+		end
+		return true
+	end
+
+	local _, def_url = ref_def(line)
+	local url = def_url or ref_link_url(line, col)
+	if url then
+		open_target(url)
+		return true
+	end
+
+	url = url_at(line, col)
+	if url then
+		open_external(url)
+		return true
+	end
+
+	local tag = frontmatter_tag(row, line, col) or tag_at(line, col)
+	if tag and vault_root and vim.fn.exists(":ObsidianTags") == 2 then
+		vim.cmd({ cmd = "ObsidianTags", args = { tag } })
+		return true
 	end
 	return false
 end
 
-local function follow_link()
-	local col0 = vim.api.nvim_win_get_cursor(0)[2]
-	local line = vim.api.nvim_get_current_line()
-	local l = link_at(line, col0 + 1)
-	if not l or l.url_e < l.url_s then
-		return false
-	end
-	local target = line:sub(l.url_s, l.url_e):match("^<?(.-)>?$"):gsub("%%20", " ")
-
-	if target:match("^%a[%w+.-]*://") or target:match("^www%.") then
-		vim.ui.open(target)
-		return true
-	end
-	if target:sub(1, 1) == "#" then
-		return goto_anchor(target:sub(2))
-	end
-
-	local path, anchor = target:match("^([^#]*)#?(.*)$")
-	if path:sub(1, 1) ~= "/" and path:sub(1, 1) ~= "~" then
-		path = vim.fs.joinpath(vim.fn.expand("%:p:h"), path)
-	end
-	path = vim.fn.fnamemodify(path, ":p")
-	-- Wikilink targets usually omit the extension.
-	if vim.fn.filereadable(path) == 0 and vim.fn.filereadable(path .. ".md") == 1 then
-		path = path .. ".md"
-	end
-	vim.cmd.edit(vim.fn.fnameescape(path))
-	if anchor ~= "" then
-		goto_anchor(anchor)
-	end
-	return true
-end
-
--- Fall back to the keys' normal jobs when the cursor is not on a link.
+-- Nothing to go to: <CR> keeps its old jobs. In the vault that is
+-- obsidian.nvim's checkbox toggle (its own <CR> map is off -- see
+-- plugins/init.lua -- because it re-maps on every BufEnter and would replace
+-- this one). Everywhere else, and in frontmatter, where a `- [ ]` would break
+-- the YAML, it moves to the next line.
 vim.keymap.set("n", "<CR>", function()
-	if not follow_link() then
+	if go_to() then
+		return
+	end
+	local row = vim.api.nvim_win_get_cursor(0)[1]
+	if vault_root and not in_frontmatter(row) and vim.fn.exists(":ObsidianToggleCheckbox") == 2 then
+		vim.cmd("ObsidianToggleCheckbox")
+	else
 		vim.cmd("normal! j^")
 	end
-end, { buffer = true, silent = true, desc = "Follow markdown link" })
-vim.keymap.set("n", "gd", function()
-	if not follow_link() then
-		vim.cmd("normal! gd")
-	end
-end, { buffer = true, silent = true, desc = "Follow markdown link" })
+end, { buffer = md_buf, silent = true, desc = "Go to link/footnote/tag under cursor" })
+local function map_follow_gd()
+	vim.keymap.set("n", "gd", function()
+		if not go_to() then
+			vim.cmd("normal! gd")
+		end
+	end, { buffer = md_buf, silent = true, desc = "Go to link/footnote/tag under cursor" })
+end
+map_follow_gd()
+-- LspAttach fires after FileType, and NvChad's on_attach maps gd to
+-- vim.lsp.buf.definition for every client -- including copilot/harper-ls,
+-- which don't implement it -- so without this gd in a note became
+-- "textDocument/definition is not supported". Scheduled so it lands after
+-- every LspAttach handler.
+vim.api.nvim_create_autocmd("LspAttach", {
+	buffer = md_buf,
+	group = vim.api.nvim_create_augroup("MarkdownFollowGd" .. md_buf, { clear = true }),
+	callback = function()
+		vim.schedule(function()
+			if vim.api.nvim_buf_is_valid(md_buf) then
+				map_follow_gd()
+			end
+		end)
+	end,
+})
 
 -- --- Fenced code blocks (linewise) ------------------------------------------
 local function is_fence(l)

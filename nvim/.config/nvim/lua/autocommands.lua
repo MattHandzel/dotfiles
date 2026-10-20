@@ -140,7 +140,10 @@ local function prune_stale_buffers()
 
 	for i = 16, #bufs do
 		local b = bufs[i]
-		if (now - b.lastused) > two_days and not b.changed then
+		-- Terminals too: bufdelete prompts for a running one, and its "No
+		-- buffers were deleted" error is printed, not raised, so pcall can't
+		-- catch it.
+		if (now - b.lastused) > two_days and not b.changed and vim.bo[b.bufnr].buftype ~= "terminal" then
 			local ok, bufdelete = pcall(require, "bufdelete")
 			if ok then
 				pcall(bufdelete.bufdelete, b.bufnr, false)
@@ -271,3 +274,16 @@ require("configs.autosave")
 -- Rename timestamp-named notes (1789411698-ZTCV.md) after their `# title` on
 -- write, re-pointing the buffer and rewriting backlinks.
 require("configs.note_rename")
+
+-- Hide <!-- comments --> in markdown unless the cursor is on one in insert or
+-- visual mode.
+require("configs.md_comments")
+
+-- Show ![[note]] / ![[note#Heading]] / ![[note#^block]] inline under the
+-- embed, frontmatter stripped. <leader>oE cycles preview/full/collapsed;
+-- :NoteEmbeds off hides them. All options: M.defaults in the module.
+require("configs.note_embeds").setup({
+	max_lines = 12,
+	default_mode = "preview",
+	hide_title = false,
+})

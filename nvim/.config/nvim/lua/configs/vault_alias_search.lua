@@ -90,16 +90,29 @@ local RG_ARGS = {
 	[[\A---\n(?:[^-\n].*\n|\n)*?aliases:.*\n(?:[ \t]+-.*\n)*]],
 }
 
+--- One rg pass over `root`'s frontmatter, off the main loop. Calls
+--- cb({ [absolute path] = { alias, ... } }), or cb(nil) if rg failed, from
+--- vim.system's callback (not scheduled). Also used by obsidian_link_index.
+function M.scan_aliases(root, cb)
+	vim.system(RG_ARGS, { cwd = root, text = true }, function(res)
+		-- rg exits 1 when nothing matched; anything else non-zero is a real error.
+		if res.code == 0 or res.code == 1 then
+			cb(parse(root, res.stdout or ""))
+		else
+			cb(nil)
+		end
+	end)
+end
+
 local function scan(root, cb)
 	local cache = caches[root]
 	if cache.scanning then
 		return
 	end
 	cache.scanning = true
-	vim.system(RG_ARGS, { cwd = root, text = true }, function(res)
-		-- rg exits 1 when nothing matched; anything else non-zero is a real error.
-		if res.code == 0 or res.code == 1 then
-			cache.aliases = parse(root, res.stdout or "")
+	M.scan_aliases(root, function(aliases)
+		if aliases then
+			cache.aliases = aliases
 		end
 		cache.scanning = false
 		if cb then

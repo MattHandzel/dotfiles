@@ -174,8 +174,14 @@ vim.g.vimtex_compiler_latexmk = {
 }
 vim.opt_local.conceallevel = 2
 
+-- nvim-treesitter's `main` branch dropped the `nvim_treesitter#foldexpr()`
+-- vimscript function, so the old setting gave every line fold level 0: no
+-- folds at all, and zc/za failed with E490. Neovim's built-in foldexpr uses
+-- the same parsers and folds.scm queries (markdown headings, code blocks...).
 vim.opt.foldmethod = "expr"
-vim.opt.foldexpr = "nvim_treesitter#foldexpr()"
+vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+-- Open files unfolded; close sections on demand with zc / zM.
+vim.opt.foldlevelstart = 99
 
 -- Neovim never rotates or truncates lsp.log. The Codeium (neocodeium) language
 -- server logged an ERROR ("[streamChoices] Request id invalid") on essentially

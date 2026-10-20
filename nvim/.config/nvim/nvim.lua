@@ -329,3 +329,8 @@ vim.keymap.set(
 
 -- Second-brain semantic search: <leader>fB (see lua/configs/brain-search.lua)
 require("configs.brain-search").setup()
+
+-- lifelog G2: log which files are opened, switched to and saved (see lua/configs/lifelog.lua)
+pcall(function()
+	require("configs.lifelog").setup()
+end)

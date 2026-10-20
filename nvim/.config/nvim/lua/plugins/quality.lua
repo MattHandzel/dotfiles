@@ -181,6 +181,9 @@ return {
 			{
 				"<leader>bd",
 				function()
+					-- Timed autosave leaves buffers dirty for up to 5 min;
+					-- write first instead of prompting "Save changes?".
+					require("configs.autosave").save_buf(vim.api.nvim_get_current_buf())
 					require("bufdelete").bufdelete(0, false)
 				end,
 				desc = "Delete Buffer",
@@ -202,6 +205,19 @@ return {
 			require("hbac").setup({
 				threshold = 15,
 				close_command = function(bufnr)
+					-- hbac runs this from BufEnter and never checks for unsaved
+					-- changes. Timed autosave leaves notes dirty for up to 5 min,
+					-- so bufdelete prompted "No write since last change" mid-
+					-- BufEnter and, when that was dismissed, printed "bufdelete.nvim:
+					-- No buffers were deleted". Leave dirty buffers and terminals
+					-- for a later pass.
+					if
+						not vim.api.nvim_buf_is_valid(bufnr)
+						or vim.bo[bufnr].modified
+						or vim.bo[bufnr].buftype == "terminal"
+					then
+						return
+					end
 					local ok, bufdelete = pcall(require, "bufdelete")
 					if ok then
 						bufdelete.bufdelete(bufnr, false)
