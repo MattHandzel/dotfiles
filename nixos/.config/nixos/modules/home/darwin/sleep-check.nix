@@ -14,13 +14,15 @@
 # Code: ~/Obsidian/Main/scripts/sleep-check. Doc: areas/second-brain/sleep-check.md
 # Manual: `sleep-check run --force` (judge now), `run --test` (sample notification, never sends).
 # Log: ~/Library/Logs/sleep-check.log (one line per judged morning).
+#
+# OFF since 2026-10-22: Matt stopped it ("no longer effective"). Flip enable back to true to restart.
 {
   config,
   pkgs,
   ...
 }: {
   launchd.agents.sleep-check = {
-    enable = true;
+    enable = false;
     config = {
       ProgramArguments = ["${pkgs.python3}/bin/python3" "-I" "${config.home.homeDirectory}/Obsidian/Main/scripts/sleep-check/sleep_check.py" "run"];
       StartInterval = 300;

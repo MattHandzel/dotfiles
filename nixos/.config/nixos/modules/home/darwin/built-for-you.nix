@@ -50,4 +50,17 @@ in {
       StandardErrorPath = log;
     };
   };
+  # Decision page for the "Built for you" email (127.0.0.1:47466 only).
+  launchd.agents.built-for-you-decide = {
+    enable = true;
+    config = {
+      ProgramArguments = ["${pkgs.python3}/bin/python3" "-I" bfy "serve"];
+      RunAtLoad = true;
+      KeepAlive = true;
+      Nice = 5;
+      EnvironmentVariables.PATH = path;
+      StandardOutPath = log;
+      StandardErrorPath = log;
+    };
+  };
 }

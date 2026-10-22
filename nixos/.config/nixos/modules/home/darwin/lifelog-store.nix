@@ -27,6 +27,11 @@
   # fd (files), git (commits), task (Taskwarrior), icalBuddy (calendar), ffmpeg/ffprobe (Dayflow archive)
   path = "/etc/profiles/per-user/${config.home.username}/bin:${home}/.nix-profile/bin:/run/current-system/sw/bin:/opt/homebrew/bin:${pkgs.coreutils}/bin:/usr/bin:/bin:/usr/sbin:/sbin";
   log = "${home}/.local/state/lifelog/store.log";
+  # None of these is ProcessType "Background" or LowPriorityIO (2026-10-20). Under memory pressure macOS starved
+  # them: a main pass ran 30+ min against its 200 s budget and the store went 13 hours without most sources
+  # (every source behind the slow one was skipped, pass after pass). Measured that morning: importing the
+  # ingester and one query took 1.2 s at normal priority and 56.6 s clamped to background (`taskpolicy -b`).
+  # Nice still keeps them polite on CPU; ingest.py stops any one source at a hard limit.
 in {
   launchd.agents.lifelog-ingest = {
     enable = true;
@@ -35,9 +40,7 @@ in {
       ProgramArguments = ["${pkgs.python3}/bin/python3" "-I" lifelog "ingest" "--lane" "main" "--budget" "200" "--quiet"];
       StartInterval = 300;
       RunAtLoad = true;
-      ProcessType = "Background";
       Nice = 10;
-      LowPriorityIO = true;
       EnvironmentVariables.PATH = path;
       StandardOutPath = log;
       StandardErrorPath = log;
@@ -53,7 +56,6 @@ in {
       ProgramArguments = ["${pkgs.python3}/bin/python3" "-I" lifelog "ingest" "--lane" "messages" "--budget" "90" "--quiet"];
       StartInterval = 120;
       RunAtLoad = true;
-      ProcessType = "Background";
       Nice = 5;
       EnvironmentVariables.PATH = path;
       StandardOutPath = log;
@@ -70,9 +72,8 @@ in {
           Minute = 40;
         }
       ];
-      ProcessType = "Background";
+      # Also holds the main lane's lock while it moves old months out, so a throttled run blocked ingest too.
       Nice = 15;
-      LowPriorityIO = true;
       EnvironmentVariables.PATH = path;
       StandardOutPath = log;
       StandardErrorPath = log;

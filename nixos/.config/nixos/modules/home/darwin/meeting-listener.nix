@@ -16,6 +16,20 @@
 }: let
   home = config.home.homeDirectory;
 in {
+  # Every 10 min: write queued Beeper follow-ups into their chats' drafts, no focus change.
+  # Never sends, never opens Beeper, never touches Swapcard (Matt, 2026-10-22).
+  launchd.agents.stage-meeting-drafts = {
+    enable = true;
+    config = {
+      ProgramArguments = ["${pkgs.python3}/bin/python3" "-I" "${home}/Obsidian/Main/scripts/meetings/stage-drafts" "--auto"];
+      StartInterval = 600;
+      RunAtLoad = false;
+      Nice = 5;
+      EnvironmentVariables.PATH = "/etc/profiles/per-user/${config.home.username}/bin:${home}/.nix-profile/bin:/run/current-system/sw/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+      StandardOutPath = "${home}/.local/state/meetings/stage-drafts.log";
+      StandardErrorPath = "${home}/.local/state/meetings/stage-drafts.log";
+    };
+  };
   launchd.agents.meeting-listener = {
     enable = true;
     config = {

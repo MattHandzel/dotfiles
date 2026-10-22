@@ -74,6 +74,13 @@ in {
     path = [gdoc-sync pkgs.coreutils];
     logFile = "%h/.local/state/gdoc-sync.log";
 
+    # Standard, not the Background default (PRI 4, E-cores only): a `sync --all`
+    # started 2026-10-19 19:34 used 2.5 min of CPU in 15 h, holding the state
+    # lock the whole time, so meeting-note-docs' `link` calls timed out
+    # (Oops 20261020-101750). Notes typed into a Doc during a meeting should
+    # reach the vault within the 15-minute cadence.
+    launchdExtra.ProcessType = "Standard";
+
     serviceExtra = {
       # `sync --all` exits 2 when a file is genuinely conflicted. That is not a
       # crash — it is a decision waiting for Matt — but leaving the unit in a

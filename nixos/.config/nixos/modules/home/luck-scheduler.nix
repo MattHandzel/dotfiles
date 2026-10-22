@@ -115,6 +115,27 @@ in {
         ];
       }
       {
+        # Matt, 2026-10-22: "yes, schedule m2". Drafts only (Gmail drafts + a review queue file); never sends.
+        name = "luck-m2-coffee-chats";
+        logName = "m2-coffee-chats";
+        description = "Luck: M2 coffee-chat drafts (Mon + Thu 09:00)";
+        command = ["${scriptsDir}/scheduler.sh" "m2-coffee-chats"];
+        onCalendar = "Mon,Thu *-*-* 09:00:00";
+        persistent = true;
+        startCalendarInterval = [
+          {
+            Weekday = 1;
+            Hour = 9;
+            Minute = 0;
+          }
+          {
+            Weekday = 4;
+            Hour = 9;
+            Minute = 0;
+          }
+        ];
+      }
+      {
         name = "luck-parse-capture-poll";
         logName = "parse-capture-poll";
         description = "Luck: Poll ntfy for relationship/linkedin captures (every 5min)";

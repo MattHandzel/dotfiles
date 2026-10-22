@@ -32,7 +32,17 @@ python3Packages.buildPythonApplication {
   # numbered paragraph instead of vanishing (Oops 2026-10-08). Worktree
   # `~/Projects/gdoc-sync-empty-list` (branch `oops-empty-list`, uncommitted),
   # written on top of the two patches above.
-  patches = [./footnote-links.patch ./mirror.patch ./empty-list-items.patch];
+  #
+  # A file's own `gdoc_theme:` frontmatter key overrides the config theme on
+  # create and on every push, so generated meeting notes stay `professional`
+  # while everything else keeps catppuccin-latte (Oops 2026-10-20). Worktree
+  # `~/Projects/gdoc-sync-theme` (branch `oops-gdoc-theme`, uncommitted), on top
+  # of the three patches above.
+  #
+  # `status` parsed the whole state file once per link (is_pull_only reloads
+  # it), so `status --json` took over a minute with ~1,100 links and
+  # gdoc-sync.nvim's link cache never filled (2026-10-21). Not upstream yet.
+  patches = [./footnote-links.patch ./mirror.patch ./empty-list-items.patch ./frontmatter-theme.patch ./status-one-state-load.patch];
 
   build-system = [python3Packages.setuptools];
   nativeBuildInputs = [makeWrapper];

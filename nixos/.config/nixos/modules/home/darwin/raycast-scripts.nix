@@ -308,20 +308,6 @@ in {
       ${pathPreamble}
       exec python3 -I "$HOME/Obsidian/Main/scripts/meetings/meeting-listener" status
     ''
-    // script "shared-notes" ''
-      #!/usr/bin/env bash
-      # @raycast.schemaVersion 1
-      # @raycast.title Fetch Shared Meeting Notes Now
-      # @raycast.mode fullOutput
-      # @raycast.icon 📥
-      # @raycast.packageName Vault
-      # @raycast.description Look for meeting notes, transcripts and docs people sent you (Granola, Plaud, Gemini, Notion, Docs), store them, and list what needs you.
-      ${pathPreamble}
-      cd "$HOME/Obsidian/Main/scripts/shared-notes" || exit 1
-      python3 -I shared_notes.py scan --no-notify
-      echo
-      python3 -I shared_notes.py status
-    ''
     // script "app-watch" ''
       #!/usr/bin/env bash
       # @raycast.schemaVersion 1
@@ -343,17 +329,6 @@ in {
       # @raycast.description Connect adb to the Pixel over Tailscale and mirror its screen with scrcpy.
       ${pathPreamble}
       exec "$HOME/Obsidian/Main/scripts/phone/open-phone.sh"
-    ''
-    // script "phone-sync" ''
-      #!/usr/bin/env bash
-      # @raycast.schemaVersion 1
-      # @raycast.title Phone Sync
-      # @raycast.mode fullOutput
-      # @raycast.icon 📱
-      # @raycast.packageName Vault
-      # @raycast.description Copy the phone's history (apps, notifications, calls) into lifelog now and show how far back it goes. Turns this Mac's Tailscale on if it is off.
-      ${pathPreamble}
-      exec "$HOME/Obsidian/Main/scripts/phone/phone-sync.sh"
     ''
     // script "predictions" ''
       #!/usr/bin/env bash
@@ -765,13 +740,53 @@ in {
       # @raycast.mode fullOutput
       # @raycast.icon 🎁
       # @raycast.packageName Vault
-      # @raycast.argument1 { "type": "text", "placeholder": "3 show, 3 practice, 5 keep, 5 drop", "optional": true }
-      # @raycast.description What Claude built for you lately: new, changed, not used yet, keep or drop, and a count of quiet fixes. Type a number and a word to act on one.
+      # @raycast.argument1 { "type": "text", "placeholder": "5 keep, drop 8 9, keep all, ok", "optional": true }
+      # @raycast.description What Claude built for you lately. With no argument it opens the decision page (one button per item). Type a number and a word to act on one.
       ${pathPreamble}
       if [ -n "''${1:-}" ]; then
         exec python3 -I "$HOME/Obsidian/Main/scripts/built-for-you/bfy" whatsnew --action "$1"
       fi
+      "$HOME/Obsidian/Main/scripts/built-for-you/open-decide.sh" >/dev/null 2>&1 || true
       exec python3 -I "$HOME/Obsidian/Main/scripts/built-for-you/bfy" whatsnew
+    ''
+    // script "stage-meeting-drafts" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Stage Meeting Drafts
+      # @raycast.mode fullOutput
+      # @raycast.icon 📨
+      # @raycast.packageName Vault
+      # @raycast.description Swapcard follow-ups one at a time (clipboard + chat), plus any Beeper draft the 10-min auto run left pending. Never sends.
+      ${pathPreamble}
+      exec python3 -I "$HOME/Obsidian/Main/scripts/meetings/stage-drafts"
+    ''
+    // script "letter-send" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Letter Send
+      # @raycast.mode compact
+      # @raycast.icon ✉️
+      # @raycast.packageName Newsletter
+      # @raycast.description Dry-run the newest written newsletter issue, then open the click-to-send page (just opens it if already running).
+      ${pathPreamble}
+      exec "$HOME/Projects/personal-newsletter/scripts/letter-send.sh"
+    ''
+    // script "ai-tips" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title AI Tips
+      # @raycast.mode fullOutput
+      # @raycast.icon 💡
+      # @raycast.packageName Vault
+      # @raycast.argument1 { "type": "text", "placeholder": "3 adopt, 3 skip, 3 show, add <url>", "optional": true }
+      # @raycast.description This week's tips from your AI newsletters, feeds and skill repos, checked against your setup. "3 adopt" has a Claude session build one in; "add <url>" follows a new newsletter or repo.
+      ${pathPreamble}
+      R="$HOME/Obsidian/Main/scripts/ai-tips-radar/radar"
+      case "''${1:-}" in
+        "") exec python3 -I "$R" list ;;
+        add\ *) exec python3 -I "$R" add-source "''${1#add }" ;;
+        *) exec python3 -I "$R" list --action "$1" ;;
+      esac
     ''
     // script "sleep-check" ''
       #!/usr/bin/env bash

@@ -1,0 +1,30 @@
+--- a/src/gdoc_sync/status.py
++++ b/src/gdoc_sync/status.py
+@@ -5,11 +5,17 @@
+ import json as jsonlib
+ from pathlib import Path
+ 
+-from .config import all_mappings, config_path, get_revision, is_pull_only, state_path
++from .config import (
++    all_mappings, config_path, get_revision, load_state, state_key_candidates, state_path,
++)
+ 
+ 
+ def status(*, remote: bool = False, json_out: bool = False) -> None:
+     mappings = all_mappings()
++    # One parse of the state file, not one per link: is_pull_only() reloads
++    # it on every call, and with ~1,100 links in a 600 KB file that made
++    # `status --json` take minutes (gdoc-sync.nvim's link cache never filled).
++    marked = set(load_state().get("pull_only", []))
+     rows = []
+     docs_service = None
+     if remote and mappings:
+@@ -22,7 +28,7 @@
+             "doc_id": doc_id,
+             "exists": Path(local).exists(),
+             "remote": "unchecked",
+-            "pull_only": is_pull_only(local),
++            "pull_only": any(k in marked for k in state_key_candidates(local)),
+         }
+         if docs_service is not None:
+             stored = get_revision(local)

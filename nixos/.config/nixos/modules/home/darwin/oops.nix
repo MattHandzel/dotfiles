@@ -600,6 +600,9 @@
             # last picked in ANY session (it was Fable on 2026-09-12), and Matt wants
             # Oops on Opus regardless (Oops 20260919-100723).
             oops_model="opus[1m]"
+            # Effort pinned the same way: medium, not whatever /effort last saved
+            # (Oops 20261020-101905, Matt: "medium effort, not X high").
+            oops_effort="medium"
             onws=0
             [ "$(/opt/homebrew/bin/aerospace list-workspaces --focused 2>/dev/null || true)" = "oops" ] && onws=1
             tab="''${ts:4:4}-''${ts:9:4}"
@@ -607,14 +610,14 @@
               bg=""; [ "$onws" = 1 ] && attached && bg="-d"
               win="$(tmux -L oops new-window $bg -P -F '#{window_id}' -t '=oops:' -n "$tab" \
                 -e COLORTERM=truecolor -e OOPS_DIR="$dir" -c "${repo}" -- \
-                "$claude_bin" --permission-mode auto --model "$oops_model" \
+                "$claude_bin" --permission-mode auto --model "$oops_model" --effort "$oops_effort" \
                   --settings ${oopsSettings} \
                   --append-system-prompt "$(cat ${brief})" \
                   "$first")"
             else
               tmux -L oops new-session -d -x 200 -y 60 -e COLORTERM=truecolor -e OOPS_DIR="$dir" \
                 -s oops -n "$tab" -c "${repo}" -- \
-                "$claude_bin" --permission-mode auto --model "$oops_model" \
+                "$claude_bin" --permission-mode auto --model "$oops_model" --effort "$oops_effort" \
                   --settings ${oopsSettings} \
                   --append-system-prompt "$(cat ${brief})" \
                   "$first"

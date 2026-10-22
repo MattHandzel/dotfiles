@@ -94,6 +94,12 @@ in {
     path = [gdoc-sync pkgs.pandoc pkgs.ripgrep pkgs.python3 pkgs.coreutils];
     logFile = "%h/.local/state/meeting-note-docs.log";
 
+    # Background (the scheduled.nix default) is PRI 4 on the E-cores only: on a
+    # busy Mac a 10:32 run sat 6 min in dyld init before Python started, and
+    # this morning's runs timed out linking the 11:30 meeting's Doc (Oops
+    # 20261020-101750). Matt needs the Doc before the meeting.
+    launchdExtra.ProcessType = "Standard";
+
     serviceExtra = {
       # Each Doc is a pandoc render plus several Drive/Docs calls; a backlog of
       # notes after the laptop has been shut for a few days is the slow case.

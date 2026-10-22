@@ -52,9 +52,12 @@
     ./shared-notes.nix # meeting notes/transcripts/docs people send Matt (Granola, Plaud, Gemini, Notion, Docs) -> stored + proposed, every 5 min
     ./person-log-sync.nix # daily: meetings/emails/DMs/calls/calendar -> areas/relationships person files (person_log.py)
     ./finance-daily.nix # daily bank sync + finance status/dashboard/audits/alerts (scripts/finance/fin daily)
-    ./sleep-check.nix # each morning: did last night slip (bed after 21:30 / up after 06:45)? draft for Jeremy, auto-send off
+    ./sleep-check.nix # each morning: did last night slip (bed after 21:30 / up after 06:45)? sent to Jeremy; agent OFF since 2026-10-22
     ./recall.nix # hourly: tag new notes with "useful when" cues, email a recall brief before each new situation on the calendar
     ./built-for-you.nix # 06:20: what Claude built for Matt -> changelog + morning email (Raycast "What's new" reads the same registry)
+    ./ai-tips-radar.nix # 05:30: fetch AI-tips newsletters/feeds/skill repos; Sundays build the week's digest of tips to adopt
+    ./references.nix # every 15 min: link new emails/chats/pages/meetings/captures to the projects, areas, resources they are about (refs tick)
+    ./google-keep-sync.nix # every 30 min: Google Keep notes -> capture/google_keep/ (+ pointer notes like Gym Logs)
     ./retro-sweep.nix # Sun 04:15: weekly agent error sweep (retrospective-analyst over the week's transcripts -> learnings.json + Linear agent-error)
   ];
 

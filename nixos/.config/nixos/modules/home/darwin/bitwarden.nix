@@ -13,7 +13,7 @@
 # Calendar/Superhuman/claude.ai windows) reads user-level hosts from
 # <user-data-dir>/NativeMessagingHosts, which Bitwarden.app never writes either
 # (Oops run 20260914-095413).
-{...}: let
+{lib, ...}: let
   manifest = builtins.toJSON {
     name = "com.8bit.bitwarden";
     description = "Bitwarden desktop <-> browser bridge";
@@ -30,6 +30,19 @@
 in {
   home.file."Library/Application Support/Dia/User Data/NativeMessagingHosts/com.8bit.bitwarden.json".text = manifest;
   home.file.".config/chromium-app/NativeMessagingHosts/com.8bit.bitwarden.json".text = manifest;
+
+  # Auto-submit after a Bitwarden fill (Oops run 20261022-102326): a tiny
+  # unpacked extension, see bitwarden-autosubmit/content.js. Copied as real
+  # files (not store symlinks) so Dia's "Load unpacked" reads it like any dir.
+  # Dia is not MDM-managed, so the ExtensionSettings policy cannot force-install
+  # an off-store extension; it is loaded once by hand from this path, and Dia
+  # picks up later edits on its next start (or the reload arrow in dia://extensions).
+  home.activation.bitwardenAutosubmit = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    dst="$HOME/.local/share/dia-extensions/bitwarden-autosubmit"
+    run mkdir -p "$dst"
+    run install -m 644 ${./bitwarden-autosubmit/manifest.json} "$dst/manifest.json"
+    run install -m 644 ${./bitwarden-autosubmit/content.js} "$dst/content.js"
+  '';
 
   # The desktop app must be running for the extension's biometric unlock, and
   # its lock screen at login is the one master-password prompt per boot.
