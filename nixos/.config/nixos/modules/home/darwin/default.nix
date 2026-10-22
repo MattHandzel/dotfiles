@@ -55,6 +55,7 @@
     ./sleep-check.nix # each morning: did last night slip (bed after 21:30 / up after 06:45)? draft for Jeremy, auto-send off
     ./recall.nix # hourly: tag new notes with "useful when" cues, email a recall brief before each new situation on the calendar
     ./built-for-you.nix # 06:20: what Claude built for Matt -> changelog + morning email (Raycast "What's new" reads the same registry)
+    ./retro-sweep.nix # Sun 04:15: weekly agent error sweep (retrospective-analyst over the week's transcripts -> learnings.json + Linear agent-error)
   ];
 
   # Home Manager's syncthing module supports darwin (it emits a launchd agent).
