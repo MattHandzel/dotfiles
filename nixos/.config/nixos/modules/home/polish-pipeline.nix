@@ -25,7 +25,13 @@ in {
     (lib.optionalAttrs isDarwin {
       home.file.".local/state/polish-pipeline/.keep".text = "";
     })
-    (scheduled {
+    # Linux only. On the Mac `uv sync` cannot install the project: morfeusz2
+    # (the Polish lemmatizer) ships wheels for manylinux x86_64 and win_amd64
+    # only, so the launchd agent could only ever exit 1 (bug
+    # err-polish-pipeline-20261019-200819). The card pipeline is parked anyway
+    # (projects/B2-polish/B2-polish.md). To run it on the Mac again, get a
+    # morfeusz2 build for macOS arm64 first, then drop this guard.
+    (lib.optionalAttrs isLinux (scheduled {
       name = "polish-pipeline";
       description = "B2 Polish Pipeline: captures → Anki cards (weekly)";
       command = ["${projectDir}/scripts/polish-pipeline-run.sh"];
@@ -66,6 +72,6 @@ in {
         "/usr/sbin"
         "/sbin"
       ];
-    })
+    }))
   ];
 }
