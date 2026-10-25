@@ -106,6 +106,10 @@ in {
         command = ["${scriptsDir}/scheduler.sh" "enrich-contact" "auto"];
         onCalendar = "Tue *-*-* 09:00:00";
         persistent = true;
+        # One contact's deep research (web, public surfaces, scholar) does not
+        # fit in the 600 s default; the 2026-10-20 run was killed at 600 s
+        # (exit 124). `auto` is resolved by pick_enrich.py inside the skill.
+        environment = {LUCK_TIMEOUT = "1800";};
         startCalendarInterval = [
           {
             Weekday = 2;
@@ -186,7 +190,13 @@ in {
         timerDescription = "Timer for luck-m3-quarterly";
         # launchd cannot express "first Sunday of the quarter" at all — it has no
         # month field combined with a weekday. Fire EVERY Sunday at 10:00 and let
-        # the skill no-op outside the quarter boundary, same idempotence argument.
+        # scheduler.sh skip outside the quarter's first week. The skill itself
+        # does NOT no-op: until 2026-10-23 it ran a full blast every Sunday and
+        # hit the 600 s timeout each time (exit 124), so it also gets 45 min.
+        environment = {
+          LUCK_QUARTER_START_ONLY = "1";
+          LUCK_TIMEOUT = "2700";
+        };
         startCalendarInterval = [
           {
             Weekday = 0;

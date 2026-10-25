@@ -10,7 +10,7 @@ python3Packages.buildPythonApplication {
   # Must track src/gdoc_sync/__init__.py's __version__. gdoc-sync.nvim's
   # health check requires >= 0.6 and its :Gdoc watch calls `watch --json`,
   # which only exists from 0.6.0 (MAT-1780 follow-up).
-  version = "0.9.0";
+  version = "0.10.0";
   pyproject = true;
 
   inherit src;
@@ -42,7 +42,16 @@ python3Packages.buildPythonApplication {
   # `status` parsed the whole state file once per link (is_pull_only reloads
   # it), so `status --json` took over a minute with ~1,100 links and
   # gdoc-sync.nvim's link cache never filled (2026-10-21). Not upstream yet.
-  patches = [./footnote-links.patch ./mirror.patch ./empty-list-items.patch ./frontmatter-theme.patch ./status-one-state-load.patch];
+  #
+  # gdoc (github.com/LucaDeLeo/gdoc, MIT) vendored as gdoc_sync._gdoc: its
+  # commands (cat, edit, suggest, comment --quote, revisions, cells, mcp, ...)
+  # run with gdoc-sync's login and accept a linked .md in place of a doc ID;
+  # {>>comment:<<} markers become anchored comments; `gdoc-sync hook` for
+  # Claude Code (2026-10-22). Branch `gdoc-integration` in the worktree
+  # `~/Projects/gdoc-sync-gdoc-integration`, committed on top of the five
+  # patches above; this patch is `git diff 6379a31 HEAD` there minus the
+  # vendored tests (tests/gdoc_upstream, 1963 tests, run in the worktree).
+  patches = [./footnote-links.patch ./mirror.patch ./empty-list-items.patch ./frontmatter-theme.patch ./status-one-state-load.patch ./gdoc-integration.patch];
 
   build-system = [python3Packages.setuptools];
   nativeBuildInputs = [makeWrapper];
@@ -52,6 +61,7 @@ python3Packages.buildPythonApplication {
     google-auth-oauthlib
     google-auth-httplib2
     pyyaml
+    requests
   ];
 
   # pandoc does the markdown → docx conversion at runtime.

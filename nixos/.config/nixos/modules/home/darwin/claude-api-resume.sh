@@ -59,16 +59,18 @@ fi
 delay=$((${CLAUDE_RESUME_BASE:-30} << recent))
 [ "$delay" -le 1800 ] || delay=1800
 echo "$now" >>"$state/$sid"
-size=0
-[ -f "$transcript" ] && size="$(wc -c <"$transcript" | tr -d ' ')"
+since="$(date -u -d "@$now" '+%Y-%m-%dT%H:%M:%S')"
 echo "$(date '+%F %T') $sid $err: waiting ${delay}s before wake $((recent + 1))/$max${details:+ ($details)}" >>"$log"
 
 # A user entry (Matt typed, a tool result) or a real assistant reply after the
-# error means the session is no longer stuck.
+# error means the session is no longer stuck. Judged by timestamp, not by what
+# was appended after the hook started: the failed turn's own tool result and
+# partial reply reach the file AFTER this hook starts (Oops 20261023-103318:
+# e45ec185 hit "went to sleep mid-response", and its 21:45 thinking block,
+# flushed late, made the first check after the wake stand down for good).
 moved_on() {
   [ -f "$transcript" ] &&
-    tail -c +"$((size + 1))" "$transcript" |
-    jq -R -e -n '[inputs | fromjson? | select(.type == "user" or (.type == "assistant" and (.isApiErrorMessage | not)))] | length > 0' >/dev/null
+    jq -R -e -n --arg since "$since" '[inputs | fromjson? | select((.timestamp // "") > $since and (.type == "user" or (.type == "assistant" and (.isApiErrorMessage | not))))] | length > 0' "$transcript" >/dev/null
 }
 # Any HTTP status from the API host means requests get through again; curl
 # honours HTTPS_PROXY like Claude Code does.

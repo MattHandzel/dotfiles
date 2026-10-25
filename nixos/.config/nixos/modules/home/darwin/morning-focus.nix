@@ -42,8 +42,11 @@
         [ "$hour" -ge 5 ] && [ "$hour" -lt 12 ] || exit 0
         [ "$(cat "$stamp" 2>/dev/null || true)" = "$today" ] && exit 0
         # Locked screen: CGSSessionScreenIsLocked only appears while locked.
-        if ioreg -n Root -d1 -a | grep -q CGSSessionScreenIsLocked; then exit 0; fi
-        idle="$(ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print int($NF/1000000000); exit}')"
+        # Both readers below consume all of ioreg's output: one that stops
+        # early (grep -q, awk exit) SIGPIPEs ioreg, and pipefail turns that
+        # into exit 141 (idle) or "not locked" (lock).
+        if ioreg -n Root -d1 -a | grep CGSSessionScreenIsLocked >/dev/null; then exit 0; fi
+        idle="$(ioreg -c IOHIDSystem | awk '/HIDIdleTime/ && !n++ {print int($NF/1000000000)}')"
         [ "''${idle:-9999}" -lt 120 ] || exit 0
       fi
 

@@ -39,7 +39,24 @@
   # A failed mirror pass must not stop the reconcile, so no `set -e`; the
   # exit status is still sync's (2 = a conflict waiting for Matt). 200 new
   # docs a pass (~5 min) finishes the first ~800-doc import in about an hour.
+  #
+  # launchd has no After=network-online.target, so a pass that fires while the
+  # Mac is offline or still joining Wi-Fi after wake died on getaddrinfo (exit
+  # 1, a traceback, and "ERROR while syncing <first file>"; bug
+  # err-gdoc-sync-20261019-200819). Wait up to ~30 s for Google to be
+  # reachable, else skip the pass with exit 0: the next one is 15 min away.
+  # The GDOC_SYNC_PROBE_* overrides exist for the bug's repro script.
   mirrorThenSync = pkgs.writeShellScript "gdoc-sync-pass" ''
+    probe_host=''${GDOC_SYNC_PROBE_HOST:-oauth2.googleapis.com}
+    tries=''${GDOC_SYNC_PROBE_TRIES:-6}
+    until /usr/bin/nc -z -G 3 "$probe_host" 443 2>/dev/null; do
+      tries=$((tries - 1))
+      if [ "$tries" -le 0 ]; then
+        echo "$(date '+%F %T') gdoc-sync: offline ($probe_host unreachable), skipping this pass"
+        exit 0
+      fi
+      sleep 5
+    done
     ${gdoc-sync}/bin/gdoc-sync mirror "$HOME/Obsidian/Main/resources/google-docs" --limit 200
     exec ${gdoc-sync}/bin/gdoc-sync sync --all
   '';

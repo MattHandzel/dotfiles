@@ -850,5 +850,48 @@ in {
       # @raycast.description Who is this? Best match, evidence, and their profile path.
       ${pathPreamble}
       bash "$HOME/Obsidian/Main/scripts/relationships/resolve-person.sh" "$1" "''${2:-}"
+    ''
+    // script "remind-me" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Remind Me
+      # @raycast.mode compact
+      # @raycast.icon ⏰
+      # @raycast.packageName Reminders
+      # @raycast.argument1 { "type": "text", "placeholder": "what (Go for a run)" }
+      # @raycast.argument2 { "type": "text", "placeholder": "time (7am, 19:30)" }
+      # @raycast.argument3 { "type": "text", "placeholder": "days (mon-fri) or date (tomorrow)", "optional": true }
+      # @raycast.description Phone push via ntfy. Days repeat it (daily, weekdays, mon,wed,fri); a date (2026-10-30, today, tomorrow) sends it once.
+      ${pathPreamble}
+      when="''${3:-daily}"
+      if [[ "$when" =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2}|today|tomorrow)$ ]]; then
+        exec "$HOME/Obsidian/Main/scripts/ntfy/remind" add "$1" --at "$2" --on "$when"
+      fi
+      exec "$HOME/Obsidian/Main/scripts/ntfy/remind" add "$1" --at "$2" --days "$when"
+    ''
+    // script "reminders" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Reminders
+      # @raycast.mode fullOutput
+      # @raycast.icon ⏰
+      # @raycast.packageName Reminders
+      # @raycast.description Phone reminders that are on, with ids and the next push. Turn one off with "Reminder Off".
+      ${pathPreamble}
+      "$HOME/Obsidian/Main/scripts/ntfy/remind" list
+      echo
+      echo "Off:"
+      "$HOME/Obsidian/Main/scripts/ntfy/remind" list --all | grep '^\[off\]' | sed 's/^/  /' || echo "  none"
+    ''
+    // script "reminder-off" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Reminder Off
+      # @raycast.mode compact
+      # @raycast.icon ⏰
+      # @raycast.packageName Reminders
+      # @raycast.argument1 { "type": "text", "placeholder": "id (see Reminders)" }
+      ${pathPreamble}
+      exec "$HOME/Obsidian/Main/scripts/ntfy/remind" off "$1"
     '';
 }
