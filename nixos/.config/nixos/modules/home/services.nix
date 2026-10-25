@@ -136,23 +136,8 @@ in {
         path = [notify];
       })
 
-      (scheduled {
-        name = "taskwarrior-export";
-        description = "Export Taskwarrior tasks to ShareComputer for server notifications";
-        command = ["${pkgs.bash}/bin/bash" "${notesDir}/scripts/taskwarrior-export-due.sh"];
-        linuxPathPackages = [pkgs.coreutils pkgs.taskwarrior3];
-        linuxPathEntries = ["/run/current-system/sw/bin"];
-
-        onBootSec = "2m";
-        onUnitActiveSec = "30m";
-        persistent = true;
-        timerUnit = "taskwarrior-export.service";
-        timerDescription = "Export Taskwarrior tasks every 30 minutes";
-        everySeconds = 1800;
-
-        path = [pkgs.bash pkgs.coreutils pkgs.taskwarrior3];
-        logFile = "%h/.local/state/taskwarrior-export.log";
-      })
+      # taskwarrior-export: retired 2026-10-25 (Matt no longer uses Taskwarrior;
+      # it fed the server's "Task export stale" push).
 
       # Mac only. Two hosts running this is destructive, not redundant: each
       # run's prune_missing_content_file_documents deletes every content row
