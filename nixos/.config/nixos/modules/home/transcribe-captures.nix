@@ -26,7 +26,7 @@ in {
     ];
     pathsDescription = "Monitor audio recordings for new files";
 
-    path = with pkgs; [bash coreutils unzip nix git];
+    path = with pkgs; [bash coreutils curl unzip nix git];
     logFile = "%h/.local/state/transcribe-captures.log";
 
     unitExtra = {
@@ -36,7 +36,8 @@ in {
       X-Switch-To-Configuration = "no";
     };
     serviceExtra = {
-      Environment = "PATH=${with pkgs; lib.makeBinPath [bash coreutils unzip nix git]}";
+      # curl: transcribe_file.py posts each segment to Whisper with it.
+      Environment = "PATH=${with pkgs; lib.makeBinPath [bash coreutils curl unzip nix git]}";
       ExecStartPre = "${pkgs.coreutils}/bin/sleep 2";
       # Ensure it doesn't run multiple instances simultaneously
       IOSchedulingClass = "idle";

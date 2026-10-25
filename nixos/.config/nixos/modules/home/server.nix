@@ -17,6 +17,7 @@
     (import ./services.nix) # Check if these services are GUI-dependent
     (import ./scripts/scripts.nix) # personal scripts
     ./transcribe-captures.nix
+    ./obsidian-vault-stignore.nix # one ~/Obsidian/.stignore on every host
     inputs.catppuccin.homeModules.catppuccin
   ];
 

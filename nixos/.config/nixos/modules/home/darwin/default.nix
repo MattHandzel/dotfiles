@@ -84,8 +84,29 @@
         # below; boox-sync (boox-sync.nix) draws the notes from that copy.
         # BOOX's app freezer once disabled the app: `adb shell pm list packages -d`.
         "BOOX Note Air 5C" = {id = "F5DON6T-MEO7333-NFWDJZB-MYNKBOM-7Y3AEPQ-DNDJV24-W36U5SK-JZMRFAC";};
+        # The home server: the always-on hub the phone syncs the vault through.
+        # Missing until 2026-10-25, so after the laptop was sold nothing carried
+        # the vault between the Mac and the server for three months. The server
+        # side declares "matts-mac" in hosts/server/default.nix.
+        "matts-server" = {
+          id = "T3F3Y23-Z3H4TEP-GXITWXB-4WSRLZC-AO4OMQW-R6UKKG3-642JIWE-EI3PIA6";
+          addresses = ["tcp://100.118.206.104:22000" "dynamic"];
+        };
       };
       folders = {
+        # The Obsidian vault (parent dir, holds Main/). The Mac is the source of
+        # truth; the server relays it to the phone. Ignores:
+        # modules/home/obsidian-vault.stignore. Doc: areas/second-brain/syncthing.md.
+        "r9mpp-yvvmy" = {
+          label = "Obsidian";
+          path = "~/Obsidian";
+          devices = ["matts-server"];
+          fsWatcherEnabled = true;
+          minDiskFree = {
+            value = 1;
+            unit = "GB";
+          };
+        };
         # The phone's "share computer" folder. Only kms-inbox/ (phone capture
         # JSON) is synced — see the .stignore written below; the other 5.8 GB
         # of photos/videos stay on the phone. Send-receive so the Mac-side

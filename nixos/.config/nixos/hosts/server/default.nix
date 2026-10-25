@@ -6,7 +6,8 @@
   imports = [
     ./hardware-configuration.nix
     ./../../modules/core/server.nix
-    ./../../modules/core/taskwarrior-daily-notify.nix
+    # taskwarrior-daily-notify.nix: retired 2026-10-25 (Taskwarrior no longer used)
+    ./../../modules/core/server-health-digest.nix
     ./../../modules/core/project-watcher.nix
     ./../../modules/core/kokoro-tts.nix
   ];
@@ -72,6 +73,13 @@
     settings = {
       devices = {
         "matts-computer" = {id = "QKTFBXV-BQA4F7D-KH665IF-H3O4ZUT-BC5LWMM-BKCLRZX-7P7Y4UA-WFWMMQ3";};
+        # The Mac, Matt's only daily machine since the laptop was sold
+        # (2026-10-01). Missing until 2026-10-25, so the vault did not sync for
+        # three months. The Mac declares "matts-server" in modules/home/darwin.
+        "matts-mac" = {
+          id = "CUZ6PSD-UGPYZV3-HD4QFTG-OVBAJIX-GSFTFRA-KA75JSN-7DACUIX-MPV4MAW";
+          addresses = ["dynamic"];
+        };
         "Pixel 9a" = {id = "OUXTWJX-MARBGAE-ANVOBSS-ANCZDVY-QGJGWNC-YXK62MC-IPV22XX-PV3RMA5";};
       };
       folders = {
@@ -83,7 +91,8 @@
         "r9mpp-yvvmy" = {
           # Obsidian
           path = "~/Obsidian";
-          devices = ["matts-computer" "Pixel 9a"];
+          # Ignores: modules/home/obsidian-vault.stignore (same file on the Mac).
+          devices = ["matts-mac" "matts-computer" "Pixel 9a"];
         };
         "claude" = {
           # ~/.claude — Claude Code config + memory (see ~/.claude/.stignore;

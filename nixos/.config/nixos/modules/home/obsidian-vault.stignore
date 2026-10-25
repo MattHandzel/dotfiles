@@ -1,0 +1,50 @@
+// ~/Obsidian/.stignore for the vault folder (r9mpp-yvvmy). Identical on the Mac
+// and the server; Syncthing never syncs this file itself. Source of truth:
+// modules/home/obsidian-vault.stignore in ~/.config/nixos, installed by
+// obsidian-vault-stignore.nix on every host. Doc: areas/second-brain/syncthing.md.
+
+// MAT-174: never sync git metadata. It partially syncs and corrupts .git.
+Main/.git
+(?d)**/.git
+
+// Agent worktrees: per-machine git checkouts (14 GB on the Mac).
+Main/.claude/worktrees
+
+// Per-OS environments and build output. A macOS venv must never overwrite the
+// server's Linux one (scripts/beeper/venv*), and the reverse.
+(?d)**/node_modules
+(?d)**/__pycache__
+(?d)*.pyc
+(?d)**/.venv
+(?d)**/venv
+(?d)**/venv.*
+(?d)**/.mypy_cache
+(?d)**/.pytest_cache
+(?d)**/.ruff_cache
+(?d)**/.direnv
+(?d)**/.cache
+(?d)**/target
+(?d)**/dist
+(?d)**/build
+(?d)**/result
+
+// Per-host generated output (the server's dashboard renders every minute).
+Main/projects/exocortex-dashboard/out
+Main/projects/exocortex-dashboard/cache
+
+// A nested Syncthing folder marker (the server's Recordings folder lives
+// inside the vault at Main/capture/raw_capture/audio_recordings).
+(?d)**/.stfolder
+
+// Editor and OS junk.
+(?d).DS_Store
+(?d)Thumbs.db
+(?d)*.swp
+(?d)*.swo
+(?d)*~
+(?d).nvimlog
+(?d)**/.nvim*
+
+// Conflict copies stay on the device that made them.
+(?d)*.sync-conflict-*
+(?d)**/*.sync-conflict-*

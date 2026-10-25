@@ -74,7 +74,16 @@ process_dir() {
             --whisper-arg model=Systran/faster-whisper-large-v3 \
             --whisper-arg temperature=0.0
             
-        if [ $? -eq 0 ]; then
+        status=$?
+        # The tool exits 0 even when every segment failed (2026-10-25: curl was
+        # missing from the unit's PATH, 178 segment errors, "Successfully
+        # transcribed", recording moved to processed/). Only an actual,
+        # non-empty transcript counts.
+        if [ $status -eq 0 ] && [ ! -s "$transcript_file" ]; then
+            echo "[transcribe] Tool exited 0 but wrote no transcript for $filename"
+            status=1
+        fi
+        if [ $status -eq 0 ]; then
             echo "[transcribe] Successfully transcribed $filename to $(basename "$transcript_file")"
             # Move to processed folder to prevent re-processing
             mkdir -p "$dir/processed"

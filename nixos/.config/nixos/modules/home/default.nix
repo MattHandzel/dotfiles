@@ -35,12 +35,13 @@
     ./services.nix
     ./health-dashboard.nix # daily 09:00 health-data import timer
     ./todoist.nix
-    ./transcribe-captures.nix
     ./luck-scheduler.nix
     ./email-do.nix # Gmail claude/do label queue -> headless Claude worker (drafts only)
     ./polish-pipeline.nix
     # keep the rotating OAuth token out of Syncthing (daily forced re-login)
     ./claude-syncthing-ignores.nix
+    # one ~/Obsidian/.stignore for the vault folder on every host
+    ./obsidian-vault-stignore.nix
     ./linear-notify.nix # poll Linear → desktop notifications
     ./predict-ui.nix # prediction-tracker resolve frontend on localhost:7337
     ./privacy-card.nix # agent-issuable capped virtual cards (Privacy.com API)
@@ -55,6 +56,9 @@
   # Hyprland, Wayland, XDG desktop entries, systemd-only guards, and Linux-only
   # applications. None of these have a meaning on macOS.
   linuxOnly = [
+    # Server-only since 2026-10-25: both hosts watched the same synced folder,
+    # and the server has the GPU Whisper and receives the phone's recordings.
+    ./transcribe-captures.nix
     ./aseprite/aseprite.nix # pixel art editor
     ./audacious/audacious.nix # music player
     ./discord.nix # discord with catppuccin theme
