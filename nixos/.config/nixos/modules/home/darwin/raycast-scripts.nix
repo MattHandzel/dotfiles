@@ -719,13 +719,15 @@ in {
       run=$(this_run 40000)
       code=$(launchctl print "$label" | awk -F' = ' '/last exit code|last terminating signal/ {print $2; exit}')
       echo
-      echo "$run" | grep -E '^(Starting Website Sync|Sync completed) at'
+      echo "$run" | grep -E '^(Starting Website Sync|Sync completed|Skipped) at'
       echo "exit: $code    errors logged: $(echo "$run" | grep -c ' - ERROR - ')"
       published=$(echo "$run" | grep -E '^Buffered (note:|(content|blog post) \(public\))' | sort -u)
       echo
       if [ -n "$published" ]; then
         echo "Published (notes live at matthandzel.com/notes/<id>):"
         echo "$published" | sed 's/^/  /'
+      elif echo "$run" | grep -q '^Skipped at '; then
+        echo "Nothing was synced: the Mac is offline. Run this again once it's back online."
       else
         echo "Nothing new to publish since the last run."
       fi

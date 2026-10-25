@@ -32,6 +32,30 @@
     export NIXPKGS_ALLOW_UNFREE=1
 
     echo "Starting Website Sync at $(date)"
+
+    # Offline runs used to exit 1: launchd starts the job on wake (a StartInterval
+    # that came due during sleep), often before the network is back, and nix-shell
+    # then can't fetch <nixpkgs> while pymongo can't resolve the cluster's SRV
+    # record (err-personal-website-sync-20261022-092020). Wait for that record to
+    # answer; if it never does, skip and let the next hourly run sync. NXDOMAIN
+    # means DNS works, so a missing cluster still fails loudly in pymongo.
+    # (/usr/bin/dig: macOS ships it, and this job only runs on the Mac.)
+    if [[ ''${MONGODB_URI:-} == mongodb+srv://* ]]; then
+      mongo_host=''${MONGODB_URI#*://}
+      mongo_host=''${mongo_host##*@}
+      mongo_host=''${mongo_host%%[/?]*}
+      net_wait=''${WEBSITE_SYNC_NET_WAIT:-180}
+      deadline=$(( $(date +%s) + net_wait ))
+      until dns=$(/usr/bin/dig +time=3 +tries=1 SRV "_mongodb._tcp.$mongo_host" | sed -n 's/.*status: \([A-Z]*\).*/\1/p'); [[ $dns == NOERROR || $dns == NXDOMAIN ]]; do
+        if (( $(date +%s) >= deadline )); then
+          echo "Skipped at $(date): offline, no DNS answer for _mongodb._tcp.$mongo_host in ''${net_wait}s (last: ''${dns:-no reply}); the next hourly run will sync."
+          exit 0
+        fi
+        [[ -n ''${waiting:-} ]] || { echo "No DNS answer for _mongodb._tcp.$mongo_host (''${dns:-no reply}); waiting up to ''${net_wait}s for the network."; waiting=1; }
+        sleep 10
+      done
+    fi
+
     ${pkgs.nix}/bin/nix-shell "$project_dir/shell.nix" --run "python3 main.py --log"
     echo "Sync completed at $(date)"
   '';
