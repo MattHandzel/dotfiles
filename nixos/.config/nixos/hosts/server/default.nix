@@ -62,6 +62,12 @@
     restic
   ];
 
+  # Services bind the Tailscale IP (grafana :3001, prometheus :9090, ...). At
+  # boot they start before tailscaled has assigned it, fail with "cannot assign
+  # requested address", hit the restart limit and stay dead (2026-10-23).
+  # Allowing a bind to a not-yet-present address removes the race.
+  boot.kernel.sysctl."net.ipv4.ip_nonlocal_bind" = 1;
+
   services.syncthing = {
     enable = true;
     user = "matth";
