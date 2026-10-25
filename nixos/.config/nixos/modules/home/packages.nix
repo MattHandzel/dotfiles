@@ -154,6 +154,7 @@
     python312Packages.webrtcvad
     python312Packages.requests
     python312Packages.setuptools # for stt-rrecord
+    uv # `uv run --with …` in vault scripts (AI catalog demo recorder, Triage tests, bug-context)
     portaudio
     nodejs_22
     go
