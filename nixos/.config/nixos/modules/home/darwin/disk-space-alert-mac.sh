@@ -84,11 +84,30 @@ if [ -n "$dayflow_kib" ]; then
 fi
 echo "${dayflow_note:-Dayflow recordings: unknown}"
 
+# `uv cache prune` needs the cache lock to itself, and any long-running
+# `uv run` (the Triage server, always up) holds it shared for its whole life.
+# Unbounded, prune waited uv's default 300 s and logged "error: Timeout ...
+# waiting for lock" on every urgent tick (×43, 2026-10-19..21). Wait 10 s,
+# then skip and name the holder. Not --force: that could delete the
+# environment the running process is using.
+prune_uv_cache() {
+  local out cache holders
+  if out="$(UV_LOCK_TIMEOUT=10 "$HOME/.nix-profile/bin/uv" cache prune 2>&1)"; then
+    printf '%s\n' "$out" | tail -1
+  elif printf '%s' "$out" | grep -q 'waiting for lock'; then
+    cache="${UV_CACHE_DIR:-$HOME/.cache/uv}"
+    holders="$(/usr/sbin/lsof -t "$cache/.lock" 2>/dev/null | paste -sd' ' -)"
+    echo "uv cache prune skipped: cache in use (lock held by pid ${holders:-unknown})"
+  else
+    printf '%s\n' "$out" | tail -1
+  fi
+}
+
 # Urgent: reclaim regenerable caches on every run (idempotent, cheap when
 # empty). On 2026-09-15 this gave back 11 GiB (Homebrew 9.5, uv 1.8).
 if [ "$current_level" = "urgent" ] || [ "$current_level" = "critical" ]; then
   HOMEBREW_NO_AUTO_UPDATE=1 /opt/homebrew/bin/brew cleanup --prune=all -s 2>&1 | tail -1
-  "$HOME/.nix-profile/bin/uv" cache prune 2>&1 | tail -1
+  prune_uv_cache
   avail_gib="$(/bin/df -k -P /System/Volumes/Data | tail -1 | awk '{printf "%d", $4/1048576}')"
   echo "after cache cleanup: data=${avail_gib}G"
 fi
