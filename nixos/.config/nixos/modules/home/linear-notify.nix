@@ -49,10 +49,19 @@
       # Fetch the 30 most-recent notifications; we only act on unread ones.
       query='{ "query": "{ notifications(first: 30) { nodes { id readAt type ... on IssueNotification { issue { identifier title } } } } }" }'
 
+      # A curl failure (DNS, timeout, refused, broken pipe) means the machine is
+      # offline or asleep. Skip this tick with exit 0: the next one retries, and
+      # launchd has no SuccessExitStatus, so curl's own code (6/7/28/35) would
+      # be recorded as an agent failure every time the Mac drops off the network.
+      rc=0
       resp="$(curl -sS --max-time 20 -X POST https://api.linear.app/graphql \
         -H "Authorization: $api_key" \
         -H "Content-Type: application/json" \
-        --data "$query")"
+        --data "$query" 2>"$state_dir/curl.err")" || rc=$?
+      if [ "$rc" -ne 0 ]; then
+        echo "$(date '+%F %T') linear-notify: offline, skipped this tick (curl exit $rc: $(head -c 200 "$state_dir/curl.err"))" >&2
+        exit 0
+      fi
 
       # A valid response has .data.notifications.nodes; anything else = transient
       # error (rate limit, network, bad key). Exit 1 so the next tick retries.
