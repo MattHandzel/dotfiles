@@ -32,8 +32,12 @@ Main/.claude/worktrees
 Main/projects/exocortex-dashboard/out
 Main/projects/exocortex-dashboard/cache
 
-// A nested Syncthing folder marker (the server's Recordings folder lives
-// inside the vault at Main/capture/raw_capture/audio_recordings).
+// The audio belongs to its own Syncthing folder, Recordings (sx2ys-nb2px), which
+// lives inside the vault. Two folders indexing the same files let one apply a
+// deletion the other then spreads: on 2026-10-25 the phone's months-old delete
+// of two processed recordings fired on the server through Recordings, and the
+// vault folder would have carried it to the Mac. One file, one folder.
+/Main/capture/raw_capture/audio_recordings
 (?d)**/.stfolder
 
 // Editor and OS junk.

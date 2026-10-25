@@ -77,6 +77,11 @@
         unit = "GB";
       };
       devices = {
+        # This Mac itself. syncthing-init deletes every device not declared here,
+        # this one included, and Syncthing 2.1 answers that DELETE with an error
+        # the init's curl retries 1000 times: every switch stalled ~17 min before
+        # reaching the folders (2026-10-25). Declaring it makes it never stale.
+        "matts-mac" = {id = "CUZ6PSD-UGPYZV3-HD4QFTG-OVBAJIX-GSFTFRA-KA75JSN-7DACUIX-MPV4MAW";};
         # Same ID the server declares (hosts/server/default.nix). The phone has
         # to accept "matts-mac" once, then accept the Recordings share.
         "Pixel 9a" = {id = "OUXTWJX-MARBGAE-ANVOBSS-ANCZDVY-QGJGWNC-YXK62MC-IPV22XX-PV3RMA5";};
@@ -105,6 +110,29 @@
           minDiskFree = {
             value = 1;
             unit = "GB";
+          };
+          # A file another device deletes or overwrites lands in .stversions for
+          # 30 days instead of vanishing. The vault's untracked files
+          # (relationship-data, captures) have no other undo.
+          versioning = {
+            type = "trashcan";
+            params.cleanoutDays = "30";
+          };
+        };
+        # Phone and meeting audio, nested inside the vault. The vault folder
+        # ignores this path (obsidian-vault.stignore), so each file belongs to
+        # one folder. Transcription runs on the server; the Mac only receives.
+        "sx2ys-nb2px" = {
+          label = "Recordings";
+          path = "~/Obsidian/Main/capture/raw_capture/audio_recordings";
+          devices = ["matts-server"];
+          minDiskFree = {
+            value = 1;
+            unit = "GB";
+          };
+          versioning = {
+            type = "trashcan";
+            params.cleanoutDays = "30";
           };
         };
         # The phone's "share computer" folder. Only kms-inbox/ (phone capture

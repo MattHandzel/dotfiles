@@ -90,15 +90,28 @@
       };
       folders = {
         "sx2ys-nb2px" = {
-          # Recordings
+          # Recordings. Nested inside the vault, which ignores this path
+          # (obsidian-vault.stignore) so each file belongs to one folder: two
+          # folders on the same files let a stale phone delete reach the Mac
+          # (2026-10-25). Transcription (transcribe-captures) runs here only.
           path = "~/notes/capture/raw_capture/audio_recordings/";
-          devices = ["matts-computer" "Pixel 9a"];
+          devices = ["matts-mac" "matts-computer" "Pixel 9a"];
+          versioning = {
+            type = "trashcan";
+            params.cleanoutDays = "30";
+          };
         };
         "r9mpp-yvvmy" = {
           # Obsidian
           path = "~/Obsidian";
           # Ignores: modules/home/obsidian-vault.stignore (same file on the Mac).
           devices = ["matts-mac" "matts-computer" "Pixel 9a"];
+          # A delete or overwrite from another device lands in .stversions for
+          # 30 days instead of vanishing.
+          versioning = {
+            type = "trashcan";
+            params.cleanoutDays = "30";
+          };
         };
         "claude" = {
           # ~/.claude — Claude Code config + memory (see ~/.claude/.stignore;
