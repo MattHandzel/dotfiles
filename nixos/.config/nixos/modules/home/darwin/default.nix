@@ -31,6 +31,7 @@
     ./raycast-scripts.nix # Raycast Script Commands (timer & co.), twin of vicinae.nix
     ./wispr-clipboard-sync.nix # every Wispr Flow dictation -> clipboard -> Raycast history
     ./wispr-meeting-sync.nix # Wispr Flow meeting summaries + transcripts -> vault, calendar note, daily note
+    ./wispr-calendar-link.nix # Wispr recordings <-> calendar: link the event, or add one for unscheduled recordings
     ./wispr-learn.nix # corrections made in Neovim -> Wispr Flow dictionary (its own learner cannot see kitty)
     ./oops.nix # alt-backtick / Raycast "Oops": last 90 s of keys -> Claude -> problem log + fix
     ./claude-api-resume.nix # every Claude Code session continues by itself after an API error, sleep or lost network
