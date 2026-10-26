@@ -31,10 +31,14 @@ in {
       persistent = false;
       everySeconds = 180;
       workingDirectory = config.home.homeDirectory;
-      # The worker shells out to `claude` (Homebrew) which needs node, plus jq
-      # and coreutils' `timeout`. A LaunchAgent starts with no PATH at all.
+      # The worker shells out to `claude`, plus jq and coreutils' `timeout`. A
+      # LaunchAgent starts with no PATH at all. Claude Code's native installer
+      # lives in ~/.local/bin (the Homebrew copy is gone), so that goes first,
+      # as in zsh.nix; without it every worker died with rc=127 (bug
+      # 2026-10-26T20:06:21.800Z).
       path = [pkgs.bash pkgs.coreutils pkgs.python3 pkgs.jq pkgs.git pkgs.curl];
       darwinPathEntries = [
+        "${config.home.homeDirectory}/.local/bin"
         "/opt/homebrew/bin"
         "${config.home.homeDirectory}/.nix-profile/bin"
         "/usr/bin"
