@@ -161,6 +161,7 @@
       "cmd+r" = "send_text all \\x12";   # C-r  redo / reverse search
       "cmd+o" = "send_text all \\x0f";   # C-o  jump back
       "cmd+i" = "send_text all \\x09";   # C-i  jump forward (Tab)
+      "cmd+g" = "send_text all \\x1bOP";   # F1  go to the next waiting Claude window (tmux.nix, tip:9c3e100b)
       # C-s. nvim maps <C-s> to "<cmd>w<cr><esc>" for i/x/n/s (mappings.lua), so
       # this is Save. Unmapped, cmd+s hit kitty's own "Secure Keyboard Entry" menu
       # item instead and silently toggled it — see NSUserKeyEquivalents in

@@ -9,6 +9,27 @@
     if host == "server"
     then "C-b"
     else "C-Space";
+
+  # Waiting agents (AI tips radar tip:9c3e100b, 2026-10-28; the idea is Corgi's F1 "catch up",
+  # https://corgi.computer/). ~/.claude/hooks/tmux-mark-waiting.sh sets the window option
+  # @waiting=<epoch> when a Claude session in that window stops or asks for input while Matt isn't
+  # looking at it. This jumps the pressing client to the oldest flagged window on this server.
+  # Vault doc: areas/second-brain/tmux-waiting-agents.md.
+  tmux-next-waiting = pkgs.writeShellApplication {
+    name = "tmux-next-waiting";
+    runtimeInputs = [pkgs.tmux pkgs.coreutils pkgs.gawk];
+    text = ''
+      c=()
+      [ -n "''${1:-}" ] && c=(-c "$1")
+      next="$(tmux list-windows -a -F '#{@waiting} #{session_id} #{window_id}' | awk 'NF == 3' | sort -n | head -n 1)"
+      if [ -z "$next" ]; then
+        tmux display-message "''${c[@]}" "No agent is waiting"
+        exit 0
+      fi
+      read -r _ session window <<<"$next"
+      tmux set-option -wqu -t "$window" @waiting \; select-window -t "$window" \; switch-client "''${c[@]}" -t "$session"
+    '';
+  };
 in {
   programs.tmux = {
     enable = true;
@@ -75,7 +96,16 @@ in {
         # list, and nothing else — like the laptop.
         set -g status-left "#{E:@catppuccin_status_session}"
         set -g status-left-length 60
-        set -g status-right ""
+        # "● 2 waiting" when Claude windows on this server are waiting for Matt (see tmux-next-waiting).
+        set -g status-right "#{?#{S:#{W:#{@waiting}}},#[fg=#{@thm_peach}]#[bold]● #{n:#{S:#{W:#{?@waiting,x,}}}} waiting ,}"
+
+        # Waiting agents: F1 (kitty sends it for cmd+g) jumps to the oldest window whose Claude
+        # session is waiting; reaching a window by any route clears its flag. The [42] index keeps
+        # these from clobbering other hooks and makes a re-source idempotent.
+        bind-key -n F1 run-shell -b "${tmux-next-waiting}/bin/tmux-next-waiting '#{client_name}'"
+        set-hook -g 'session-window-changed[42]' 'set-option -wqu @waiting'
+        set-hook -g 'client-session-changed[42]' 'set-option -wqu @waiting'
+        set-hook -g 'client-attached[42]' 'set-option -wqu @waiting'
         bind-key h select-pane -L
         bind-key j select-pane -D
         bind-key k select-pane -U
@@ -165,8 +195,9 @@ in {
           # v2 names (the *_separator options above are v0.x and are ignored):
           # window tabs show the window NAME, current one filled Mauve.
           set -g @catppuccin_window_status_style "rounded"
-          set -g @catppuccin_window_text " #W"
-          set -g @catppuccin_window_current_text " #W"
+          # The ● marks a window whose Claude session is waiting for Matt (@waiting, see above).
+          set -g @catppuccin_window_text " #W#{?@waiting, #[fg=#{@thm_peach}]●#[fg=#{@thm_fg}],}"
+          set -g @catppuccin_window_current_text " #W#{?@waiting, #[fg=#{@thm_peach}]●#[fg=#{@thm_fg}],}"
           set -g @catppuccin_window_number_position "left"
         '';
       }
