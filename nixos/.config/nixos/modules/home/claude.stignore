@@ -1,0 +1,44 @@
+// Syncthing ignores for the `claude` folder (~/.claude), shared Mac <-> server.
+// Installed as a REAL file by claude-syncthing-ignores.nix on every host that
+// shares the folder: Syncthing does not follow a symlinked .stignore, and until
+// 2026-10-28 this was a nix-store symlink, so nothing below would have applied
+// (credentials included). Doc: areas/second-brain/claude-sync.md.
+//
+// Syncthing reads top to bottom, first match wins; "!" = do NOT ignore. This is
+// a whitelist: the durable Claude Code state is listed, everything else in
+// ~/.claude is machine-local and stays put. On 2026-10-28 the Mac held 2.2 GB
+// of fleet job state, 280 MB of security scans, digest buffers, plugin caches
+// and daemon files that have no business on the server and would only conflict.
+
+// OAuth credentials are machine-local and MUST NOT be synced. Claude Code
+// rotates its refresh token on every use, so a synced token is revoked by the
+// other host's next refresh: six .credentials.sync-conflict-* files and a
+// "login expired" prompt several times a day, 2026-06-06 to 2026-07-11.
+/.credentials.json
+/.credentials.sync-conflict-*
+/.syncthing..credentials.json.tmp
+(?d)*.lock
+(?d).DS_Store
+
+// Synced: config, memory and conversation history (so `claude --resume`
+// lists the same sessions on either host).
+!/settings.json
+!/settings.local.json
+!/CLAUDE.md
+!/keybindings.json
+!/statusline-command.sh
+!/agents
+!/commands
+!/hooks
+!/skills
+!/dev-mods
+!/agent-memory
+!/projects
+!/todos
+!/tasks
+!/teams
+!/sessions
+!/plans
+
+// Everything else is machine-local.
+*
