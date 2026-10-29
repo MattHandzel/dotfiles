@@ -60,6 +60,7 @@
     ./references.nix # every 15 min: link new emails/chats/pages/meetings/captures to the projects, areas, resources they are about (refs tick)
     ./google-keep-sync.nix # every 30 min: Google Keep notes -> capture/google_keep/ (+ pointer notes like Gym Logs)
     ./retro-sweep.nix # Sun 04:15: weekly agent error sweep (retrospective-analyst over the week's transcripts -> learnings.json + Linear agent-error)
+    ./voice-metrics.nix # Sun 05:00: every AI draft vs what Matt sent -> metrics, Haiku labels, findability probe, weekly report (voice loop)
     ./fact-check.nix # `fetch-text URL`: a page's real text (trafilatura, headless Chrome for JS pages) for fact-checks, not WebFetch's summary
   ];
 
