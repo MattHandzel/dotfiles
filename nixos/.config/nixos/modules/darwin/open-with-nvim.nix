@@ -19,7 +19,17 @@
 #
 # The default-app BINDING is set with `duti` below rather than through Finder's
 # "Do you want all documents with the extension .md to open with Neovim?" sheet,
-# which cannot be answered from a config file. duti writes the same
+# which cannot be answered from a config file.
+#
+# obsidian:// links (2026-11-02, Matt: "I DONT WANT IT TO OPEN UP .md files in
+# obsidian. only in neovim."): the bundle also owns the obsidian:// URL scheme,
+# so every link the vault's tools print (Work Test, bug board, recall, triage,
+# morning-focus, built-for-you) opens the note in nvim. obsidian-url-nvim
+# resolves vault/file/path to a file and, when an nvim already has that file
+# open, brings kitty forward instead of opening a second copy. Obsidian claims
+# the scheme back each time it launches (Electron setAsDefaultProtocolClient),
+# so the obsidian-url-guard agent watches the LaunchServices prefs and sets it
+# back to Neovim whenever it changes. duti writes the same
 # com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers entry the
 # sheet would, so the binding survives a reboot and is re-asserted every switch.
 {
@@ -29,6 +39,86 @@
 }: let
   nvimBin = "/etc/profiles/per-user/${username}/bin/nvim";
 
+  # obsidian://open?vault=V&file=F | ?path=/abs | obsidian://vault/V/F -> nvim
+  urlHandler = pkgs.writeScript "obsidian-url-nvim" ''
+    #!${pkgs.python3}/bin/python3
+    import json, os, subprocess, sys, time
+    from urllib.parse import urlparse, parse_qs, unquote
+
+    HOME = os.path.expanduser("~")
+    LOG = os.path.join(HOME, "Library/Logs/obsidian-url-nvim.log")
+    NVIM = "${nvimBin}"
+
+    def log(msg):
+        with open(LOG, "a") as f:
+            f.write(time.strftime("%Y-%m-%dT%H:%M:%S ") + msg + "\n")
+
+    def vaults():
+        try:
+            cfg = json.load(open(os.path.join(HOME, "Library/Application Support/obsidian/obsidian.json")))
+            return {os.path.basename(v["path"]): v["path"] for v in cfg.get("vaults", {}).values()}
+        except Exception:
+            return {}
+
+    def resolve(url):
+        u = urlparse(url)
+        q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        vs = vaults()
+        default_root = vs.get("Main") or os.path.join(HOME, "Obsidian/Main")
+        if u.netloc == "vault":  # obsidian://vault/<vault>/<file>
+            parts = unquote(u.path).lstrip("/").split("/", 1)
+            q.setdefault("vault", parts[0])
+            if len(parts) > 1:
+                q.setdefault("file", parts[1])
+        if q.get("path"):
+            return q["path"].split("#")[0]
+        name = q.get("vault")
+        root = vs.get(name) or (os.path.join(HOME, "Obsidian", name) if name else default_root)
+        f = q.get("file")
+        if not f:
+            return root
+        f = f.split("#")[0].split("^")[0]
+        for cand in (os.path.join(root, f), os.path.join(root, f + ".md")):
+            if os.path.exists(cand):
+                return cand
+        # Bare note name: Obsidian resolves it anywhere in the vault.
+        base = os.path.basename(f) + ("" if f.endswith(".md") else ".md")
+        r = subprocess.run(["${pkgs.fd}/bin/fd", "--type", "f", "--fixed-strings", base, root],
+                           capture_output=True, text=True)
+        hits = [p for p in r.stdout.splitlines() if os.path.basename(p) == base]
+        hits.sort(key=lambda p: ("/archive/" in p, len(p)))
+        if hits:
+            return hits[0]
+        return os.path.join(root, f if f.endswith(".md") else f + ".md")
+
+    def already_open(target):
+        ps = subprocess.run(["/bin/ps", "-axo", "command="], capture_output=True, text=True).stdout
+        return any("nvim" in line.split(" ", 1)[0] and target in line for line in ps.splitlines())
+
+    url = sys.argv[1] if len(sys.argv) > 1 else ""
+    target = resolve(url)
+    if already_open(target):
+        subprocess.run(["/usr/bin/open", "-a", "/Applications/kitty.app"])
+        log(f"{url} -> {target} (already open, focused kitty)")
+        sys.exit(0)
+    d = target if os.path.isdir(target) else os.path.dirname(target)
+    subprocess.run(["/usr/bin/open", "-na", "/Applications/kitty.app", "--args", "--single-instance",
+                    "--instance-group=nvim", "--directory", d, "-e", NVIM, target])
+    log(f"{url} -> {target}")
+  '';
+
+  # Keeps obsidian:// on Neovim. Only writes when the handler changed, so its
+  # own write to the watched prefs file doesn't loop.
+  urlGuard = pkgs.writeShellScript "obsidian-url-guard" ''
+    DUTI=/opt/homebrew/bin/duti
+    [ -x "$DUTI" ] || exit 0
+    cur="$("$DUTI" -d obsidian 2>/dev/null || true)"
+    if [ "$cur" != "com.matth.neovim" ]; then
+      "$DUTI" -s com.matth.neovim obsidian
+      echo "$(date '+%FT%T') obsidian:// was ''${cur:-unset}, set back to com.matth.neovim"
+    fi
+  '';
+
   droplet = pkgs.writeText "neovim-droplet.applescript" ''
     on open theFiles
         repeat with f in theFiles
@@ -36,6 +126,10 @@
             do shell script "/usr/bin/open -na /Applications/kitty.app --args --single-instance --instance-group=nvim --directory " & quoted form of (do shell script "dirname " & quoted form of p) & " -e ${nvimBin} " & quoted form of p
         end repeat
     end open
+
+    on open location theURL
+        do shell script "${urlHandler} " & quoted form of theURL & " >/dev/null 2>&1 &"
+    end open location
 
     on run
         do shell script "/usr/bin/open -na /Applications/kitty.app --args --single-instance --instance-group=nvim -e ${nvimBin}"
@@ -87,6 +181,14 @@ in {
       "$PB" -c "Add :CFBundleDocumentTypes:1:CFBundleTypeExtensions array" "$P"
       "$PB" -c "Add :CFBundleDocumentTypes:1:CFBundleTypeExtensions:0 string csv" "$P"
 
+      # obsidian:// links (see the header).
+      "$PB" -c "Delete :CFBundleURLTypes" "$P" 2>/dev/null || true
+      "$PB" -c "Add :CFBundleURLTypes array" "$P"
+      "$PB" -c "Add :CFBundleURLTypes:0 dict" "$P"
+      "$PB" -c "Add :CFBundleURLTypes:0:CFBundleURLName string Obsidian link" "$P"
+      "$PB" -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$P"
+      "$PB" -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string obsidian" "$P"
+
       # Ad-hoc signature: unsigned bundles get a fresh identity on every rebuild,
       # which would drop any TCC grant the bundle picks up later.
       /usr/bin/codesign --force --deep -s - "$STAGE/Neovim.app" >/dev/null 2>&1 || true
@@ -110,6 +212,17 @@ in {
         "$DUTI" -s com.matth.neovim public.comma-separated-values-text all || true
       /bin/launchctl asuser "$UID_M" /usr/bin/sudo -u ${username} \
         "$DUTI" -s com.matth.neovim net.daringfireball.markdown all || true
+      /bin/launchctl asuser "$UID_M" /usr/bin/sudo -u ${username} \
+        "$DUTI" -s com.matth.neovim obsidian || true
     fi
   '';
+
+  launchd.user.agents.obsidian-url-guard.serviceConfig = {
+    ProgramArguments = ["${urlGuard}"];
+    RunAtLoad = true;
+    WatchPaths = ["/Users/${username}/Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist"];
+    StartInterval = 900;
+    StandardOutPath = "/Users/${username}/Library/Logs/obsidian-url-guard.log";
+    StandardErrorPath = "/Users/${username}/Library/Logs/obsidian-url-guard.log";
+  };
 }

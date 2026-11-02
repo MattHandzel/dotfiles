@@ -1,5 +1,5 @@
 # Morning focus: the first time the laptop is used each morning, quit the
-# messaging apps, open today's daily note, and walk Matt through his
+# messaging apps, open today's daily note (in nvim), and walk Matt through his
 # arrive-at-work routine.
 #
 # WHY (2026-10-01, CFAR TAPs class): Matt's TAP trigger is "I open my laptop".
@@ -69,10 +69,12 @@
       }
 
       open_note() {
+        # obsidian:// is routed to nvim (open-with-nvim.nix), which also
+        # focuses an nvim that already has the note open instead of a 2nd copy.
         if [ -f "$note" ]; then
           open "obsidian://open?vault=Main&file=dailies%2F$today"
         else
-          open -a Obsidian
+          open "obsidian://open?vault=Main&file=dailies"
         fi
       }
 
