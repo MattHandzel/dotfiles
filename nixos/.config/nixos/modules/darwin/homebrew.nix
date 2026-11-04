@@ -94,6 +94,8 @@
       "devin-desktop"
       "wispr-flow"
       "bitwarden"
+      "1password" # Redwood's org password manager (Marshall, 2026-11-04: "Use Redwood 1Pass for Redwood-related secrets")
+      "1password-cli" # `op`, for `op run --env-file .env.tpl` (Redwood skill use-1password-cli)
       "thunderbird" # profiles migrated; kept as an archive reader
 
       # ── the Phase 6 keyboard/window stack ──
