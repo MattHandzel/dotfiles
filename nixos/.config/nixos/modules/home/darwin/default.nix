@@ -18,9 +18,11 @@
     ./automations.nix # calendar-agenda / disk-space-alert (system services on NixOS)
     ./memory-guard.nix # end a runaway batch job before macOS pauses apps on swap exhaustion
     ./systemstatus-guard.nix # warn to reboot before a slow systemstatusd breaks the camera in calls
+    ./claude-update-check.nix # every 30 min: new `claude --version`? run the after-update smoke test (hooks, CLAUDE.md, skills), ntfy on failure
     ./charge-limit.nix # battery charge cap (macOS's own Charge Limit): 100 % through 2026-10-24, then 80 %
     ./dayflow-guard.nix # keep Dayflow's screenshot interval at 1 s; notify when frames stop or slow down
     ./phone-lifelog.nix # copy the phone's location, app/screen events and Sleep Guard home log for lifelog
+    ./lifelog-transcribe.nix # transcribe the phone's recordings (every call, and talks) on the server's Whisper for lifelog
     ./lifelog-store.nix # every message, email and log -> ~/.local/share/lifelog store every 5 min; nightly archive + storage limits
     ./newsletter-page.nix # republish the unlisted newsletter page when its vault note or images change
     ./display-arrangement.nix # keep the secondary display stacked above the built-in (alt-k/alt-j cross monitors)
@@ -32,6 +34,7 @@
     ./wispr-clipboard-sync.nix # every Wispr Flow dictation -> clipboard -> Raycast history
     ./wispr-meeting-sync.nix # Wispr Flow meeting summaries + transcripts -> vault, calendar note, daily note
     ./wispr-calendar-link.nix # Wispr recordings <-> calendar: link the event, or add one for unscheduled recordings
+    ./meeting-commands.nix # `meet` CLI (Raycast Meet Prep / New Meeting) + 5-min three-way meeting-title sync (calendar, Doc, note)
     ./wispr-learn.nix # corrections made in Neovim -> Wispr Flow dictionary (its own learner cannot see kitty)
     ./oops.nix # alt-backtick / Raycast "Oops": last 90 s of keys -> Claude -> problem log + fix
     ./claude-api-resume.nix # every Claude Code session continues by itself after an API error, sleep or lost network
@@ -50,6 +53,8 @@
     ./bug-listener.nix # every bug capture -> sorted on areas/bugs/bug-board.md; owned-software bugs fixed by a background Claude
     ./error-collector.nix # every error (failing agents, app logs, crashes, Hammerspoon) -> batched onto the bug board for his yes
     ./meeting-listener.nix # each finished Wispr meeting -> Haiku "real meeting?" gate -> background Opus runs the process-meeting skill
+    ./meeting-live.nix # Claude DURING the meeting: tails the live Wispr transcript, Haiku scan, read-only Sonnet lookups, web panel on 127.0.0.1:47620
+    ./speaker-attribution.nix # daily rolling self-model of Matt + every 15 min: who said what in each unresolved transcript (speakers.py)
     ./shared-notes.nix # meeting notes/transcripts/docs people send Matt (Granola, Plaud, Gemini, Notion, Docs) -> stored + proposed, every 5 min
     ./person-log-sync.nix # daily: meetings/emails/DMs/calls/calendar -> areas/relationships person files (person_log.py)
     ./finance-daily.nix # daily bank sync + finance status/dashboard/audits/alerts (scripts/finance/fin daily)
@@ -61,6 +66,7 @@
     ./google-keep-sync.nix # every 30 min: Google Keep notes -> capture/google_keep/ (+ pointer notes like Gym Logs)
     ./retro-sweep.nix # Sun 04:15: weekly agent error sweep (retrospective-analyst over the week's transcripts -> learnings.json + Linear agent-error)
     ./voice-metrics.nix # Sun 05:00: every AI draft vs what Matt sent -> metrics, Haiku labels, findability probe, weekly report (voice loop)
+    ./gdoc-claude.nix # every 60 s: "@claude ..." Doc comments -> headless Claude does it, replies in the thread
     ./fact-check.nix # `fetch-text URL`: a page's real text (trafilatura, headless Chrome for JS pages) for fact-checks, not WebFetch's summary
   ];
 
@@ -150,6 +156,26 @@
           minDiskFree = {
             value = 1;
             unit = "GB";
+          };
+        };
+        # Claude Code's config, memory and transcripts, shared with the server so
+        # a session there (tmux, Slack) has the same CLAUDE.md, hooks, skills,
+        # memory and --resume list. A whitelist ignore (claude.stignore, a real
+        # file) keeps credentials and machine-local state out. The Mac is the
+        # source of truth; the server's stale 2026-07 copy was moved aside before
+        # pairing. Doc: areas/second-brain/claude-sync.md.
+        "claude" = {
+          label = "claude";
+          path = "~/.claude";
+          devices = ["matts-server"];
+          fsWatcherEnabled = true;
+          minDiskFree = {
+            value = 1;
+            unit = "GB";
+          };
+          versioning = {
+            type = "trashcan";
+            params.cleanoutDays = "30";
           };
         };
         # The tablet's /sdcard/.ksync (its Notes app's sync store, ~11 MB), sent

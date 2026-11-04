@@ -60,6 +60,9 @@ python3Packages.buildPythonApplication {
     google-api-python-client
     google-auth-oauthlib
     google-auth-httplib2
+    # httplib2 ignores http(s)_proxy without PySocks; the Claude Code Bash sandbox only lets traffic out
+    # through its proxy, so gdoc-sync inside a sandboxed headless job (gdoc-claude) needs this. 2026-11-04.
+    pysocks
     pyyaml
     requests
   ];
