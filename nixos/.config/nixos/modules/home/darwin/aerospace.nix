@@ -361,6 +361,7 @@ in {
     alt-ctrl-w = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Work Test" worktest -- open -a "Work Test"'
     alt-ctrl-v = 'exec-and-forget smart-clipboard-picker'
     alt-ctrl-r = 'exec-and-forget open -a Raycast'
+    alt-ctrl-j = 'exec-and-forget /Users/matth/Obsidian/Main/scripts/delegate/open-delegate.sh'   # Delegate to Claude: captures app/page/selection first, then the window (2026-11-04)
 
     # Outer-RIGHT pinky (pos 31) tap -> focus Claude.
     # The keyboard sends Option+Ctrl+F13 for this. It joins the same

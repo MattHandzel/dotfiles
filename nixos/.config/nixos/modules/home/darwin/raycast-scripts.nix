@@ -286,6 +286,18 @@ in {
       ${pathPreamble}
       exec "$HOME/Obsidian/Main/scripts/recall/open-recall.sh" "$1"
     ''
+    // script "delegate" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Delegate to Claude
+      # @raycast.mode silent
+      # @raycast.icon 🤝
+      # @raycast.packageName Vault
+      # @raycast.description Hand Claude a whole task. With text: files it at once (context captured, Mac/server per your last choice). Without: opens the Delegate window (127.0.0.1:47470). Hotkey: Option+Ctrl+J.
+      # @raycast.argument1 { "type": "text", "placeholder": "the task (blank = open the window)", "optional": true }
+      ${pathPreamble}
+      exec "$HOME/Obsidian/Main/scripts/delegate/open-delegate.sh" "''${1:-}"
+    ''
     // script "bug-board" ''
       #!/usr/bin/env bash
       # @raycast.schemaVersion 1

@@ -37,6 +37,7 @@
     ./todoist.nix
     ./luck-scheduler.nix
     ./email-do.nix # Gmail claude/do label queue -> headless Claude worker (drafts only)
+    ./delegate.nix # delegate engine: hotkey/UI/CLI/email/Triage/Linear -> one queue of Claude tasks (poll both hosts, UI on the Mac)
     ./polish-pipeline.nix
     # keep the rotating OAuth token out of Syncthing (daily forced re-login)
     ./claude-syncthing-ignores.nix
