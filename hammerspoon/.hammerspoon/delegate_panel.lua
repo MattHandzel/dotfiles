@@ -124,6 +124,8 @@ function M.show()
   M.wv:show()
   M.wv:bringToFront(true)
   M.focus(8)
+  -- fresh context chips and the cursor in the box on every show, whether or not the AX window is seen yet
+  M.wv:evaluateJavaScript("window.delegateActivated && window.delegateActivated()")
   return true
 end
 
