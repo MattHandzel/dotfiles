@@ -273,3 +273,9 @@ bfyWatch = require("bfy_watch")
 -- ── a non-user wake with the lid shut (⌥⎋ then lid close on the DELL) re-sleeps ─
 -- Added 2026-10-29 (Oops 20261029-195452); see lid_resleep.lua.
 lidResleep = require("lid_resleep")
+
+-- ── Delegate: the floating "Claude, do this" panel behind Option+Ctrl+J / Raycast ──
+-- Added 2026-11-04; see delegate_panel.lua. scripts/delegate/open-delegate.sh captures the context,
+-- then opens hammerspoon://delegate?action=show; it falls back to the browser when the panel
+-- doesn't answer within a second (Hammerspoon down or mid-reload).
+delegatePanel = require("delegate_panel")
