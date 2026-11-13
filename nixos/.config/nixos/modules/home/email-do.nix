@@ -26,7 +26,15 @@ in {
     (scheduled {
       name = "email-do-poll";
       description = "email-do: poll the claude/do Gmail queue and spawn workers (every 3min)";
-      command = ["${pkgs.python3}/bin/python3" "${scriptsDir}/claude_do.py" "poll"];
+      # One pass is 3-35 s. launchd never starts the next tick while a pass is
+      # alive, so a pass that never returns freezes the queue with exit 0 and
+      # only a stale log: 14 h on 2026-11-11 (a dead IMAP socket, since fixed
+      # with a socket timeout) and 13:36-14:37 on 2026-11-13 (the Mac
+      # thrashing: load ~146, 11 GB swap; err-email-do-poll-20261113-143143).
+      # So every pass gets a wall-clock limit: TERM at 10 min, KILL 15 s
+      # later, exit 124/137 so the error collector sees it. Workers run in
+      # their own session (start_new_session) and are not touched.
+      command = ["${pkgs.coreutils}/bin/timeout" "-k" "15" "600" "${pkgs.python3}/bin/python3" "${scriptsDir}/claude_do.py" "poll"];
       onCalendar = "*:0/3";
       persistent = false;
       everySeconds = 180;
