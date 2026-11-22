@@ -13,6 +13,7 @@
     # GUI, so it needs the trampoline
     kitty
     mpv
+    (callPackage ../../pkgs/survival-llm/default.nix {}) # offline emergency AI + library (2026-11-21)
 
     # CLI
     kanata # keyboard remapper (launchd daemon in modules/darwin/kanata.nix)
