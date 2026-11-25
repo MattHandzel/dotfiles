@@ -123,6 +123,11 @@ in {
     pyright
     lua-language-server
     typescript-language-server
+    # Redwood devbox `rw` CLI prerequisites. Also in packages.nix's working copy
+    # (uncommitted there on 2026-11-24); listing them here too keeps them on the laptop.
+    awscli2
+    terraform
+    ssm-session-manager-plugin
     # Ctrl-Opt-C (aerospace.nix) runs `calendar`: Google Calendar as its own Chrome app window on the
     # `calendar` workspace. It lives in the personal scripts bundle (scripts/scripts.nix), which this laptop
     # doesn't get, so `calendar` was macOS's /usr/bin/calendar and the key did nothing (Matt, 2026-11-24).
