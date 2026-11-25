@@ -248,6 +248,27 @@ in {
     }
   ];
 
+  # Raycast commands that were hand-written on matts-mac (never in Nix), copied
+  # here 2026-11-25 so the laptop has them too (Matt: "copy all useful scripts").
+  # Their backends are in genericScripts above; genpass ships its EFF word list.
+  home.file =
+    lib.listToAttrs (map (n: {
+      name = ".config/raycast/scripts/${n}.sh";
+      value = {
+        source = ./darwin/raycast-hand + "/${n}.sh";
+        executable = true;
+      };
+    }) ["clip2md" "grammar-check" "link-search" "screenshot-search" "tmux-sessionizer" "genpass"])
+    // {
+      ".local/bin/genpass" = {
+        source = ./darwin/raycast-hand/genpass.py;
+        executable = true;
+      };
+      ".local/share/diceware/eff_large_wordlist.txt".source = ./darwin/raycast-hand/eff_large_wordlist.txt;
+      # Marks this as the work machine (Hammerspoon's init.lua skips its personal modules).
+      ".config/work-machine".text = "redwood-mac: personal Hammerspoon modules and bar items are skipped\n";
+    };
+
   # Dayflow (Matt, 2026-11-25: "marshall gave the ok fro dayflow", "please
   # install dayflow on work computer"). Installed with Homebrew the first time the
   # config is applied, with matts-mac's privacy settings: no analytics, password
@@ -269,7 +290,6 @@ in {
 
   # Marks this as the work machine for configs Nix doesn't build: Hammerspoon's
   # init.lua skips its personal modules when this file exists.
-  home.file.".config/work-machine".text = "redwood-mac: personal Hammerspoon modules and bar items are skipped\n";
 
   # Config sync (Matt, 2026-11-24): improvements made on matts-mac reach this
   # laptop without anyone copying files. ~/dotfiles is a read-only HTTPS clone
