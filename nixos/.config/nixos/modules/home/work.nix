@@ -58,6 +58,7 @@ in {
     ./darwin/borders.nix # focused-window border colours
     ./darwin/sketchybar.nix # the status bar; personal items skipped via SKETCHYBAR_WORK
     ./darwin/hammerspoon-cli.nix # the `hs` CLI
+    ./darwin/espanso.nix # text expansion; vault/password-picker snippets skipped via my.work
   ];
 
   # The subset of ./packages.nix that the shell config, Neovim and Redwood's
