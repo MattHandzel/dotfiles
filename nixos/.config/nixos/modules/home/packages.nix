@@ -276,7 +276,7 @@
   # Left off the Redwood laptop (my.work; modules/home/work.nix imports this file
   # since 2026-11-24): tools tied to Matt's personal accounts or vault, and
   # Gemini, which would send work text to Google outside Redwood's approved tools.
-  personalOnly = with pkgs; [gdoc-sync organize-core bitwarden-cli ntfy-sh gemini-cli taskwarrior3 vit];
+  personalOnly = with pkgs; [organize-core bitwarden-cli ntfy-sh gemini-cli taskwarrior3 vit];
 in {
   # sharedPkgs are the CLI/dev tools that build and behave the same on NixOS and
   # macOS. linuxPkgs are Wayland/Hyprland/systemd-bound tools, Linux-only

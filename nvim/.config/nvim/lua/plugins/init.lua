@@ -2271,6 +2271,8 @@ return {
 		-- The old setup table below the early-return is DEAD CODE kept for reference;
 		-- doc/MIGRATION-from-old-setup.md in the repo maps every old key to its new home.
 		dir = "~/Projects/KnowledgeManagementSystem/organize-rewrite",
+		-- Only where the local checkout exists (not on the Redwood laptop, 2026-11-25).
+		cond = vim.uv.fs_stat(vim.fn.expand("~/Projects/KnowledgeManagementSystem/organize-rewrite")) ~= nil,
 		name = "para-organize",
 		dependencies = {
 			"nvim-lua/plenary.nvim",
@@ -2777,6 +2779,8 @@ return {
 
 	{
 		dir = "~/Projects/task.nvim",
+		-- Only where the local checkout exists (not on the Redwood laptop, 2026-11-25).
+		cond = vim.uv.fs_stat(vim.fn.expand("~/Projects/task.nvim")) ~= nil,
 		lazy = false, -- load at startup so global keymaps (<leader>tt, <leader>ta, etc.) work
 		config = function()
 			require("taskwarrior").setup({
@@ -2804,6 +2808,8 @@ return {
 	},
 	{
 		dir = "~/Projects/kms-capture.nvim",
+		-- Only where the local checkout exists (not on the Redwood laptop, 2026-11-25).
+		cond = vim.uv.fs_stat(vim.fn.expand("~/Projects/kms-capture.nvim")) ~= nil,
 		-- Capture into the KMS inbox (capture/raw_capture) from Neovim: like
 		-- <leader>oe (Obsidian extract) but through `kms capture`, with a tag
 		-- field that completes from the vault vocabulary. The selection is
@@ -2825,7 +2831,11 @@ return {
 		end,
 	},
 	{
-		dir = "~/Projects/gdoc-sync.nvim", -- github.com/MattHandzel/gdoc-sync.nvim
+		-- The local checkout when it exists; the public GitHub repo otherwise (the
+		-- Redwood laptop has no ~/Projects/gdoc-sync.nvim, 2026-11-25).
+		[1] = (not vim.uv.fs_stat(vim.fn.expand("~/Projects/gdoc-sync.nvim"))) and "MattHandzel/gdoc-sync.nvim" or nil,
+		dir = vim.uv.fs_stat(vim.fn.expand("~/Projects/gdoc-sync.nvim")) and "~/Projects/gdoc-sync.nvim" or nil,
+		name = "gdoc-sync.nvim",
 		ft = "markdown",
 		cmd = "Gdoc",
 		config = function()
