@@ -25,11 +25,19 @@
 # Tools, outside the store (same reason open-with-nvim.nix uses osacompile).
 # The sources are declarative; the build re-runs only when they change.
 {
+  config,
   pkgs,
   lib,
   ...
 }: let
-  dir = "/Users/matth/Obsidian/Main/scripts/message-triage";
+  # On the Redwood laptop (my.work) there is no vault copy of the code: it is a clone of the private repo,
+  # kept current by claude-config-sync (work.nix), and every `claude -p` call uses Matt's personal account
+  # from ~/.claude-personal instead of the Redwood login, so his messages never go through Redwood's org.
+  work = config.my.work or false;
+  dir =
+    if work
+    then "/Users/matth/Projects/message-triage"
+    else "/Users/matth/Obsidian/Main/scripts/message-triage";
   appSrc = ./triage-app;
   serve = pkgs.writeShellApplication {
     name = "message-triage-serve";
@@ -112,12 +120,14 @@ in {
 
   launchd.agents.message-triage = {
     enable = true;
-    config = {
-      ProgramArguments = ["${serve}/bin/message-triage-serve"];
-      RunAtLoad = true;
-      KeepAlive = true;
-      StandardOutPath = "/Users/matth/Library/Logs/message-triage.log";
-      StandardErrorPath = "/Users/matth/Library/Logs/message-triage.log";
-    };
+    config =
+      lib.optionalAttrs work {EnvironmentVariables.CLAUDE_CONFIG_DIR = "/Users/matth/.claude-personal";}
+      // {
+        ProgramArguments = ["${serve}/bin/message-triage-serve"];
+        RunAtLoad = true;
+        KeepAlive = true;
+        StandardOutPath = "/Users/matth/Library/Logs/message-triage.log";
+        StandardErrorPath = "/Users/matth/Library/Logs/message-triage.log";
+      };
   };
 }
