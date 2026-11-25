@@ -104,7 +104,7 @@
   dotfilesSync = let
     script = pkgs.writeShellScript "dotfiles-sync" ''
       set -u
-      export PATH=${lib.makeBinPath [pkgs.git pkgs.coreutils]}:/usr/bin:/bin
+      export PATH=${lib.makeBinPath [pkgs.git pkgs.coreutils]}:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:/usr/bin:/bin
       repo="$HOME/dotfiles"
       branch="''${DOTFILES_BRANCH:-$(git -C "$repo" rev-parse --abbrev-ref HEAD)}"
       notify() { /usr/bin/osascript -e "display notification \"$1\" with title \"Dotfiles sync\""; }
@@ -122,7 +122,20 @@
         /Applications/Hammerspoon.app/Contents/Frameworks/hs/hs -t 5 -c 'hs.reload()' >/dev/null 2>&1 || true
       fi
       if echo "$changed" | grep -q '^nixos/'; then
-        notify "Config changed: run ~/redwood-kit/switch.command to apply"
+        # Apply the user-level half (Espanso, AeroSpace keys, Raycast scripts,
+        # launchd agents, dotfiles) now, as Matt, with no password: nix-darwin
+        # runs this same activate script during a full switch (2026-11-25, Matt:
+        # ";scfo ... wasn't synced to my work one. solve this problem").
+        # New CLI tools and system settings still wait for `rebuild`.
+        flake="$repo/nixos/.config/nixos"
+        hm=$(nix build --no-link --print-out-paths "$flake#darwinConfigurations.redwood-mac.config.home-manager.users.matth.home.activationPackage" 2>>"$HOME/.local/state/dotfiles-sync.err.log") || {
+          notify "Config changed but didn't build; run rebuild to see why"; exit 1; }
+        if ! "$hm/activate" >>"$HOME/.local/state/dotfiles-sync.log" 2>&1; then
+          notify "Config changed but applying it failed; run rebuild"; exit 1
+        fi
+        /opt/homebrew/bin/aerospace reload-config >/dev/null 2>&1 || true
+        /opt/homebrew/bin/espanso restart >/dev/null 2>&1 || true
+        notify "Applied the new config. New apps or tools still need: rebuild"
       fi
     '';
   in {
