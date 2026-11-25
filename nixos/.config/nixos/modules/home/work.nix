@@ -110,7 +110,6 @@ in {
     ./darwin/sketchybar.nix # the status bar; personal items skipped via SKETCHYBAR_WORK
     ./darwin/hammerspoon-cli.nix # the `hs` CLI
     ./darwin/memory-guard.nix # end runaway batch processes before macOS starts pausing apps
-    ./darwin/systemstatus-guard.nix # tell Matt to reboot before the camera indicator daemon stalls calls
     ./darwin/claude-api-resume.nix # wake Claude Code sessions that stopped on an API error
     ./darwin/charge-limit.nix # macOS's own battery charge cap
     ./darwin/espanso.nix # text expansion; vault/password-picker snippets skipped via my.work
