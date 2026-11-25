@@ -197,6 +197,7 @@
     ...
   } @ inputs: let
     username = "matth";
+    redwoodUsername = "matth"; # account name on the Redwood laptop
     linuxSystem = "x86_64-linux";
     darwinSystem = "aarch64-darwin";
 
@@ -276,6 +277,19 @@
       specialArgs = {
         host = "mac";
         inherit self inputs username sharedVariables;
+      };
+    };
+
+    # The Redwood-issued MacBook: core settings only (modules/home/work.nix).
+    # `host = "mac"` so tmux/zsh take their macOS branches. `username` is the
+    # short account name on that laptop (`whoami` there); change redwoodUsername
+    # above if it is not the same as here.
+    darwinConfigurations.redwood-mac = inputs.nix-darwin.lib.darwinSystem {
+      modules = [(import ./hosts/redwood-mac)];
+      specialArgs = {
+        host = "mac";
+        username = redwoodUsername;
+        inherit self inputs sharedVariables;
       };
     };
 

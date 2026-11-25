@@ -174,8 +174,19 @@ browserHistoryTap = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, functio
 end)
 browserHistoryTap:start()
 
+-- ── Work laptop guard ───────────────────────────────────────────────────────
+-- The Redwood laptop (nix-darwin host redwood-mac, my.work) gets
+-- ~/.config/work-machine from modules/home/work.nix. There the modules that
+-- read or write personal state (vault, lifelog, Dayflow, Bitwarden, Delegate,
+-- background-job status, built-for-you logs) are skipped. Added 2026-11-24.
+WORK_MACHINE = hs.fs.attributes(os.getenv("HOME") .. "/.config/work-machine") ~= nil
+local function personal(load) if not WORK_MACHINE then return load() end end
+
 -- Added 2026-09-11 for shell-side debugging: enables `hs -c "<lua>"`.
 require("hs.ipc")
+-- 2026-11-15: defer hs.ipc port deletes that land mid-send (a CLI unregistering while we reply
+-- crashed Hammerspoon with SIGTRAP). See ipc_guard.lua.
+require("ipc_guard").install()
 
 -- ── Cmd+Delete deletes the previous WORD, not the whole line ─────────────────
 -- Added 2026-09-12. karabiner.nix carries the same rewrite, but Karabiner only
@@ -202,13 +213,13 @@ end)
 cmdDeleteTap:start()
 
 -- ── read-aloud floating player (no hotkeys; shown by the Raycast "Read Aloud" command) ──
-readAloudPlayer = require("readaloud_player")
+readAloudPlayer = personal(function() return require("readaloud_player") end)
 
 -- ── Oops: 90-s keystroke/app/click recorder + "something went wrong" trigger ──
 -- Added 2026-09-12. Recorder + trigger in oops.lua; the Claude half is the
 -- nix-managed `oops` script (modules/home/darwin/oops.nix). Reached via
 -- AeroSpace alt-backtick / Raycast "Oops" -> hammerspoon://oops.
-oops = require("oops")
+oops = personal(function() return require("oops") end)
 
 -- ── auto-close "“sh” can run in the background" (BTM) banners ───────────────
 -- Added 2026-09-13. Every new home-manager launch agent triggers one; see btm_mute.lua.
@@ -220,7 +231,11 @@ tileGuard = require("tile_guard")
 
 -- ── Bitwarden opens on the workspace you are on ─────────────────────────────
 -- Added 2026-09-13 (Oops 20260913-171335); see bitwarden_follow.lua.
-bitwardenFollow = require("bitwarden_follow")
+bitwardenFollow = personal(function() return require("bitwarden_follow") end)
+
+-- ── Opening Dayflow takes you to its workspace ──────────────────────────────
+-- Added 2026-11-05 (Oops 20261105-161827); see dayflow_follow.lua.
+dayflowFollow = personal(function() return require("dayflow_follow") end)
 
 -- ── screen recording toggle (Raycast "Record Screen (toggle)") ───────────────
 -- Added 2026-09-13 (Oops 20260913-171439); see screen_record.lua.
@@ -232,7 +247,7 @@ ocrScreen = require("ocr_screen")
 
 -- ── Focus Mode: distracting workspaces take 15 s to reach ───────────────────
 -- Added 2026-09-14; see focus_gate.lua.
-focusGate = require("focus_gate")
+focusGate = personal(function() return require("focus_gate") end)
 
 -- ── AeroSpace monitor mode follows plug/unplug and lid open/close ────────────
 -- Added 2026-09-14; see monitor_mode.lua.
@@ -264,11 +279,11 @@ hlGuard = require("hl_guard")
 
 -- ── clipboard history for the lifelog (scripts/lifelog/clipboard.py ingests it) ──
 -- Added 2026-10-07; see clipboard_log.lua.
-clipboardLog = require("clipboard_log")
+clipboardLog = personal(function() return require("clipboard_log") end)
 
 -- ── built-for-you: log presses of the chords Claude built, while under watch ──
 -- Added 2026-10-19; see bfy_watch.lua.
-bfyWatch = require("bfy_watch")
+bfyWatch = personal(function() return require("bfy_watch") end)
 
 -- ── a non-user wake with the lid shut (⌥⎋ then lid close on the DELL) re-sleeps ─
 -- Added 2026-10-29 (Oops 20261029-195452); see lid_resleep.lua.
@@ -278,4 +293,9 @@ lidResleep = require("lid_resleep")
 -- Added 2026-11-04; see delegate_panel.lua. scripts/delegate/open-delegate.sh captures the context,
 -- then opens hammerspoon://delegate?action=show; it falls back to the browser when the panel
 -- doesn't answer within a second (Hammerspoon down or mid-reload).
-delegatePanel = require("delegate_panel")
+delegatePanel = personal(function() return require("delegate_panel") end)
+
+-- ── Jobs down: the panel behind the red "N down" pill in sketchybar ──────────
+-- Added 2026-11-10; see jobs_panel.lua. sketchybar's plugins/jobs_down.sh click opens
+-- hammerspoon://jobs-panel?action=toggle.
+jobsPanel = personal(function() return require("jobs_panel") end)

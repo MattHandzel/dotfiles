@@ -17,21 +17,13 @@
   # Everything here evaluates on BOTH NixOS and nix-darwin. Modules that need a
   # per-platform branch do it internally (btop's nvtop, tmux's shell path, zsh's
   # aliases, gtk's fontconfig-vs-gtk split) rather than being forked.
+  # The settings every profile gets (shell, editor, terminal, prompt, theme) live
+  # in ./core.nix, which the Redwood work profile (./work.nix) imports by itself.
   shared = [
-    ./theme.nix # palette/font tokens shared across modules
-    ./platform.nix # clip-copy / clip-paste / notify / open-it / pick / type-text
-    ./bat.nix # better cat command
-    ./btop.nix # resouces monitor
-    ./git.nix # version control
-    ./gtk.nix # fonts on both; the gtk.* theme block is Linux-gated inside
-    ./kitty.nix # terminal
-    ./nvim.nix # neovim editor
+    ./core.nix
     ./packages.nix # other packages
     ./scripts/scripts.nix # personal scripts
-    ./starship.nix # shell prompt
-    ./tmux.nix # terminal multiplexer
     ./vscodium.nix # vscode forck
-    ./zsh.nix # shell
     ./services.nix
     ./health-dashboard.nix # daily 09:00 health-data import timer
     ./todoist.nix
@@ -51,7 +43,6 @@
     # a shareable Google Doc per upcoming meeting note (the server writes the
     # notes; gdoc-sync only lives here, so the Doc half runs on the laptop)
     ./meeting-note-docs.nix
-    inputs.catppuccin.homeModules.catppuccin
   ];
 
   # Hyprland, Wayland, XDG desktop entries, systemd-only guards, and Linux-only
@@ -107,41 +98,4 @@
   ];
 in {
   imports = shared ++ lib.optionals isLinux linuxOnly ++ lib.optionals isDarwin [./darwin];
-
-  catppuccin = {
-    flavor = "mocha";
-    enable = true;
-    # Catppuccin's VSCode module pulls/builds a theme extension; keep it off so
-    # rebuilds don't depend on npm registry availability.
-    vscode.profiles.default.enable = false;
-    # nvim.enable = false;
-  };
-  catppuccin.delta.enable = false;
-
-  programs.atuin = {
-    enable = true;
-    settings = {
-      accept_past_line_end = true;
-      auto_sync = true;
-      sync_frequency = "5m";
-      sync_address = "https://api.atuin.sh";
-      search_mode = "fuzzy";
-      keymap_mode = "vim-normal";
-      enter_accept = true;
-    };
-  };
-
-  programs.delta = {
-    enable = true;
-    enableGitIntegration = true;
-    options = {
-      # todo: write
-    };
-  };
-
-  home.sessionVariables = {
-    TERMINAL = "kitty";
-    EDITOR = "nvim";
-    # GDK_BACKEND = "x11"; # Forces XWayland for GTK apps like Foliate
-  };
 }

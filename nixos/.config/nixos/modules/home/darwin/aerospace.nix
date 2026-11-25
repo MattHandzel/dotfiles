@@ -17,9 +17,24 @@
 {
   config,
   pkgs,
+  lib,
   ...
 }: let
   helpers = import ./aerospace-helpers.nix {inherit pkgs;};
+
+  # On a work machine (`my.work`) a key may only run the window helpers, Raycast,
+  # kitty or sleep. Every other `exec-and-forget` line is dropped: those call
+  # Matt's personal tools, and one of them (keypad 4) posts the clipboard to his
+  # home server. Lines that are not launchers (focus, move, modes, rules) stay.
+  workAllowed = l:
+    builtins.match ".*exec-and-forget.*" l == null
+    || builtins.match "[[:space:]]*#.*" l != null
+    || (builtins.match ".*(/bin/(aerospace-retile|move-smart|float-toggle|dwindle-open|float-open|keybinds|focus-app)|/opt/homebrew/bin/borders|open -a Raycast|open -g \"raycast://|/usr/bin/pmset sleepnow).*" l != null
+      && builtins.match ".*(Obsidian|/Users/matth|Triage|Beeper|WhatsApp|Work Test|tasker|notetaker|Superhuman|Dia|darwin-rebuild|gemini|Gemini).*" l == null);
+  forHost = text:
+    if config.my.work
+    then lib.concatStringsSep "\n" (builtins.filter workAllowed (lib.splitString "\n" text))
+    else text;
 
   # Numpad 4 (Hyprland KP_4): clipboard -> prompt-llm (picker for the prompt)
   # -> clipboard. Unlike the Linux one-liner, an empty result (picker
@@ -46,7 +61,7 @@ in {
     helpers.monitor-mode
   ];
 
-  home.file.".aerospace.toml".text = ''
+  home.file.".aerospace.toml".text = forHost ''
     # AeroSpace — the Hyprland replacement.
     #
     # THE ONE SUBSTITUTION THAT MAKES THIS WORK: on Linux the window-manager

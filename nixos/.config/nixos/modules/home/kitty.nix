@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   ...
@@ -68,7 +69,12 @@
         copy_on_select = "yes";
         strip_trailing_spaces = "smart";
         paste_actions = "quote-urls-at-prompt";
-        clipboard_control = "write-clipboard write-primary read-clipboard read-primary";
+        # On a work machine a program in the terminal (a remote shell, an agent)
+        # must ask before it reads the clipboard, which may hold a password.
+        clipboard_control =
+          if config.my.work
+          then "write-clipboard write-primary read-clipboard-ask read-primary-ask"
+          else "write-clipboard write-primary read-clipboard read-primary";
 
         ## Terminal features
         term = "xterm-256color";

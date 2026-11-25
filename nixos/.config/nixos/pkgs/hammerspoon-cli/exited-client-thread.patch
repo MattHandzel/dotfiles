@@ -1,0 +1,23 @@
+--- a/extensions/ipc/cli/hs.m
++++ b/extensions/ipc/cli/hs.m
+@@ -732,8 +732,18 @@
+ 
+         if (core.remotePort && !core.cancelled) {
+             [core cancel] ;
+-            // cancel does not break the runloop, so poke it to wake it up
+-            [core performSelector:@selector(poke:) onThread:core withObject:nil waitUntilDone:YES] ;
++            // cancel does not break the runloop, so poke it to wake it up.
++            // The client thread also leaves its runloop on its own once exitCode != EX_OK (a failed or
++            // timed-out command), so it may already be gone: a waitUntilDone:YES perform on an exited thread
++            // raises NSDestinationInvalidException (SIGABRT) or waits forever. Poke without waiting, then
++            // wait for the thread itself to finish (it unregisters on the way out), bounded.
++            if (!core.finished) {
++                @try {
++                    [core performSelector:@selector(poke:) onThread:core withObject:nil waitUntilDone:NO] ;
++                } @catch (__unused NSException *e) {}
++                NSDate *limit = [NSDate dateWithTimeIntervalSinceNow:(core.sendTimeout + 1.0)] ;
++                while (!core.finished && [limit timeIntervalSinceNow] > 0) usleep(1000) ;
++            }
+         }
+         exitCode = core.exitCode ;
+         core = nil ;

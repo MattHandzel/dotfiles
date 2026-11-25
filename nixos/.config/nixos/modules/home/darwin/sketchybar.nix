@@ -62,7 +62,9 @@ in {
           "/sbin"
         ];
         LANG = "en_US.UTF-8";
-      };
+      }
+      # The Redwood laptop (my.work) skips the bar items that read personal state.
+      // lib.optionalAttrs (config.my.work or false) {SKETCHYBAR_WORK = "1";};
       StandardOutPath = "${home}/.local/state/sketchybar.log";
       StandardErrorPath = "${home}/.local/state/sketchybar.err.log";
     };

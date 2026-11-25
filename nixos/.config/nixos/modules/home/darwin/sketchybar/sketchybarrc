@@ -75,6 +75,8 @@ sketchybar --default \
 sketchybar --add event aerospace_workspace_change
 # ~/.local/bin/oops fires this when it starts a Claude repair session.
 sketchybar --add event oops_update
+# error-collector fires this after each scan (every 5 min) when it has rewritten down.json.
+sketchybar --add event jobs_down_update
 # leader-timer fires this when a timer starts, is cancelled or finishes.
 sketchybar --add event timer_update
 
@@ -197,6 +199,11 @@ sketchybar --add item cpu right \
     click_script="$PLUGIN_DIR/bfy_click.sh; open -na kitty --args --title btop -e btop" \
     script="$PLUGIN_DIR/cpu.sh"
 
+# Personal-only items (Claude repair sessions, background-job health, focus
+# mode, leader timers, meeting recorder). The Redwood laptop sets
+# SKETCHYBAR_WORK=1 (sketchybar.nix, my.work) and skips them.
+if [ -z "${SKETCHYBAR_WORK:-}" ]; then
+
 # Oops: red life-ring + count while a Claude repair session runs (tmux -L oops);
 # hidden otherwise. Added last so it sits leftmost of the right cluster. Click
 # jumps to the "oops" workspace where the session's terminal is parked.
@@ -211,6 +218,21 @@ sketchybar --add item oops right \
     click_script="$PLUGIN_DIR/bfy_click.sh; $PLUGIN_DIR/oops.sh click" \
     script="$PLUGIN_DIR/oops.sh" \
   --subscribe oops oops_update
+
+# Jobs down: red warning sign + "N down" while any of Matt's background jobs is
+# down (plugins/jobs_down.sh); hidden otherwise. Click opens the jobs panel (Hammerspoon jobs_panel.lua).
+sketchybar --add item jobs_down right \
+  --set jobs_down \
+    drawing=off \
+    updates=on \
+    update_freq=120 \
+    icon="" \
+    icon.color="$RED" \
+    icon.font="$FONT:Bold:13.0" \
+    label.color="$RED" \
+    click_script="$PLUGIN_DIR/bfy_click.sh; $PLUGIN_DIR/jobs_down.sh click" \
+    script="$PLUGIN_DIR/jobs_down.sh" \
+  --subscribe jobs_down jobs_down_update
 
 # Focus Mode pill: peach "󱫠 Focus" when on, a dim glyph when off. Click to
 # toggle. Its 60 s timer also turns focus on during Deep work calendar blocks
@@ -248,6 +270,24 @@ sketchybar --add item timer right \
     popup.background.corner_radius=6 \
     script="$PLUGIN_DIR/timer.sh" \
   --subscribe timer timer_update system_woke mouse.clicked mouse.exited.global
+
+# Meeting-recording pill: red "🎙 REC 0h 12m <name>" while the Raycast
+# "Record Meeting" job runs, hidden otherwise (plugins/meeting_rec.sh). Added
+# 2026-11-04 after a forgotten recording ran for 19 h unnoticed.
+sketchybar --add event meeting_rec_update
+sketchybar --add item meeting_rec right \
+  --set meeting_rec \
+    drawing=off \
+    update_freq=30 \
+    updates=on \
+    icon="🎙" \
+    icon.color="$RED" \
+    label.color="$RED" \
+    label.max_chars=28 \
+    script="$PLUGIN_DIR/meeting_rec.sh" \
+  --subscribe meeting_rec meeting_rec_update system_woke
+
+fi # SKETCHYBAR_WORK
 
 # ── go ────────────────────────────────────────────────────────────────────
 sketchybar --update
