@@ -41,6 +41,8 @@
     "runbg"
     "lofi"
     "take-note"
+    "grammar-check"
+    "paste-second-clip"
   ];
   ocrScreenshot = import ./scripts/scripts/ocr-screenshot/default.nix {inherit pkgs;};
   # Claude Code setup from the personal Mac (Matt, 2026-11-24: "the same skills,
@@ -167,6 +169,7 @@ in {
       # /usr/bin/calendar, leader+digit timers, screenshot OCR, tmux Alt-N
       # (2026-11-24 red team, gap G26).
       ocrScreenshot
+      (import ./scripts/scripts/kbshot/default.nix {inherit pkgs;})
     ]
     ++ map (n: writeShellScriptBin n (builtins.readFile (./scripts/scripts + "/${n}.sh"))) genericScripts
     ++ [

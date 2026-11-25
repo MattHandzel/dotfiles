@@ -26,18 +26,24 @@
   # kitty or sleep. Every other `exec-and-forget` line is dropped: those call
   # Matt's personal tools, and one of them (keypad 4) posts the clipboard to his
   # home server. Lines that are not launchers (focus, move, modes, rules) stay.
+  # Generic tools (kbshot, clip2md, grammar-check, leader timers...) are allowed:
+  # work.nix installs them.
   # Dia, Superhuman and Beeper keys stay since 2026-11-24: Matt installed those
   # apps on the laptop on purpose (Alt-B for the browser was the big miss).
   workAllowed = l:
     builtins.match ".*exec-and-forget.*" l
     == null
     || builtins.match "[[:space:]]*#.*" l != null
-    || (builtins.match ".*(/bin/(aerospace-retile|move-smart|float-toggle|dwindle-open|float-open|keybinds|focus-app)|/opt/homebrew/bin/borders|open -a Raycast|open -g \"raycast://|/usr/bin/pmset sleepnow).*" l
+    || (builtins.match ".*(/bin/(aerospace-retile|move-smart|float-toggle|dwindle-open|float-open|keybinds|focus-app)|/opt/homebrew/bin/borders|open -a Raycast|open -g \"raycast://|/usr/bin/pmset sleepnow|/opt/homebrew/bin/sketchybar --reload|exec-and-forget (kbshot|clip2md|grammar-check|paste-second-clip|leader-timer)|/usr/bin/screencapture -i).*" l
       != null
       && builtins.match ".*(Obsidian|/Users/matth|Triage|WhatsApp|Work Test|tasker|notetaker|darwin-rebuild|gemini|Gemini).*" l == null);
   forHost = text:
     if config.my.work
-    then lib.concatStringsSep "\n" (builtins.filter workAllowed (lib.splitString "\n" text))
+    then
+      # Chrome is the laptop's browser (Dia has no profile there): Alt-B and the
+      # workspace-1 rule follow it.
+      lib.replaceStrings [''open -a "Dia"'' "if.app-id = 'company.thebrowser.dia'"] [''open -a "Google Chrome"'' "if.app-id = 'com.google.Chrome'"]
+      (lib.concatStringsSep "\n" (builtins.filter workAllowed (lib.splitString "\n" text)))
     else text;
 
   # Numpad 4 (Hyprland KP_4): clipboard -> prompt-llm (picker for the prompt)
