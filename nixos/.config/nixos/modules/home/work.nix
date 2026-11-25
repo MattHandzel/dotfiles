@@ -1,7 +1,8 @@
 # The Redwood-issued MacBook's Home Manager profile: how Matt works, with none
 # of what he knows. It gets the core settings (./core.nix), the window and
 # keyboard setup, and the command-line tools the shell config calls. It gets
-# no vault, no lifelog, no Triage, no background jobs and no secrets.
+# no lifelog and no secrets; the Redwood notes and work-safe Claude setup
+# arrive through claude-config-sync below.
 #
 # Design and reasons: the vault note
 # projects/generator-residency/ai-uplift-for-ai-safety/redwood-two-laptop-design-2026-11-23.md
@@ -11,6 +12,54 @@
   lib,
   ...
 }: let
+  # Claude Code setup from the personal Mac (Matt, 2026-11-24: "the same skills,
+  # context when I'm doing anything work related"). The personal Mac's
+  # scripts/claude-work-sync builds a private repo, MattHandzel/claude-work-config,
+  # with the work-safe skills, agents, a CLAUDE-matt.md and his Redwood notes;
+  # this pulls it with a read-only deploy key every 15 min. Skills/agents are
+  # linked into ~/.claude without replacing anything already there (Redwood's own
+  # skills win), ~/.claude/CLAUDE.md imports CLAUDE-matt.md, and the notes are
+  # copied into ~/Obsidian/Main (no deletes, so notes written here stay).
+  claudeConfigSync = let
+    script = pkgs.writeShellScript "claude-config-sync" ''
+      set -u
+      export PATH=${lib.makeBinPath [pkgs.git pkgs.coreutils pkgs.rsync pkgs.openssh pkgs.gnugrep]}:/usr/bin:/bin
+      export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/claude_work_config -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+      repo="$HOME/claude-work-config"
+      if [ ! -d "$repo/.git" ]; then
+        git clone -q git@github.com:MattHandzel/claude-work-config.git "$repo" || exit 1
+      fi
+      git -C "$repo" pull -q --ff-only origin main || exit 1
+      mkdir -p "$HOME/.claude/skills" "$HOME/.claude/agents" "$HOME/Obsidian/Main"
+      for d in "$repo"/skills/*/; do
+        n=$(basename "$d"); t="$HOME/.claude/skills/$n"
+        [ -e "$t" ] && [ ! -L "$t" ] && continue
+        ln -sfn "$d" "$t"
+      done
+      for f in "$repo"/agents/*.md; do
+        t="$HOME/.claude/agents/$(basename "$f")"
+        [ -e "$t" ] && [ ! -L "$t" ] && continue
+        ln -sfn "$f" "$t"
+      done
+      for t in "$HOME"/.claude/skills/* "$HOME"/.claude/agents/*; do
+        [ -L "$t" ] && [ ! -e "$t" ] && rm -f "$t"
+      done
+      line="@$repo/CLAUDE-matt.md"
+      touch "$HOME/.claude/CLAUDE.md"
+      grep -qxF "$line" "$HOME/.claude/CLAUDE.md" || printf '\n# Matt: own instructions, synced from his personal Mac\n%s\n' "$line" >> "$HOME/.claude/CLAUDE.md"
+      rsync -a "$repo/context/" "$HOME/Obsidian/Main/"
+      echo "$(date -Iseconds) ok $(git -C "$repo" rev-parse --short HEAD)"
+    '';
+  in {
+    enable = true;
+    config = {
+      ProgramArguments = ["${script}"];
+      StartInterval = 900;
+      RunAtLoad = true;
+      StandardOutPath = "/Users/matth/.local/state/claude-config-sync.log";
+      StandardErrorPath = "/Users/matth/.local/state/claude-config-sync.err.log";
+    };
+  };
   dotfilesSync = let
     script = pkgs.writeShellScript "dotfiles-sync" ''
       set -u
@@ -122,7 +171,10 @@ in {
         ProcessType = "Interactive";
       };
     }))
-    {dotfiles-sync = dotfilesSync;}
+    {
+      dotfiles-sync = dotfilesSync;
+      claude-config-sync = claudeConfigSync;
+    }
   ];
 
   # Marks this as the work machine for configs Nix doesn't build: Hammerspoon's
