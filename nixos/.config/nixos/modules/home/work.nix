@@ -10,6 +10,7 @@
 {
   pkgs,
   lib,
+  config,
   ...
 }: let
   genericScripts = [
@@ -208,6 +209,28 @@ in {
     {
       dotfiles-sync = dotfilesSync;
       claude-config-sync = claudeConfigSync;
+      # Login codes from Matt's personal Gmail and Beeper texts onto the
+      # clipboard, as on matts-mac (Matt, 2026-11-25: "put it on the work
+      # laptop", after being told it needs his personal Gmail app password in
+      # ~/notes/.env and Beeper's token in ~/.config/beeper/access-token here).
+      # Both are read at runtime; neither enters the Nix store. Exits 1 while
+      # APP_PASSWORD is missing, so launchd shows it failing until he adds it.
+      auth-code-watcher = {
+        enable = true;
+        config = {
+          ProgramArguments = [
+            "${pkgs.writeShellScript "auth-code-watcher" ''
+              exec ${pkgs.python3}/bin/python3 ${./scripts/scripts/auth-code-watcher.py} "$@"
+            ''}"
+          ];
+          EnvironmentVariables.PATH = "${config.home.profileDirectory}/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+          RunAtLoad = true;
+          KeepAlive = true;
+          ThrottleInterval = 30;
+          StandardOutPath = "${config.home.homeDirectory}/.local/state/auth-code-watcher.log";
+          StandardErrorPath = "${config.home.homeDirectory}/.local/state/auth-code-watcher.log";
+        };
+      };
     }
   ];
 
