@@ -20,6 +20,24 @@
   # failure into either a fresh dashboard or a visible ping.
   ntfyUrl = "http://server.matthandzel.com:8124/claude";
 
+  # What ~/Projects/health-data-dashboard/shell.nix pulls from <nixpkgs>
+  # (mkShell + python311, uv, cc lib, zlib, glib). Referenced in the script
+  # below so they stay in its closure (GC-rooted): an offline 09:00 run then
+  # finds everything in the store. Keep in step with shell.nix; the repro
+  # scripts/bugs/repros/err-health-dashboard-refresh-20261108-210501.sh
+  # fails when they drift.
+  shellInputs = with pkgs; [
+    stdenv
+    bashInteractive
+    python311
+    uv
+    stdenv.cc.cc.lib
+    zlib
+    glib
+    glib.dev
+    glib.bin
+  ];
+
   refreshScript = pkgs.writeShellScript "health-dashboard-refresh" ''
     set -uo pipefail
 
@@ -28,12 +46,8 @@
 
     # POST one line to ntfy; never let a notification failure mask the real
     # exit status (|| true).
-    notify() {
-      ${pkgs.curl}/bin/curl -fsS \
-        -H "Title: Health dashboard" \
-        -H "Tags: health-dashboard" \
-        -d "$1" "${ntfyUrl}" >/dev/null 2>&1 || true
-    }
+    # phone push removed (off 2026-11-15: Matt asked to delete the ntfy senders); the failure still goes to the log and the exit status.
+    notify() { log "$1"; }
 
     host="$(${pkgs.coreutils}/bin/uname -n)"
 
@@ -59,6 +73,15 @@
     fi
 
     log "Starting health-dashboard refresh"
+    # Pin shell.nix's `<nixpkgs>` to this flake's nixpkgs (already in the
+    # store). Unset, it resolved through the flake registry to a floating
+    # flakehub tarball: every run needed the network just to evaluate the
+    # shell, re-downloaded python/uv/glib whenever the tarball moved, and
+    # exited 1 whenever the Mac was offline at 09:00
+    # (err-health-dashboard-refresh-20261108-210501).
+    export NIX_PATH="nixpkgs=${pkgs.path}"
+    # Keep the shell's inputs alive across GC so the shell never downloads:
+    # ${lib.concatStringsSep " " shellInputs}
     # The project's shell.nix provides python + pandas/plotly/google-api deps
     # (SPEC tech stack). Run inside it when present; otherwise trust refresh.sh
     # to provision its own environment.

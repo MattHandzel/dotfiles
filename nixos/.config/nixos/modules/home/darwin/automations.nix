@@ -53,7 +53,17 @@
     [ -f "$agenda" ] || { echo "calendar-agenda: $agenda not found." >&2; exit 2; }
     export FOCUS_AGENDA_EXCLUDE=${lib.escapeShellArg (lib.concatStringsSep "," agendaExcludeCalendars)}
     export FOCUS_AGENDA_INCLUDE=${lib.escapeShellArg (lib.concatStringsSep "," agendaIncludeCalendars)}
-    exec ${googlePython}/bin/python3 "$agenda"
+    # Cap each pass. launchd skips every interval while a run is alive, so one
+    # hung pass (2026-11-13: stuck 65+ min in a kernel stat() at load 146)
+    # froze the agenda with no exit code. A normal pass takes seconds; even the
+    # post-reboot crawl took ~7 min. KILL 15 s after TERM if it ignores TERM.
+    limit="''${CALENDAR_AGENDA_TIMEOUT:-600}"
+    ${pkgs.coreutils}/bin/timeout -k 15 "$limit" ${googlePython}/bin/python3 "$agenda"
+    rc=$?
+    if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+      echo "calendar-agenda: pass still running after ''${limit}s, killed it (exit $rc); the next pass starts on schedule." >&2
+    fi
+    exit "$rc"
   '';
 
   # !! MUTATES GMAIL (moves labels as it turns labelled mail into Taskwarrior

@@ -1,0 +1,11 @@
+--- a/src/gdoc_sync/cli.py
++++ b/src/gdoc_sync/cli.py
+@@ -168,5 +168,7 @@
+                         help="clear a previous --pull-only mark")
+ 
+     p = sub.add_parser("unlink", help="remove a file's local→doc mapping (doc is untouched)")
+-    p.add_argument("file", type=_existing_file)
++    # Not _existing_file: unlinking a renamed or deleted file is the main use,
++    # and `status` / `sync --all` tell you to run exactly this for one.
++    p.add_argument("file", type=Path)
+ 

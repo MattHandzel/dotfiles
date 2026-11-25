@@ -24,7 +24,10 @@ in {
       ProgramArguments = ["${pkgs.python3}/bin/python3" "-I" "${home}/Obsidian/Main/scripts/references/refs.py" "tick"];
       StartInterval = 900;
       RunAtLoad = true;
-      ProcessType = "Background";
+      # Standard, not Background (PRI 4, E-cores, throttled): on 2026-11-11 a tick used 6 s of CPU in 29 min under
+      # load 60+, and ticks of 1-2 h left launchd.log stale past the error collector's 1 h check
+      # (err-references-20261030-090117). Nice 10 still yields to Matt's apps.
+      ProcessType = "Standard";
       Nice = 10;
       # claude (Haiku adjudication), the brain-search daemon launcher under ~/Projects/SecondBrainSearch/bin
       EnvironmentVariables.PATH = "${home}/.local/bin:/etc/profiles/per-user/${config.home.username}/bin:${home}/.nix-profile/bin:/run/current-system/sw/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin";

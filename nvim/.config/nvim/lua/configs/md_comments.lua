@@ -109,6 +109,10 @@ end
 --- continuation row visible. One per character puts each blank on whatever
 --- row that character wrapped to. Plain spaces are skipped: already blank.
 local function blank(buf, row, line, from, to)
+	-- The tree can lag the buffer (see find_comments), so a range can run past
+	-- the end of a line that has since shrunk; str_utf_end then raised "index
+	-- out of range" inside the FileType autocmd.
+	to = math.min(to, #line)
 	local vcol = vim.fn.strdisplaywidth(line:sub(1, from))
 	local col = from
 	while col < to do

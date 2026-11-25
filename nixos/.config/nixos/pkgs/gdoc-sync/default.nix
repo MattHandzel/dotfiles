@@ -51,7 +51,39 @@ python3Packages.buildPythonApplication {
   # `~/Projects/gdoc-sync-gdoc-integration`, committed on top of the five
   # patches above; this patch is `git diff 6379a31 HEAD` there minus the
   # vendored tests (tests/gdoc_upstream, 1963 tests, run in the worktree).
-  patches = [./footnote-links.patch ./mirror.patch ./empty-list-items.patch ./frontmatter-theme.patch ./status-one-state-load.patch ./gdoc-integration.patch];
+  #
+  # `unlink` accepts a path whose file is gone: that is the case `status` and
+  # `sync --all` tell you to run it for, and it used to refuse with "file not
+  # found" (2026-11-10). Worktree `~/Projects/gdoc-sync-unlink-missing` (branch
+  # `oops-unlink-missing`, uncommitted).
+  #
+  # A Doc edit inside a numbered list no longer conflicts just because the
+  # vault numbers it 1. 2. 3. and the Doc renders 1. 1. 1.: merge3 retries with
+  # uniform numbers and keeps that only if it is clean (bug
+  # err-gdoc-sync-20261111-113950). Worktree `~/Projects/gdoc-sync-list-numbering`
+  # (branch `oops-list-numbering-merge`, uncommitted, on top of the patches above).
+  #
+  # A lost network (DNS gone, network unreachable, read timeout) anywhere in an
+  # API command is one line on stderr and exit 75 (EX_TEMPFAIL) instead of a
+  # traceback and "ERROR while syncing <file>"; the launchd pass treats 75 as
+  # "offline mid-pass" (bug err-gdoc-sync-20261027-181808). Worktree
+  # `~/Projects/gdoc-sync-network-skip` (detached, base commit = the patches
+  # above, change uncommitted).
+  #
+  # A dead Google login (RefreshError invalid_grant mid-run) is one line,
+  # "the Google login is dead ... Run: gdoc-sync auth --force", and exit 77
+  # (EX_NOPERM), instead of "ERROR while syncing <whichever file was first>" and
+  # a traceback; it stays loud because only a re-auth fixes it (bug
+  # err-gdoc-sync-20261105-214358). Worktree `~/Projects/gdoc-sync-auth-dead`
+  # (detached; base commit cd8de0b = all patches above, change staged).
+  #
+  # A trailing space trimmed in the vault ("1. " -> "1." on an editor save) no
+  # longer turns a Doc edit of that list into a conflict: merge3 retries with
+  # each side's whitespace-only trims undone (and with uniform list numbers on
+  # top), keeping a retry only if it is clean; added hard breaks are kept (bug
+  # err-gdoc-sync-20261113-122443). Worktree `~/Projects/gdoc-sync-ws-merge`
+  # (detached; base commit ab8d1d0 = all patches above, change uncommitted).
+  patches = [./footnote-links.patch ./mirror.patch ./empty-list-items.patch ./frontmatter-theme.patch ./status-one-state-load.patch ./gdoc-integration.patch ./unlink-missing.patch ./list-numbering-merge.patch ./network-loss-exit-75.patch ./dead-login-exit-77.patch ./merge-trailing-whitespace.patch];
 
   build-system = [python3Packages.setuptools];
   nativeBuildInputs = [makeWrapper];

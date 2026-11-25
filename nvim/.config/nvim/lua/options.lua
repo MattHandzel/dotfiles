@@ -135,6 +135,30 @@ vim.g["loaded_python3_provider"] = 1
 local is_windows = vim.loop.os_uname().sysname == "Windows_NT"
 vim.env.PATH = vim.fn.stdpath("data") .. "/mason/bin" .. (is_windows and ";" or ":") .. vim.env.PATH
 
+-- nvim started from LaunchServices (the "Open in Neovim" droplet / obsidian://
+-- handler) inherits a bare PATH with no Nix profile dirs. The notetaker then
+-- runs inside `tmux -L notetaker` with $TMUX set but no `tmux` on PATH, and
+-- image.nvim's tmux helpers fail on every render ("'tmux' is not executable",
+-- "tmux does not have allow-passthrough enabled"). Append the Nix profile bins
+-- so tmux, rg, git, etc. resolve however nvim was launched (2026-11-16).
+if not is_windows then
+	local have = {}
+	for dir in (vim.env.PATH or ""):gmatch("[^:]+") do
+		have[dir] = true
+	end
+	local user = vim.env.USER or vim.loop.os_get_passwd().username
+	for _, dir in ipairs({
+		"/etc/profiles/per-user/" .. user .. "/bin",
+		vim.env.HOME .. "/.nix-profile/bin",
+		"/run/current-system/sw/bin",
+		"/nix/var/nix/profiles/default/bin",
+	}) do
+		if not have[dir] and vim.fn.isdirectory(dir) == 1 then
+			vim.env.PATH = vim.env.PATH .. ":" .. dir
+		end
+	end
+end
+
 vim.o.relativenumber = true
 
 -------------------------------------------------------------------------------------------------------------------------------------------------

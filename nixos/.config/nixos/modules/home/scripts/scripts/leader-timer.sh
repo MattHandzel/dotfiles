@@ -10,6 +10,9 @@
 #   leader-timer 25 deep work       ... labelled "deep work"
 #   leader-timer --list             show pending timers (with their labels)
 #   leader-timer --cancel [UNIT]    cancel one timer, or all of them
+#   leader-timer --resolve 5 label  a Resolve Cycle: on macOS its alarm gives
+#                                   10 s to finish typing, then blocks input
+#                                   for a breath (timer_alert.lua)
 #
 # Timers are independent transient systemd units, so any number can run at once
 # — the unit name carries minutes + label + start-second + PID, which is unique
@@ -21,6 +24,12 @@
 # A launchd job survives Raycast/skhd/AeroSpace reaping the caller's process
 # group, which a plain `sleep … &` would not.
 set -euo pipefail
+
+# Resolve Cycle (Oops 20261030-093441): Matt kept dismissing the alarm and
+# working on unaware. --resolve marks the timer so the alarm makes him stop;
+# plain timers stay gentle "time is passing" reminders.
+kind=""
+if [[ "${1:-}" == --resolve ]]; then kind=resolve; shift; fi
 
 if [[ "$(uname)" == Darwin ]]; then
   LT_DIR="$HOME/Library/Caches/leader-timer"
@@ -80,6 +89,10 @@ if [[ "$(uname)" == Darwin ]]; then
   label="$*"; label="${label#"${label%%[![:space:]]*}"}"; label="${label%"${label##*[![:space:]]}"}"
   what="${mins} min"; [[ -n "$label" ]] && what+=" — ${label}"
   title="⏱ Timer done"; [[ -n "$label" ]] && title+=" — ${label}"
+  if [[ "$kind" == resolve ]]; then
+    what="${mins} min — 🧘 resolve${label:+: ${label}}"
+    title="🧘 Resolve Cycle over${label:+ — ${label}}"
+  fi
   body="${mins} min elapsed"
   secs=$((mins * 60)); ((mins == 0)) && secs=1
   slug=""
@@ -87,6 +100,7 @@ if [[ "$(uname)" == Darwin ]]; then
     slug=$(printf '%s' "$label" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-*//; s/-*$//' | cut -c1-40)
     [[ -n "$slug" ]] && slug="-${slug}"
   fi
+  [[ "$kind" == resolve ]] && slug="-resolve${slug}"
   unit="leader-timer-${mins}min${slug}-$(date +%s)-$$"
   plist="$LT_DIR/$unit.plist"
   printf '%s' "$what" >"$LT_DIR/$unit.what"
@@ -106,7 +120,7 @@ if [[ "$(uname)" == Darwin ]]; then
   # 60 min timer set before closing the lid fired 40 min after the next
   # morning's wake. Short sleeps against `date +%s` count the time the Mac was
   # asleep and fire within 15 s of waking once the deadline has passed.
-  finish='while now=$(/bin/date +%s); [ "$now" -lt "$LT_DEADLINE" ]; do left=$((LT_DEADLINE - now)); [ "$left" -gt 15 ] && left=15; sleep "$left"; done; enc() { printf %s "$1" | /usr/bin/xxd -p | /usr/bin/tr -d "\n" | /usr/bin/sed "s/../%&/g"; }; /usr/bin/osascript -e "on run argv" -e "display notification (item 2 of argv) with title (item 1 of argv)" -e "end run" "$LT_TITLE" "$LT_BODY" >/dev/null 2>&1 || true; if /usr/bin/pgrep -xq Hammerspoon; then /usr/bin/open -g "hammerspoon://leader-timer-done?title=$(enc "$LT_TITLE")&body=$(enc "$LT_BODY")" || true; elif [ -r "$LT_SOUND" ]; then /usr/bin/afplay "$LT_SOUND" >/dev/null 2>&1 || true; fi; rm -f "$LT_PLIST" "${LT_PLIST%.plist}.what" "${LT_PLIST%.plist}.deadline"; [ -x /opt/homebrew/bin/sketchybar ] && /opt/homebrew/bin/sketchybar --trigger timer_update >/dev/null 2>&1; launchctl bootout "gui/$(id -u)/$LT_UNIT" >/dev/null 2>&1 || true'
+  finish='while now=$(/bin/date +%s); [ "$now" -lt "$LT_DEADLINE" ]; do left=$((LT_DEADLINE - now)); [ "$left" -gt 15 ] && left=15; sleep "$left"; done; enc() { printf %s "$1" | /usr/bin/xxd -p | /usr/bin/tr -d "\n" | /usr/bin/sed "s/../%&/g"; }; /usr/bin/osascript -e "on run argv" -e "display notification (item 2 of argv) with title (item 1 of argv)" -e "end run" "$LT_TITLE" "$LT_BODY" >/dev/null 2>&1 || true; if /usr/bin/pgrep -xq Hammerspoon; then /usr/bin/open -g "hammerspoon://leader-timer-done?title=$(enc "$LT_TITLE")&body=$(enc "$LT_BODY")&kind=$LT_KIND" || true; elif [ -r "$LT_SOUND" ]; then /usr/bin/afplay "$LT_SOUND" >/dev/null 2>&1 || true; fi; rm -f "$LT_PLIST" "${LT_PLIST%.plist}.what" "${LT_PLIST%.plist}.deadline"; [ -x /opt/homebrew/bin/sketchybar ] && /opt/homebrew/bin/sketchybar --trigger timer_update >/dev/null 2>&1; launchctl bootout "gui/$(id -u)/$LT_UNIT" >/dev/null 2>&1 || true'
 
   xml_escape() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' <<<"$1"; }
   cat >"$plist" <<PLIST
@@ -121,6 +135,7 @@ if [[ "$(uname)" == Darwin ]]; then
     <key>LT_NOTIFY</key><string>$NOTIFY</string>
     <key>LT_TITLE</key><string>$(xml_escape "$title")</string>
     <key>LT_BODY</key><string>$(xml_escape "$body")</string>
+    <key>LT_KIND</key><string>$kind</string>
     <key>LT_SOUND</key><string>$SOUND_FILE</string>
     <key>LT_PLIST</key><string>$plist</string>
     <key>LT_UNIT</key><string>$unit</string>

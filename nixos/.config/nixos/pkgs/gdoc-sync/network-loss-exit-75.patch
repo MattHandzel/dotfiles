@@ -1,0 +1,212 @@
+diff --git a/src/gdoc_sync/cli.py b/src/gdoc_sync/cli.py
+index 9415073..7f28997 100644
+--- a/src/gdoc_sync/cli.py
++++ b/src/gdoc_sync/cli.py
+@@ -11,6 +11,7 @@ import sys
+ from pathlib import Path
+ 
+ from . import __version__
++from .neterr import EXIT_NETWORK, is_network_error
+ from .config import DEFAULT_FONT, DEFAULT_THEME, set_config_override
+ 
+ 
+@@ -570,15 +571,19 @@ def _run_sync(files, *, adopt, no_push, force, json_lines) -> None:
+                 force=force,
+                 say=(lambda *a: None) if json_lines else print,
+             )
+-        except Exception:
++        except Exception as e:
+             # A crash in one document's reconcile aborts the whole `--all`
+             # batch, and every frame in the traceback belongs to a library —
+             # nothing in it says which of ~50 files was being synced. Pinning
+             # the 2026-09-16 IndexError to a file took three crashed runs and a
+             # vault-wide grep. Name the file, then let the traceback through
+-            # untouched.
+-            print(f"ERROR while syncing {path} (doc {doc_id})",
+-                  file=sys.stderr, flush=True)
++            # untouched. A lost network is not a crash: _api_guard turns it
++            # into one line and EXIT_NETWORK.
++            if is_network_error(e):
++                print(f"network lost while syncing {path}", file=sys.stderr, flush=True)
++            else:
++                print(f"ERROR while syncing {path} (doc {doc_id})",
++                      file=sys.stderr, flush=True)
+             raise
+         if outcome.revision:
+             set_revision(str(path), outcome.revision)
+@@ -701,6 +706,21 @@ def _print_config() -> None:
+ 
+ def _api_guard(fn) -> None:
+     """Run an API-touching action with friendly error reporting."""
++    try:
++        _api_guard_inner(fn)
++    except Exception as e:
++        if not is_network_error(e):
++            raise
++        # The Mac slept or changed networks mid-run (a scheduled `sync --all`
++        # takes minutes): nothing is wrong with the docs, so no traceback,
++        # and a distinct exit code the scheduler can treat as "retry later"
++        # (bug err-gdoc-sync-20261027-181808).
++        print(f"gdoc-sync: can't reach Google ({type(e).__name__}); stopped. "
++              f"Run it again once you're online.", file=sys.stderr)
++        sys.exit(EXIT_NETWORK)
++
++
++def _api_guard_inner(fn) -> None:
+     from googleapiclient.errors import HttpError
+ 
+     from .style import UnknownThemeError
+diff --git a/src/gdoc_sync/neterr.py b/src/gdoc_sync/neterr.py
+new file mode 100644
+index 0000000..0967ac5
+--- /dev/null
++++ b/src/gdoc_sync/neterr.py
+@@ -0,0 +1,59 @@
++"""Tell "the network went away" apart from a real failure.
++
++A scheduled ``sync --all`` runs for minutes; when the Mac sleeps or changes
++Wi-Fi during it, the next Google request fails deep inside google-auth,
++httplib2 or urllib3. That is not a bug in any doc, so the CLI reports it in one
++line and exits with :data:`EXIT_NETWORK` (EX_TEMPFAIL from sysexits.h) instead
++of a traceback, and the launchd pass retries on its next tick.
++"""
++
++from __future__ import annotations
++
++import errno
++import socket
++
++EXIT_NETWORK = 75  # EX_TEMPFAIL
++
++_NET_ERRNOS = {
++    errno.ENETUNREACH, errno.ENETDOWN, errno.EHOSTUNREACH, errno.EHOSTDOWN,
++    errno.ECONNREFUSED, errno.ECONNRESET, errno.ECONNABORTED, errno.ETIMEDOUT,
++    errno.EPIPE, errno.ENETRESET,
++}
++
++
++def _network_types() -> tuple[type, ...]:
++    types: list[type] = [socket.gaierror, TimeoutError, ConnectionError]
++    try:
++        from google.auth.exceptions import TransportError
++        types.append(TransportError)
++    except ImportError:
++        pass
++    try:
++        import httplib2
++        types.append(httplib2.ServerNotFoundError)
++    except ImportError:
++        pass
++    try:
++        import requests
++        types += [requests.exceptions.ConnectionError, requests.exceptions.Timeout]
++    except ImportError:
++        pass
++    return tuple(types)
++
++
++def is_network_error(exc: BaseException | None) -> bool:
++    """True if ``exc`` or anything in its cause/context chain is a lost network.
++
++    Local errors (FileNotFoundError, PermissionError, an SSL certificate
++    failure, an HttpError from the API) are not, even though some are OSErrors.
++    """
++    types = _network_types()
++    seen: set[int] = set()
++    while exc is not None and id(exc) not in seen:
++        seen.add(id(exc))
++        if isinstance(exc, types):
++            return True
++        if type(exc) is OSError and exc.errno in _NET_ERRNOS:
++            return True
++        exc = exc.__cause__ or exc.__context__
++    return False
+diff --git a/tests/test_neterr.py b/tests/test_neterr.py
+new file mode 100644
+index 0000000..ec325d0
+--- /dev/null
++++ b/tests/test_neterr.py
+@@ -0,0 +1,83 @@
++"""A lost network is a one-line, exit-75 stop, not a traceback (bug err-gdoc-sync-20261027-181808)."""
++
++import errno
++import socket
++
++import pytest
++from google.auth.exceptions import TransportError
++
++from gdoc_sync import cli
++from gdoc_sync.neterr import EXIT_NETWORK, is_network_error
++
++
++def _dns_failure():
++    try:
++        raise socket.gaierror(8, "nodename nor servname provided, or not known")
++    except socket.gaierror as e:
++        try:
++            raise TransportError("Failed to resolve 'oauth2.googleapis.com'") from e
++        except TransportError as t:
++            return t
++
++
++@pytest.mark.parametrize("exc", [
++    _dns_failure(),
++    socket.gaierror(8, "nodename nor servname provided"),
++    TimeoutError("The read operation timed out"),
++    OSError(errno.ENETUNREACH, "Network is unreachable"),
++    ConnectionResetError(errno.ECONNRESET, "reset"),
++])
++def test_network_errors_are_recognised(exc):
++    assert is_network_error(exc)
++
++
++@pytest.mark.parametrize("exc", [
++    FileNotFoundError(errno.ENOENT, "gone"),
++    PermissionError(errno.EACCES, "no"),
++    OSError(errno.ENOSPC, "disk full"),
++    ValueError("bad markdown"),
++    IndexError("list index out of range"),
++])
++def test_other_errors_are_not(exc):
++    assert not is_network_error(exc)
++
++
++def test_sync_stops_with_exit_75_and_no_error_line(tmp_path, monkeypatch, capsys):
++    import gdoc_sync.config as config
++    import gdoc_sync.sync as gsync
++
++    note = tmp_path / "note.md"
++    note.write_text("# note\n")
++    monkeypatch.setattr(config, "get_doc_id", lambda p: "1fakeDocId")
++    monkeypatch.setattr(config, "is_pull_only", lambda p: False)
++
++    def offline(*a, **k):
++        raise _dns_failure()
++
++    monkeypatch.setattr(gsync, "reconcile", offline)
++    with pytest.raises(SystemExit) as ex:
++        cli._api_guard(lambda: cli._run_sync([note], adopt=None, no_push=False,
++                                             force=False, json_lines=False))
++    assert ex.value.code == EXIT_NETWORK
++    err = capsys.readouterr().err
++    assert "ERROR" not in err and "Traceback" not in err
++    assert "can't reach Google" in err
++
++
++def test_real_crash_still_raises(tmp_path, monkeypatch, capsys):
++    import gdoc_sync.config as config
++    import gdoc_sync.sync as gsync
++
++    note = tmp_path / "note.md"
++    note.write_text("# note\n")
++    monkeypatch.setattr(config, "get_doc_id", lambda p: "1fakeDocId")
++    monkeypatch.setattr(config, "is_pull_only", lambda p: False)
++
++    def boom(*a, **k):
++        raise IndexError("list index out of range")
++
++    monkeypatch.setattr(gsync, "reconcile", boom)
++    with pytest.raises(IndexError):
++        cli._api_guard(lambda: cli._run_sync([note], adopt=None, no_push=False,
++                                             force=False, json_lines=False))
++    assert "ERROR while syncing" in capsys.readouterr().err

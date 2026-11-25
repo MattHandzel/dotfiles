@@ -378,8 +378,19 @@
                 idx="$(tmux -L oops list-windows -t '=oops:' -F '#{window_index}' | tail -n 1)"
               fi
               [ -n "$idx" ] && tmux -L oops select-window -t "=oops:$idx"
-              attached || kitty --title oops -e tmux -L oops attach -t '=oops:' >/dev/null 2>&1 &
-              sleep 0.8; /opt/homebrew/bin/aerospace summon-workspace oops 2>/dev/null || true
+              # The Oops kitty window can drift off workspace "oops" (Oops
+              # 20261107-114444: it sat on ws 8, attached, so this opened
+              # nothing and summoned an empty workspace). Find it by title
+              # wherever it is and pull it back; open one only if none exists.
+              aero=/opt/homebrew/bin/aerospace
+              ids="$($aero list-windows --all --format '%{window-id}|%{app-name}|%{window-title}' 2>/dev/null | awk -F'|' '$2 == "kitty" && $3 ~ /^oops( |$)/ {print $1}')"
+              if [ -n "$ids" ]; then
+                for id in $ids; do $aero move-node-to-workspace --window-id "$id" oops 2>/dev/null || true; done
+              else
+                kitty --title oops -e tmux -L oops attach -t '=oops:' >/dev/null 2>&1 &
+                sleep 0.8
+              fi
+              $aero summon-workspace oops 2>/dev/null || true
               exit 0
             fi
 

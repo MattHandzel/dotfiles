@@ -1,0 +1,284 @@
+diff --git a/src/gdoc_sync/merge.py b/src/gdoc_sync/merge.py
+index 6813657..71650e5 100644
+--- a/src/gdoc_sync/merge.py
++++ b/src/gdoc_sync/merge.py
+@@ -162,16 +162,59 @@ def merge3(
+     # exit 2). Retry with the numbers made uniform on all three sides, and use
+     # that only when it actually removes every conflict; the list then keeps
+     # the Doc's "1." style, which renders the same.
+-    if any(_OL_RE.search(t) for t in (ours_n, base_n, theirs_n)):
+-        retry = _merge_texts(
+-            _uniform_list_numbers(ours_n), _uniform_list_numbers(base_n),
+-            _uniform_list_numbers(theirs_n), *labels,
+-        )
++    #
++    # Trailing whitespace is noise too (``normalize`` already ignores it for
++    # change detection): an editor save trims an empty item "1. " to "1.", and
++    # a Doc edit that grows that list then reads as both sides changing the
++    # same line (2026-11-13: a meeting note latched the pass at exit 2). Retry
++    # with each side's whitespace-only line changes undone, and with both
++    # fixes together, again keeping a retry only when it is clean.
++    numbered = any(_OL_RE.search(t) for t in (ours_n, base_n, theirs_n))
++    uniform_base = _uniform_list_numbers(base_n)
++    retries: list[tuple[str, str, str]] = []
++    if numbered:
++        retries.append((_uniform_list_numbers(ours_n), uniform_base,
++                        _uniform_list_numbers(theirs_n)))
++    retries.append((_snap_whitespace(ours_n, base_n), base_n,
++                    _snap_whitespace(theirs_n, base_n)))
++    if numbered:
++        retries.append((_snap_whitespace(_uniform_list_numbers(ours_n), uniform_base),
++                        uniform_base,
++                        _snap_whitespace(_uniform_list_numbers(theirs_n), uniform_base)))
++    for o, b, t in retries:
++        retry = _merge_texts(o, b, t, *labels)
+         if not retry.conflicted:
+             return retry
+     return merged
+ 
+ 
++def _snap_whitespace(text: str, base: str) -> str:
++    """``text`` with each line that only *lost* trailing whitespace against
++    ``base`` put back to ``base``'s bytes, so the merge sees no edit there.
++
++    Lines are paired by a diff of their stripped forms. Only trims are undone
++    (an editor's "1. " → "1."); a line that gained whitespace, such as a new
++    markdown hard break ("two spaces"), is a real edit and is kept as is.
++    """
++    import difflib
++
++    t_lines = text.splitlines(keepends=True)
++    b_lines = base.splitlines(keepends=True)
++    sm = difflib.SequenceMatcher(
++        None, [line.rstrip() for line in b_lines],
++        [line.rstrip() for line in t_lines], autojunk=False,
++    )
++    out = list(t_lines)
++    for tag, i1, i2, j1, _j2 in sm.get_opcodes():
++        if tag != "equal":
++            continue
++        for k in range(i2 - i1):
++            b_line, t_line = b_lines[i1 + k], t_lines[j1 + k]
++            if len(t_line.rstrip("\n")) < len(b_line.rstrip("\n")):
++                out[j1 + k] = b_line
++    return "".join(out)
++
++
+ # "  12. item" / "3) item" → number + delimiter, keeping indent and spacing.
+ _OL_RE = re.compile(r"^([ \t]*)\d{1,9}([.)])(?=[ \t])", re.MULTILINE)
+ 
+diff --git a/tests/fixtures/ws_merge/base.md b/tests/fixtures/ws_merge/base.md
+new file mode 100644
+index 0000000..3ab1e8a
+--- /dev/null
++++ b/tests/fixtures/ws_merge/base.md
+@@ -0,0 +1,39 @@
++## Action items
++
++### Matt
++
++1. 
++
++## Purpose
++
++## Prep
++
++1. 
++
++## Discussion Points
++
++1. item 316
++
++## Debrief
++
++## Details
++
++text 18
++
++### Calendar event description
++
++text 3
++
++text 19
++
++text 20
++
++text 21
++
++text 22
++
++text 23
++
++text 24
++
++text 17
+diff --git a/tests/fixtures/ws_merge/ours.md b/tests/fixtures/ws_merge/ours.md
+new file mode 100644
+index 0000000..236aa56
+--- /dev/null
++++ b/tests/fixtures/ws_merge/ours.md
+@@ -0,0 +1,50 @@
++## Action items
++
++### Matt
++
++1.
++
++## Purpose
++
++## Prep
++
++1.
++
++## Discussion Points
++
++1. item 316
++
++## Debrief
++
++## Details
++
++text 0  
++text 1  
++text 2
++
++---
++
++### Calendar event description
++
++text 3
++
++text 4
++text 5
++
++text 6
++text 7
++
++text 8
++text 9
++
++text 10
++text 11
++
++text 12
++text 13
++
++text 14
++text 15
++text 16
++
++text 17
+diff --git a/tests/fixtures/ws_merge/theirs.md b/tests/fixtures/ws_merge/theirs.md
+new file mode 100644
+index 0000000..32112a8
+--- /dev/null
++++ b/tests/fixtures/ws_merge/theirs.md
+@@ -0,0 +1,57 @@
++## Action items
++
++### Matt
++
++1. 
++
++## Purpose
++
++## Prep
++
++1. 
++1. item 703
++  1. item 19
++  1. item 465
++    1. item 186
++      1. item 665
++        1. item 654
++        1. item 490
++        1. item 380
++1. item 813
++
++## Discussion Points
++
++1. item 497
++1. item 140
++1. item 223
++  1. item 580
++  1. item 777
++1. item 22
++  1. item 4
++  1. item 241
++1. item 997
++  1. item 614
++
++## Debrief
++
++## Details
++
++text 18
++
++### Calendar event description
++
++text 3
++
++text 19
++
++text 20
++
++text 21
++
++text 22
++
++text 23
++
++text 24
++
++text 17
+diff --git a/tests/test_merge.py b/tests/test_merge.py
+index 62ba57b..051fb8e 100644
+--- a/tests/test_merge.py
++++ b/tests/test_merge.py
+@@ -8,6 +8,7 @@ data-loss bug that only shows up on someone else's laptop.
+ 
+ from __future__ import annotations
+ 
++from pathlib import Path
+ import pytest
+ 
+ from gdoc_sync import merge as m
+@@ -198,3 +199,38 @@ def test_numbering_untouched_when_the_plain_merge_is_clean(merge3):
+     result = merge3(ours, base, theirs)
+     assert result.clean
+     assert "2. b" in result.text
++
++
++_WS_FIXTURE = Path(__file__).parent / "fixtures" / "ws_merge"
++
++
++def test_trimmed_trailing_space_does_not_conflict_with_a_doc_edit(merge3):
++    # 2026-11-13 (bug err-gdoc-sync-20261113-122443): the last-synced render
++    # had an empty item "1. ", an editor save trimmed it to "1." in the vault,
++    # and the Doc grew that list. The three real sides, text anonymized.
++    ours, base, theirs = (
++        (_WS_FIXTURE / f"{n}.md").read_text(encoding="utf-8")
++        for n in ("ours", "base", "theirs")
++    )
++    result = merge3(ours, base, theirs)
++    assert result.clean, result.text
++    for kept in ("item 703", "item 813", "item 997"):  # the Doc's edits
++        assert kept in result.text
++    assert "text 0  \ntext 1  \n" in result.text  # local hard breaks survive
++
++
++def test_whitespace_retry_keeps_real_conflicts(merge3):
++    ours = "## Prep\n\n1. mine\n\n## Next\n"
++    base = "## Prep\n\n1. \n\n## Next\n"
++    theirs = "## Prep\n\n1. \n1. theirs\n\n## Next\n"
++    assert merge3(ours, base, theirs).conflicted
++
++
++def test_whitespace_only_local_change_small(merge3):
++    ours = "## Prep\n\n1.\n\n## Next\n\nx  \ny\n\nmine\n"
++    base = "## Prep\n\n1. \n\n## Next\n\nx\ny\n"
++    theirs = "## Prep\n\n1. \n1. added\n\n## Next\n\nx\ny\n"
++    result = merge3(ours, base, theirs)
++    assert result.clean, result.text
++    assert "1. added" in result.text
++    assert "x  \ny\n\nmine\n" in result.text  # local edits and an added hard break kept

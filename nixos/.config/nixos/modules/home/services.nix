@@ -15,6 +15,25 @@
   inherit (import ./lib/scheduled.nix {inherit lib pkgs config isDarwin;}) scheduled;
   inherit (import ./lib/platform-scripts.nix {inherit pkgs;}) notify;
 
+  # The sync's Python env, built once at switch time from this flake's locked
+  # nixpkgs. The job used to run `nix-shell ~/Projects/website/shell.nix`, whose
+  # <nixpkgs> floats (Determinate's nix-path, nixpkgs-weekly): every week the
+  # hourly run re-fetched nixpkgs and rebuilt its env, so a DNS blip mid-fetch
+  # (2026-11-06, cache.nixos.org) or a flaky timing test in a package built
+  # locally (2026-11-09, feedparser-sgmllib) exited 1
+  # (err-personal-website-sync-20261103-132051). Same package list as shell.nix's
+  # Python part; keep them in step. shell.nix stays for interactive dev.
+  websiteSyncPython = pkgs.python312.withPackages (ps:
+    with ps; [
+      pyyaml
+      pymongo
+      python-dotenv
+      python-frontmatter
+      cryptography
+      requests
+      feedparser
+    ]);
+
   personalWebsiteSyncScript = pkgs.writeShellScript "personal-website-sync" ''
     set -euo pipefail
 
@@ -56,7 +75,7 @@
       done
     fi
 
-    ${pkgs.nix}/bin/nix-shell "$project_dir/shell.nix" --run "python3 main.py --log"
+    ${websiteSyncPython}/bin/python3 main.py --log
     echo "Sync completed at $(date)"
   '';
 in {
@@ -99,6 +118,12 @@ in {
         # profile dirs that supply it, so without these the Mac side fails with
         # "nix-shell: command not found" the moment the script path is right.
         path = [pkgs.python3 pkgs.coreutils pkgs.git pkgs.nix pkgs.bash];
+        # Pin <nixpkgs> for that nix-shell to this flake's locked nixpkgs (a local
+        # store path). Without it, <nixpkgs> came from Determinate's nix.conf
+        # nix-path: a floating flakehub tarball re-fetched every hour, so every
+        # pass with DNS down exited 1 ("Could not resolve host: flakehub.com",
+        # 45 times by 2026-11-10; bug err-second-brain-automation-20261110-103425).
+        environment.NIX_PATH = "nixpkgs=${pkgs.path}";
         logFile = "%h/.local/state/second-brain-automation.log";
       })
 
@@ -182,27 +207,7 @@ in {
         launchdExtra.ProcessType = "Standard";
       }))
 
-      # birthday-check — daily birthday check + notify from the vault. Until
-      # 2026-09-10 this was a hand-`systemctl --user enable`d unit on the laptop
-      # (never in the flake), so it would have been lost in the Mac migration;
-      # the block below reproduces that unit exactly and adds the launchd twin.
-      (scheduled {
-        name = "birthday-check";
-        description = "Birthday Manager - daily check and notify";
-        command = ["/usr/bin/env" "python3" "%h/Obsidian/Main/scripts/birthday-manager.py" "check"];
-        environment.VAULT_ROOT = "%h/Obsidian/Main";
-        linuxLogFile = "%h/.local/log/birthday-manager.log";
-        logFile = "%h/.local/log/birthday-manager.log";
-        onCalendar = "*-*-* 07:00:00";
-        persistent = true;
-        timerDescription = "Run birthday check daily at 7:00 AM CT";
-        startCalendarInterval = {
-          Hour = 7;
-          Minute = 0;
-        };
-        path = [pkgs.python3 pkgs.coreutils];
-        darwinPathEntries = ["${config.home.profileDirectory}/bin" "/usr/bin" "/bin"];
-      })
+      # birthday-check removed (off 2026-11-15: Matt asked to delete the ntfy senders); scripts/birthday-manager.py is still in the vault.
 
       # inject-experiment-questions — idempotently inject experiment-declared
       # questions into today's daily note. Same story: hand-enabled on the laptop,

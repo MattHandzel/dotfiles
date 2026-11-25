@@ -62,7 +62,18 @@ local function saveable(buf)
 	if vim.b[buf].large_file_mode then
 		return false
 	end
-	return vim.api.nvim_buf_get_name(buf) ~= ""
+	if vim.api.nvim_buf_get_name(buf) == "" then
+		return false
+	end
+	-- Vault scripts rewrite notes (the daily note) while they sit dirty here.
+	-- A plain :write then asks "The file has been changed since reading it!!!
+	-- Do you really want to write to it (y/n)?" -- `silent!` does not suppress
+	-- that question -- and nvim blocks on it, swallowing every key that is not
+	-- y/n (Oops 20261102-162202). checktime first: the FileChangedShell
+	-- handler below flags the conflict, and the autosave leaves that buffer to
+	-- Matt instead of prompting or overwriting the other writer.
+	pcall(vim.cmd, ("checktime %d"):format(buf))
+	return not vim.b[buf].autosave_conflict
 end
 
 local function write(buf)
@@ -137,6 +148,45 @@ vim.api.nvim_create_autocmd("InsertLeave", {
 			pending = false
 			M.save()
 		end
+	end,
+})
+
+-- A file changed on disk. Defining this autocmd replaces nvim's own W11/W12
+-- dialog (another modal prompt). Unmodified buffers just reload. A buffer
+-- with unsaved edits is flagged so the autosave skips it, and Matt gets one
+-- warning; :w! (keep mine) or :e! (take disk) clears the flag.
+vim.api.nvim_create_autocmd("FileChangedShell", {
+	group = group,
+	pattern = "*",
+	callback = function(ev)
+		local reason = vim.v.fcs_reason
+		if reason == "deleted" or reason == "mode" then
+			vim.v.fcs_choice = ""
+			return
+		end
+		if not vim.bo[ev.buf].modified then
+			vim.v.fcs_choice = "reload"
+			return
+		end
+		vim.v.fcs_choice = ""
+		if not vim.b[ev.buf].autosave_conflict then
+			vim.b[ev.buf].autosave_conflict = true
+			local name = vim.fn.fnamemodify(ev.file, ":~:.")
+			vim.schedule(function()
+				vim.notify(
+					("%s changed on disk while it had unsaved edits here. Autosave paused for it: :w! keeps yours, :e! loads the disk version."):format(name),
+					vim.log.levels.WARN
+				)
+			end)
+		end
+	end,
+})
+
+vim.api.nvim_create_autocmd({ "BufWritePost", "BufReadPost" }, {
+	group = group,
+	pattern = "*",
+	callback = function(ev)
+		vim.b[ev.buf].autosave_conflict = nil
 	end,
 })
 

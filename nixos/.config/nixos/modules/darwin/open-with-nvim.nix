@@ -38,6 +38,13 @@
   ...
 }: let
   nvimBin = "/etc/profiles/per-user/${username}/bin/nvim";
+  # LaunchServices starts this bundle with launchd's bare PATH
+  # (/usr/bin:/bin:/usr/sbin:/sbin), and kitty -e / tmux / nvim inherit it, so
+  # nvim could not find tmux (image.nvim: "'tmux' is not executable") or
+  # gdoc-sync ("gdoc-sync is not executable") — 2026-11-16. Same PATH as
+  # AeroSpace's [exec.env-vars] (aerospace.nix), which ⌃⌥N launches get.
+  userPath = "/opt/homebrew/bin:/Users/${username}/.local/bin:/etc/profiles/per-user/${username}/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+  focusApp = (import ../home/darwin/aerospace-helpers.nix {inherit pkgs;}).focus-app;
 
   # obsidian://open?vault=V&file=F | ?path=/abs | obsidian://vault/V/F -> nvim
   urlHandler = pkgs.writeScript "obsidian-url-nvim" ''
@@ -48,6 +55,8 @@
     HOME = os.path.expanduser("~")
     LOG = os.path.join(HOME, "Library/Logs/obsidian-url-nvim.log")
     NVIM = "${nvimBin}"
+    # Everything below (open -> kitty -> tmux -> nvim) inherits this.
+    os.environ["PATH"] = "${userPath}"
 
     def log(msg):
         with open(LOG, "a") as f:
@@ -95,8 +104,56 @@
         ps = subprocess.run(["/bin/ps", "-axo", "command="], capture_output=True, text=True).stdout
         return any("nvim" in line.split(" ", 1)[0] and target in line for line in ps.splitlines())
 
+    # The notetaker (⌃⌥N, aerospace.nix): `nvim .` in `tmux -L notetaker`. A
+    # note it has open as a BUFFER is invisible to already_open() (its command
+    # line is `nvim .`), so morning-focus's Start spawned a second kitty+nvim
+    # beside it (Oops 20261113-114655). Vault links now go INTO that nvim via
+    # its server socket (--remote = :drop) and focus its window the ⌃⌥N way.
+    TMUX = "${pkgs.tmux}/bin/tmux"
+    FOCUS_APP = "${focusApp}/bin/focus-app"
+    VAULT = os.path.join(HOME, "Obsidian/Main")
+
+    def notetaker_socket():
+        r = subprocess.run([TMUX, "-L", "notetaker", "display", "-p", "-t", "notetaker", "#{pane_pid}"],
+                           capture_output=True, text=True)
+        pane = r.stdout.strip()
+        if r.returncode != 0 or not pane.isdigit():
+            return None
+        # The pane runs the nvim TUI; its server is the `nvim --embed` child.
+        kids = subprocess.run(["/usr/bin/pgrep", "-P", pane], capture_output=True, text=True).stdout.split()
+        tmp = os.environ.get("TMPDIR") or "/tmp"
+        import glob
+        for pid in [pane] + kids:
+            for s in glob.glob(os.path.join(tmp, "nvim.*", "*", f"nvim.{pid}.0")):
+                return s
+        return None
+
+    def open_in_notetaker(target):
+        sock = notetaker_socket()
+        if sock:
+            try:
+                r = subprocess.run([NVIM, "--headless", "--server", sock, "--remote", target],
+                                   capture_output=True, text=True, timeout=5, stdin=subprocess.DEVNULL)
+                if r.returncode != 0:
+                    return False
+            except subprocess.TimeoutExpired:
+                return False
+        # ⌃⌥N's launch command, used only when no notetaker window exists: it
+        # re-attaches a live session (note already sent above) or starts one on
+        # this note.
+        launch = ["/usr/bin/open", "-na", "kitty", "--args", "--title", "notetaker",
+                  "--working-directory", VAULT, "-e", TMUX, "-L", "notetaker", "new-session", "-A",
+                  "-s", "notetaker", NVIM, "." if sock else target,
+                  ";", "set", "-s", "focus-events", "on", ";", "set", "status", "off"]
+        subprocess.run([FOCUS_APP, "--title", "^notetaker", "notetaker", "--"] + launch,
+                       capture_output=True, timeout=20)
+        return True
+
     url = sys.argv[1] if len(sys.argv) > 1 else ""
     target = resolve(url)
+    if os.path.realpath(target).startswith(os.path.realpath(VAULT)) and open_in_notetaker(target):
+        log(f"{url} -> {target} (notetaker)")
+        sys.exit(0)
     if already_open(target):
         subprocess.run(["/usr/bin/open", "-a", "/Applications/kitty.app"])
         log(f"{url} -> {target} (already open, focused kitty)")
@@ -123,7 +180,7 @@
     on open theFiles
         repeat with f in theFiles
             set p to POSIX path of (f as text)
-            do shell script "/usr/bin/open -na /Applications/kitty.app --args --single-instance --instance-group=nvim --directory " & quoted form of (do shell script "dirname " & quoted form of p) & " -e ${nvimBin} " & quoted form of p
+            do shell script "/usr/bin/env PATH=${userPath} /usr/bin/open -na /Applications/kitty.app --args --single-instance --instance-group=nvim --directory " & quoted form of (do shell script "dirname " & quoted form of p) & " -e ${nvimBin} " & quoted form of p
         end repeat
     end open
 
@@ -132,7 +189,7 @@
     end open location
 
     on run
-        do shell script "/usr/bin/open -na /Applications/kitty.app --args --single-instance --instance-group=nvim -e ${nvimBin}"
+        do shell script "/usr/bin/env PATH=${userPath} /usr/bin/open -na /Applications/kitty.app --args --single-instance --instance-group=nvim -e ${nvimBin}"
     end run
   '';
 in {

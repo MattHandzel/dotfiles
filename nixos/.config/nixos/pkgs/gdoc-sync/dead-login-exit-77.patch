@@ -1,0 +1,113 @@
+diff --git a/src/gdoc_sync/cli.py b/src/gdoc_sync/cli.py
+index 7f28997..733631f 100644
+--- a/src/gdoc_sync/cli.py
++++ b/src/gdoc_sync/cli.py
+@@ -11,7 +11,7 @@ import sys
+ from pathlib import Path
+ 
+ from . import __version__
+-from .neterr import EXIT_NETWORK, is_network_error
++from .neterr import EXIT_AUTH, EXIT_NETWORK, is_auth_error, is_network_error
+ from .config import DEFAULT_FONT, DEFAULT_THEME, set_config_override
+ 
+ 
+@@ -581,6 +581,8 @@ def _run_sync(files, *, adopt, no_push, force, json_lines) -> None:
+             # into one line and EXIT_NETWORK.
+             if is_network_error(e):
+                 print(f"network lost while syncing {path}", file=sys.stderr, flush=True)
++            elif is_auth_error(e):
++                pass  # the login died, not this file; _api_guard says so
+             else:
+                 print(f"ERROR while syncing {path} (doc {doc_id})",
+                       file=sys.stderr, flush=True)
+@@ -709,6 +711,13 @@ def _api_guard(fn) -> None:
+     try:
+         _api_guard_inner(fn)
+     except Exception as e:
++        if is_auth_error(e) and not is_network_error(e):
++            # The refresh token was revoked or expired mid-run. Every file after
++            # this one would fail the same way, and the fix is a re-login, so
++            # say that in one line and exit loud (not 75: retrying won't help).
++            print(f"gdoc-sync: the Google login is dead ({e.args[0] if e.args else e}); "
++                  f"stopped. Run: gdoc-sync auth --force", file=sys.stderr)
++            sys.exit(EXIT_AUTH)
+         if not is_network_error(e):
+             raise
+         # The Mac slept or changed networks mid-run (a scheduled `sync --all`
+diff --git a/src/gdoc_sync/neterr.py b/src/gdoc_sync/neterr.py
+index 0967ac5..b6a1136 100644
+--- a/src/gdoc_sync/neterr.py
++++ b/src/gdoc_sync/neterr.py
+@@ -13,6 +13,7 @@ import errno
+ import socket
+ 
+ EXIT_NETWORK = 75  # EX_TEMPFAIL
++EXIT_AUTH = 77  # EX_NOPERM: the stored Google login is dead; someone must re-auth
+ 
+ _NET_ERRNOS = {
+     errno.ENETUNREACH, errno.ENETDOWN, errno.EHOSTUNREACH, errno.EHOSTDOWN,
+@@ -57,3 +58,26 @@ def is_network_error(exc: BaseException | None) -> bool:
+             return True
+         exc = exc.__cause__ or exc.__context__
+     return False
++
++
++def is_auth_error(exc: BaseException | None) -> bool:
++    """True if ``exc`` or its cause/context chain is a refused token refresh.
++
++    google-auth refreshes the access token inside whichever API call comes
++    next, so a revoked or expired refresh token (``invalid_grant``) surfaces as
++    a RefreshError in the middle of syncing some unrelated file. That is not a
++    problem with the file, and retrying won't help: only ``gdoc-sync auth``
++    does (bug err-gdoc-sync-20261105-214358). A network failure during the
++    refresh is a TransportError, which :func:`is_network_error` handles first.
++    """
++    try:
++        from google.auth.exceptions import RefreshError
++    except ImportError:
++        return False
++    seen: set[int] = set()
++    while exc is not None and id(exc) not in seen:
++        seen.add(id(exc))
++        if isinstance(exc, RefreshError):
++            return True
++        exc = exc.__cause__ or exc.__context__
++    return False
+diff --git a/tests/test_neterr.py b/tests/test_neterr.py
+index ec325d0..b7d7963 100644
+--- a/tests/test_neterr.py
++++ b/tests/test_neterr.py
+@@ -81,3 +81,33 @@ def test_real_crash_still_raises(tmp_path, monkeypatch, capsys):
+         cli._api_guard(lambda: cli._run_sync([note], adopt=None, no_push=False,
+                                              force=False, json_lines=False))
+     assert "ERROR while syncing" in capsys.readouterr().err
++
++
++def test_dead_token_is_one_auth_line_not_a_file_error(tmp_path, monkeypatch, capsys):
++    """A revoked refresh token is the login's fault, not the first file's
++    (bug err-gdoc-sync-20261105-214358): one line, exit 77, no ERROR line."""
++    from google.auth.exceptions import RefreshError
++
++    import gdoc_sync.config as config
++    import gdoc_sync.sync as gsync
++    from gdoc_sync.neterr import EXIT_AUTH, is_auth_error
++
++    note = tmp_path / "lukas-matt.md"
++    note.write_text("# note\n")
++    monkeypatch.setattr(config, "get_doc_id", lambda p: "1fakeDocId")
++    monkeypatch.setattr(config, "is_pull_only", lambda p: False)
++
++    def dead(*a, **k):
++        raise RefreshError("invalid_grant: Token has been expired or revoked.",
++                           {"error": "invalid_grant"})
++
++    monkeypatch.setattr(gsync, "reconcile", dead)
++    with pytest.raises(SystemExit) as ex:
++        cli._api_guard(lambda: cli._run_sync([note], adopt=None, no_push=False,
++                                             force=False, json_lines=False))
++    assert ex.value.code == EXIT_AUTH != EXIT_NETWORK
++    err = capsys.readouterr().err
++    assert "ERROR" not in err and "Traceback" not in err
++    assert "gdoc-sync auth --force" in err
++    assert not is_auth_error(_dns_failure())
++    assert not is_auth_error(ValueError("x"))

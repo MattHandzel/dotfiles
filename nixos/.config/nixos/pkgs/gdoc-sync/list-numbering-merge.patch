@@ -1,0 +1,97 @@
+diff --git a/src/gdoc_sync/merge.py b/src/gdoc_sync/merge.py
+index e32792d..6813657 100644
+--- a/src/gdoc_sync/merge.py
++++ b/src/gdoc_sync/merge.py
+@@ -149,15 +149,51 @@ def merge3(
+     base_n = _ensure_trailing_newline(base)
+     theirs_n = _ensure_trailing_newline(theirs)
+ 
++    labels = (label_ours, label_base, label_theirs)
++    merged = _merge_texts(ours_n, base_n, theirs_n, *labels)
++    if not merged.conflicted:
++        return merged
++
++    # Ordered-list numbering is round-trip noise: pandoc writes a vault list as
++    # "1. 2. 3." while a Doc always renders back as "1. 1. 1.", so the
++    # last-synced remote snapshot and the local file disagree on every item.
++    # A Doc edit anywhere in such a list then reads as "both sides changed the
++    # same lines" (2026-11-11: a call-prep note latched the 15-min pass at
++    # exit 2). Retry with the numbers made uniform on all three sides, and use
++    # that only when it actually removes every conflict; the list then keeps
++    # the Doc's "1." style, which renders the same.
++    if any(_OL_RE.search(t) for t in (ours_n, base_n, theirs_n)):
++        retry = _merge_texts(
++            _uniform_list_numbers(ours_n), _uniform_list_numbers(base_n),
++            _uniform_list_numbers(theirs_n), *labels,
++        )
++        if not retry.conflicted:
++            return retry
++    return merged
++
++
++# "  12. item" / "3) item" → number + delimiter, keeping indent and spacing.
++_OL_RE = re.compile(r"^([ \t]*)\d{1,9}([.)])(?=[ \t])", re.MULTILINE)
++
++
++def _uniform_list_numbers(text: str) -> str:
++    """Every ordered-list item numbered ``1`` (Markdown renders it the same)."""
++    return _OL_RE.sub(r"\g<1>1\g<2>", text)
++
++
++def _merge_texts(
++    ours: str, base: str, theirs: str,
++    label_ours: str, label_base: str, label_theirs: str,
++) -> MergeResult:
+     if shutil.which("git"):
+         merged = _merge_with_git(
+-            ours_n, base_n, theirs_n, label_ours, label_base, label_theirs
++            ours, base, theirs, label_ours, label_base, label_theirs
+         )
+         if merged is not None:
+             return merged
+ 
+     return _merge_pure_python(
+-        ours_n, base_n, theirs_n, label_ours, label_base, label_theirs
++        ours, base, theirs, label_ours, label_base, label_theirs
+     )
+ 
+ 
+diff --git a/tests/test_merge.py b/tests/test_merge.py
+index 6edd78c..62ba57b 100644
+--- a/tests/test_merge.py
++++ b/tests/test_merge.py
+@@ -167,3 +167,34 @@ def test_large_disjoint_edits_stay_clean(merge3):
+     result = merge3(ours, base, theirs)
+     assert result.clean
+     assert "LOCAL" in result.text and "REMOTE" in result.text
++
++
++def test_list_numbering_noise_does_not_conflict_with_a_doc_edit(merge3):
++    # 2026-11-11: the vault numbers a list 1. 2. 3.; the Doc renders it back
++    # as 1. 1. 1. An edit in the Doc used to conflict on every item.
++    head = "# Prep\n\n## Questions\n\n"
++    ours = head + "1. a\n2. b\n3. c\n\nend\n"
++    base = head + "1. a\n1. b\n1. c\n\nend\n"
++    theirs = head + "1. intro\n1. a\n1. b edited\n1. c\n\nend\n"
++    result = merge3(ours, base, theirs)
++    assert result.clean
++    assert "1. intro\n1. a\n1. b edited\n1. c\n" in result.text
++
++
++def test_list_numbering_retry_keeps_real_conflicts(merge3):
++    head = "# Prep\n\n"
++    ours = head + "1. a\n2. b mine\n3. c\n"
++    base = head + "1. a\n1. b\n1. c\n"
++    theirs = head + "1. a\n1. b theirs\n1. c\n"
++    result = merge3(ours, base, theirs)
++    assert result.conflicted
++    assert "2. b mine" in result.text  # the conflict shows the original text
++
++
++def test_numbering_untouched_when_the_plain_merge_is_clean(merge3):
++    ours = "1. a\n2. b\n\nlocal para\n\ntail\n"
++    base = "1. a\n2. b\n\npara\n\ntail\n"
++    theirs = "1. a\n2. b\n\npara\n\ntail edited\n"
++    result = merge3(ours, base, theirs)
++    assert result.clean
++    assert "2. b" in result.text

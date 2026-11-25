@@ -38,7 +38,7 @@ notify() { # <kind> <title> <body>; at most every REPEAT_SECONDS per kind
   echo "$now" >"$f"
   [ -n "${DAYFLOW_GUARD_DRY:-}" ] && { echo "  (dry run: would notify \"$2\")"; return 0; }
   /usr/bin/osascript -e 'on run argv' -e 'display notification (item 2 of argv) with title (item 1 of argv) sound name "Funk"' -e 'end run' "$2" "$3" >/dev/null 2>&1 || true
-  curl -fsS -m 5 -H "Title: $2" -H "Tags: camera,warning" -d "$3" "$NTFY_URL" >/dev/null 2>&1 || true
+  # phone push removed (off 2026-11-15: Matt asked to delete the ntfy senders)
 }
 
 # 1. The setting.

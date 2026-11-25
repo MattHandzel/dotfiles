@@ -33,6 +33,18 @@
           "/etc/profiles/per-user/matth/bin"
         ];
         path = [pkgs.bash pkgs.coreutils pkgs.python3 pkgs.git];
+        # The claude sessions these jobs start expect Matt's tools (rg, fd, node
+        # for plugin SessionEnd hooks). Without the per-user profile each run
+        # spent ~2 min hunting for rg/fd and every hook failed with "node: command
+        # not found" (m2-coffee-chats transcripts, 2026-10-26/29). The nix store
+        # entries above come first, so `timeout` is still pkgs.coreutils'.
+        darwinPathEntries = [
+          "/etc/profiles/per-user/matth/bin"
+          "/usr/bin"
+          "/bin"
+          "/usr/sbin"
+          "/sbin"
+        ];
         timerUnit = "${job.name}.service";
       }
       // j
@@ -59,6 +71,7 @@ in {
         logName = "m1-refresh";
         description = "Luck: Weekly M1 relationship refresh (Sunday 19:00)";
         command = ["${scriptsDir}/scheduler.sh" "m1-refresh"];
+        environment = {LUCK_TIMEOUT = "2400";};
         onCalendar = "Sun *-*-* 19:00:00";
         persistent = true;
         startCalendarInterval = [
@@ -74,6 +87,7 @@ in {
         logName = "sunday-review";
         description = "Luck: Weekly Sunday review (Sunday 19:30)";
         command = ["${scriptsDir}/scheduler.sh" "sunday-review"];
+        environment = {LUCK_TIMEOUT = "2400";};
         onCalendar = "Sun *-*-* 19:30:00";
         persistent = true;
         startCalendarInterval = [
@@ -89,6 +103,7 @@ in {
         logName = "now-update";
         description = "Luck: Weekly now-update (Sunday 19:45)";
         command = ["${scriptsDir}/scheduler.sh" "now-update"];
+        environment = {LUCK_TIMEOUT = "2400";};
         onCalendar = "Sun *-*-* 19:45:00";
         persistent = true;
         startCalendarInterval = [
@@ -126,6 +141,10 @@ in {
         command = ["${scriptsDir}/scheduler.sh" "m2-coffee-chats"];
         onCalendar = "Mon,Thu *-*-* 09:00:00";
         persistent = true;
+        # A full batch (source 5 people, research each, red-team, 5 Gmail drafts)
+        # does not fit in the 600 s default: every run from 10-26 to 11-09 was
+        # killed at 09:10 mid-research (exit 124) and no batch was ever written.
+        environment = {LUCK_TIMEOUT = "2400";};
         startCalendarInterval = [
           {
             Weekday = 1;
@@ -143,7 +162,13 @@ in {
         name = "luck-parse-capture-poll";
         logName = "parse-capture-poll";
         description = "Luck: Poll ntfy for relationship/linkedin captures (every 5min)";
-        command = ["${scriptsDir}/ntfy-poll.sh"];
+        # Cap each pass at 15 min. launchd never starts a new pass while one is
+        # alive, so a pass stuck under swap froze the poll for 55 min on
+        # 2026-11-13 with exit 0 (err-luck-parse-capture-poll-20261113-172813).
+        # A cut-off pass exits 124/137, which the error collector reports.
+        # 900 s, not 600: a dispatched parse-capture runs scheduler.sh's own
+        # 600 s claude limit inside this pass.
+        command = ["${pkgs.coreutils}/bin/timeout" "-k" "15" "900" "${scriptsDir}/ntfy-poll.sh"];
         onCalendar = "*:0/5";
         persistent = false;
         everySeconds = 300;

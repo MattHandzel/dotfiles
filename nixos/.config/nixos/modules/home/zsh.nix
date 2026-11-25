@@ -142,6 +142,16 @@ in {
         # shell did. -ixoff drops the incoming half too.
         [[ -t 0 ]] && stty -ixon -ixoff 2>/dev/null
 
+        # Inside an nvim :terminal the nearest terminal is nvim, not tmux, even
+        # when nvim itself runs in tmux (the ⌃⌥N notetaker). Programs that see
+        # $TMUX wrap OSC 52 copies in tmux's DCS passthrough (Claude Code does),
+        # and nvim's terminal draws that as "52;c;<base64>" at the cursor. Plain
+        # OSC 52 is understood by nvim (0.10+) and reaches the system clipboard.
+        if [[ -n $NVIM && -n $TMUX ]]; then
+          unset TMUX TMUX_PANE
+          [[ $TERM_PROGRAM == tmux ]] && unset TERM_PROGRAM TERM_PROGRAM_VERSION
+        fi
+
         # Suggestion autofill: when a command fails with a "you probably meant X"
         # hint, put X on the NEXT prompt line, pre-filled and editable — one Enter
         # runs it. No retyping.
@@ -379,6 +389,7 @@ in {
         gcon = "git config user.name";
         glazy = "git add --all ; git commit -am \"This is an automated commit by $USER because they were too lazy\" ; git pull && git push";
 
+        # python
         # python
         piv = "python -m venv .venv";
         psv = "source .venv/bin/activate";

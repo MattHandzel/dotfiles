@@ -45,20 +45,48 @@
   # 1, a traceback, and "ERROR while syncing <first file>"; bug
   # err-gdoc-sync-20261019-200819). Wait up to ~30 s for Google to be
   # reachable, else skip the pass with exit 0: the next one is 15 min away.
-  # The GDOC_SYNC_PROBE_* overrides exist for the bug's repro script.
+  # The GDOC_SYNC_PROBE_* overrides exist for the bugs' repro scripts.
   mirrorThenSync = pkgs.writeShellScript "gdoc-sync-pass" ''
     probe_host=''${GDOC_SYNC_PROBE_HOST:-oauth2.googleapis.com}
-    tries=''${GDOC_SYNC_PROBE_TRIES:-6}
-    until /usr/bin/nc -z -G 3 "$probe_host" 443 2>/dev/null; do
-      tries=$((tries - 1))
-      if [ "$tries" -le 0 ]; then
-        echo "$(date '+%F %T') gdoc-sync: offline ($probe_host unreachable), skipping this pass"
-        exit 0
-      fi
-      sleep 5
-    done
+    probe_port=''${GDOC_SYNC_PROBE_PORT:-443}
+    online() {
+      tries=''${GDOC_SYNC_PROBE_TRIES:-6}
+      until /usr/bin/nc -z -G 3 "$probe_host" "$probe_port" 2>/dev/null; do
+        tries=$((tries - 1))
+        [ "$tries" -le 0 ] && return 1
+        sleep 5
+      done
+    }
+    if ! online; then
+      echo "$(date '+%F %T') gdoc-sync: offline ($probe_host unreachable), skipping this pass"
+      exit 0
+    fi
     ${gdoc-sync}/bin/gdoc-sync mirror "$HOME/Obsidian/Main/resources/google-docs" --limit 200
-    exec ${gdoc-sync}/bin/gdoc-sync sync --all
+
+    # The probe above only covers the start; a pass runs for minutes, and the
+    # Mac sleeping, changing Wi-Fi, or the guest network's resolver dropping
+    # one Google hostname for ~20 s (seen 2026-11-12: www.googleapis.com
+    # unresolvable while oauth2.googleapis.com answered) used to crash sync
+    # with a traceback and exit 1 (bug err-gdoc-sync-20261027-181808).
+    # gdoc-sync now exits 75 when it loses the network: end the pass quietly,
+    # the next one starts over. Only a streak of 4 such passes (~1 h) is
+    # reported, so a lasting problem (one doc always timing out) stays loud.
+    streak=''${GDOC_SYNC_STREAK_FILE:-$HOME/.local/state/gdoc-sync/network-streak}
+    ${gdoc-sync}/bin/gdoc-sync sync --all
+    rc=$?
+    if [ "$rc" -ne 75 ]; then
+      rm -f "$streak"
+      exit "$rc"
+    fi
+    mkdir -p "$(dirname "$streak")"
+    n=$(( $(cat "$streak" 2>/dev/null || echo 0) + 1 ))
+    echo "$n" > "$streak"
+    if [ "$n" -lt 4 ]; then
+      echo "$(date '+%F %T') gdoc-sync: lost Google mid-pass (offline or DNS blip, $n in a row); the next pass retries"
+      exit 0
+    fi
+    echo "$(date '+%F %T') gdoc-sync: lost Google mid-pass $n passes in a row (about an hour); something is wrong"
+    exit 75
   '';
 in {
   config = scheduled {
