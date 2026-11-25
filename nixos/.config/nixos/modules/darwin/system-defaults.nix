@@ -202,6 +202,8 @@
       GloballyEnabled = false; # Stage Manager off
       EnableStandardClickToShowDesktop = false;
       StandardHideDesktopIcons = true;
+      StandardHideWidgets = true; # no desktop widgets (2026-11-24: the work laptop showed calendar/weather/photos)
+      StageManagerHideWidgets = true;
     };
 
     # Day + time only ("EEE HH:mm", the DateFormat is in CustomUserPreferences),
@@ -239,8 +241,13 @@
       # padlocks and the unlock prompt itself. Auto-login is deliberately NOT
       # enabled and FileVault stays on; neither would remove a prompt that Touch
       # ID cannot already answer, and both trade real security for nothing.
+      #
+      # 2026-11-03: back to 0. Redwood Security Policy A.6 requires the password
+      # "Immediately" after the display sleeps, and its Device Security Check
+      # (security.rdwrs.com, rerun every 30 days) fails otherwise. Display sleep
+      # is 5 min on battery and AC (pmset, set by hand, not expressible here).
       askForPassword = true;
-      askForPasswordDelay = 300;
+      askForPasswordDelay = 0;
     };
     # Globe/Fn key does nothing on its own; kanata owns the layers.
     hitoolbox.AppleFnUsageType = "Do Nothing";
