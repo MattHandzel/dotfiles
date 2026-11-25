@@ -48,13 +48,6 @@
       touch "$HOME/.claude/CLAUDE.md"
       grep -qxF "$line" "$HOME/.claude/CLAUDE.md" || printf '\n# Matt: own instructions, synced from his personal Mac\n%s\n' "$line" >> "$HOME/.claude/CLAUDE.md"
       rsync -a "$repo/context/" "$HOME/Obsidian/Main/"
-      # Triage's code (message-triage.nix runs it from here), with its own read-only deploy key.
-      if [ -f "$HOME/.ssh/message_triage" ]; then
-        mt="$HOME/Projects/message-triage"
-        export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/message_triage -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
-        [ -d "$mt/.git" ] || git clone -q git@github.com:MattHandzel/message-triage.git "$mt" || exit 1
-        git -C "$mt" pull -q --ff-only origin main || exit 1
-      fi
       echo "$(date -Iseconds) ok $(git -C "$repo" rev-parse --short HEAD)"
     '';
   in {
@@ -119,7 +112,6 @@ in {
     ./darwin/claude-api-resume.nix # wake Claude Code sessions that stopped on an API error
     ./darwin/charge-limit.nix # macOS's own battery charge cap
     ./darwin/espanso.nix # text expansion; vault/password-picker snippets skipped via my.work
-    ./darwin/message-triage.nix # Triage (Matt, 2026-11-24: "ship my personal custom messaging app, Triage, and run it on the redwood laptop")
   ];
 
   # The subset of ./packages.nix that the shell config, Neovim and Redwood's
