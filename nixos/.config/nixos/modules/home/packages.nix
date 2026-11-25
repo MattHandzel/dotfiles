@@ -156,6 +156,10 @@
     python312Packages.requests
     python312Packages.setuptools # for stt-rrecord
     uv # `uv run --with …` in vault scripts (AI catalog demo recorder, Triage tests, bug-context)
+    # Redwood research-devboxes `rw` CLI prerequisites (AWS SSO, devbox Terraform, SSM shell)
+    awscli2
+    terraform # unfree (BSL); allowUnfree is on per host
+    ssm-session-manager-plugin
     portaudio
     nodejs_22
     go

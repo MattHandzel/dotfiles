@@ -2801,17 +2801,17 @@ return {
 			})
 		end,
 	},
-	{
-		dir = "~/Projects/beeper.nvim", -- github.com/MattHandzel/beeper.nvim (private)
-		-- Beeper Desktop as buffers. Lazy on the command/key: the plugin does no
-		-- network or SQLite I/O until :Beeper runs. Needs $BEEPER_ACCESS_TOKEN and
-		-- Beeper Desktop running; :checkhealth beeper explains what is missing.
-		cmd = "Beeper",
-		keys = { { "<leader>B", "<cmd>Beeper<cr>", desc = "Beeper inbox" } },
-		config = function()
-			require("beeper").setup({ notify = "mentions" })
-		end,
-	},
+-- bfy-dropped nvim-plugin:beeper.nvim: 	{
+-- bfy-dropped nvim-plugin:beeper.nvim: 		dir = "~/Projects/beeper.nvim", -- github.com/MattHandzel/beeper.nvim (private)
+-- bfy-dropped nvim-plugin:beeper.nvim: 		-- Beeper Desktop as buffers. Lazy on the command/key: the plugin does no
+-- bfy-dropped nvim-plugin:beeper.nvim: 		-- network or SQLite I/O until :Beeper runs. Needs $BEEPER_ACCESS_TOKEN and
+-- bfy-dropped nvim-plugin:beeper.nvim: 		-- Beeper Desktop running; :checkhealth beeper explains what is missing.
+-- bfy-dropped nvim-plugin:beeper.nvim: 		cmd = "Beeper",
+-- bfy-dropped nvim-plugin:beeper.nvim: 		keys = { { "<leader>B", "<cmd>Beeper<cr>", desc = "Beeper inbox" } },
+-- bfy-dropped nvim-plugin:beeper.nvim: 		config = function()
+-- bfy-dropped nvim-plugin:beeper.nvim: 			require("beeper").setup({ notify = "mentions" })
+-- bfy-dropped nvim-plugin:beeper.nvim: 		end,
+-- bfy-dropped nvim-plugin:beeper.nvim: 	},
 	{
 		dir = "~/Projects/kms-capture.nvim",
 		-- Only where the local checkout exists (not on the Redwood laptop, 2026-11-25).
@@ -2844,6 +2844,36 @@ return {
 		name = "gdoc-sync.nvim",
 		ft = "markdown",
 		cmd = "Gdoc",
+		-- <leader>gds<key>: one key per :Gdoc subcommand (which-key lists them).
+		-- Costs bare <leader>gd (Diffview) one 'timeoutlen'. Subcommands that need
+		-- an argument (share level, export format, link URL) stop at the cmdline.
+		keys = {
+			{ "<leader>gds:", ":Gdoc ", desc = "Gdoc: :Gdoc <subcommand>" },
+			{ "<leader>gdso", "<cmd>Gdoc open<cr>", desc = "Gdoc: open in browser" },
+			{ "<leader>gdsy", "<cmd>Gdoc copy<cr>", desc = "Gdoc: copy (yank) doc link" },
+			{ "<leader>gdsc", "<cmd>Gdoc create<cr>", desc = "Gdoc: create doc from file" },
+			{ "<leader>gdsi", "<cmd>Gdoc import<cr>", desc = "Gdoc: import doc (asks URL)" },
+			{ "<leader>gdsp", "<cmd>Gdoc push<cr>", desc = "Gdoc: push" },
+			{ "<leader>gdsP", "<cmd>Gdoc pull<cr>", desc = "Gdoc: pull" },
+			{ "<leader>gdss", "<cmd>Gdoc sync<cr>", desc = "Gdoc: sync (two-way, once)" },
+			{ "<leader>gdsw", "<cmd>Gdoc watch<cr>", desc = "Gdoc: watch (live sync)" },
+			{ "<leader>gdsW", "<cmd>Gdoc watch stop<cr>", desc = "Gdoc: watch stop" },
+			{ "<leader>gdsS", "<cmd>Gdoc status<cr>", desc = "Gdoc: status" },
+			{ "<leader>gdsd", "<cmd>Gdoc diff<cr>", desc = "Gdoc: diff local vs doc" },
+			{ "<leader>gdsC", "<cmd>Gdoc conflict<cr>", desc = "Gdoc: show conflict" },
+			{ "<leader>gdsr", "<cmd>Gdoc resolve<cr>", desc = "Gdoc: resolve conflict" },
+			{ "<leader>gdsR", "<cmd>Gdoc restore<cr>", desc = "Gdoc: restore from backup" },
+			{ "<leader>gdsh", ":Gdoc share ", desc = "Gdoc: share (view|comment|edit|private)" },
+			{ "<leader>gdse", ":Gdoc export ", desc = "Gdoc: export (pdf|docx|…)" },
+			{ "<leader>gdsm", "<cmd>Gdoc comment<cr>", desc = "Gdoc: add comment" },
+			{ "<leader>gdsM", "<cmd>Gdoc comments<cr>", desc = "Gdoc: list comments" },
+			{ "<leader>gdsa", "<cmd>Gdoc reply<cr>", desc = "Gdoc: reply to comment" },
+			{ "<leader>gdsA", "<cmd>Gdoc resolvecomment<cr>", desc = "Gdoc: resolve comment" },
+			{ "<leader>gdst", "<cmd>Gdoc tabs<cr>", desc = "Gdoc: tabs" },
+			{ "<leader>gdsl", ":Gdoc link ", desc = "Gdoc: link to doc URL" },
+			{ "<leader>gdsu", "<cmd>Gdoc unlink<cr>", desc = "Gdoc: unlink" },
+			{ "<leader>gdsD", "<cmd>Gdoc doctor<cr>", desc = "Gdoc: doctor" },
+		},
 		config = function()
 			require("gdoc-sync").setup({
 				-- Only speak up when something is actually broken. A successful
