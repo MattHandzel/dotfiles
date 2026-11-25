@@ -43,6 +43,13 @@
     "take-note"
     "grammar-check"
     "paste-second-clip"
+    "notetaker"
+    "toggle-stt"
+    "smart-clipboard-picker"
+    "screenshot-search"
+    "shutdown-script"
+    "wallpaper-picker"
+    "wall-change"
   ];
   ocrScreenshot = import ./scripts/scripts/ocr-screenshot/default.nix {inherit pkgs;};
   # Claude Code setup from the personal Mac (Matt, 2026-11-24: "the same skills,
@@ -170,6 +177,7 @@ in {
       # (2026-11-24 red team, gap G26).
       ocrScreenshot
       (import ./scripts/scripts/kbshot/default.nix {inherit pkgs;})
+      (import ./scripts/scripts/link-search/default.nix {inherit pkgs;})
     ]
     ++ map (n: writeShellScriptBin n (builtins.readFile (./scripts/scripts + "/${n}.sh"))) genericScripts
     ++ [

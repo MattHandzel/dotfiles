@@ -34,16 +34,33 @@
     builtins.match ".*exec-and-forget.*" l
     == null
     || builtins.match "[[:space:]]*#.*" l != null
-    || (builtins.match ".*(/bin/(aerospace-retile|move-smart|float-toggle|dwindle-open|float-open|keybinds|focus-app)|/opt/homebrew/bin/borders|open -a Raycast|open -g \"raycast://|/usr/bin/pmset sleepnow|/opt/homebrew/bin/sketchybar --reload|exec-and-forget (kbshot|clip2md|grammar-check|paste-second-clip|leader-timer)|/usr/bin/screencapture -i).*" l
+    || (builtins.match ".*(/bin/(aerospace-retile|move-smart|float-toggle|dwindle-open|float-open|keybinds|focus-app)|/opt/homebrew/bin/borders|open -a Raycast|open -g \"raycast://|/usr/bin/pmset sleepnow|/opt/homebrew/bin/sketchybar --reload|exec-and-forget (kbshot|clip2md|grammar-check|paste-second-clip|leader-timer|notetaker|toggle-stt|smart-clipboard-picker|link-search|screenshot-search|shutdown-script|wallpaper-picker|open -a Terminal)|/usr/bin/screencapture -i).*" l
       != null
-      && builtins.match ".*(Obsidian|/Users/matth|Triage|WhatsApp|Work Test|tasker|notetaker|darwin-rebuild|gemini|Gemini).*" l == null);
+      && builtins.match ".*(/Users/matth|Triage|WhatsApp|Work Test|tasker|darwin-rebuild|gemini|Gemini).*" l == null);
+  # Laptop stand-ins for personal tools, so the same key does the same kind of
+  # thing (2026-11-24 hotkey diff): Raycast's colour picker and 1Password search
+  # for colour-pick / password-picker, the kit's switch for rebuild, notes in
+  # ~/notes instead of the vault.
+  workSub = key: cmd: l:
+    if builtins.match "[[:space:]]*${key} = .*" l != null
+    then "${key} = 'exec-and-forget ${cmd}'"
+    else l;
+  workLine = l:
+    lib.pipe l [
+      (workSub "alt-c" "open -g \"raycast://extensions/thomas/color-picker/pick-color\"")
+      (workSub "alt-x" "open -g \"raycast://extensions/khasbilegt/1password/item-list\"")
+      (workSub "alt-shift-x" "open -g \"raycast://extensions/khasbilegt/1password/item-list\"")
+      (workSub "alt-ctrl-h" "${helpers.focus-app}/bin/focus-app \"Beeper\" beeper -- open -a \"Beeper Desktop\"")
+      (workSub "alt-shift-r" "open -a Terminal \"$HOME/redwood-kit/switch.command\"")
+      (lib.replaceStrings ["--working-directory /Users/matth/Obsidian/Main"] ["--working-directory \"$HOME/notes\""])
+    ];
   forHost = text:
     if config.my.work
     then
       # Chrome is the laptop's browser (Dia has no profile there): Alt-B and the
       # workspace-1 rule follow it.
       lib.replaceStrings [''open -a "Dia"'' "if.app-id = 'company.thebrowser.dia'"] [''open -a "Google Chrome"'' "if.app-id = 'com.google.Chrome'"]
-      (lib.concatStringsSep "\n" (builtins.filter workAllowed (lib.splitString "\n" text)))
+      (lib.concatStringsSep "\n" (builtins.filter workAllowed (map workLine (lib.splitString "\n" text))))
     else text;
 
   # Numpad 4 (Hyprland KP_4): clipboard -> prompt-llm (picker for the prompt)
