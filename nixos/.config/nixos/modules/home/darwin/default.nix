@@ -56,6 +56,7 @@
     ./meeting-live.nix # Claude DURING the meeting: tails the live Wispr transcript, Haiku scan, read-only Sonnet lookups, web panel on 127.0.0.1:47620
     ./speaker-attribution.nix # daily rolling self-model of Matt + every 15 min: who said what in each unresolved transcript (speakers.py)
     ./shared-notes.nix # meeting notes/transcripts/docs people send Matt (Granola, Plaud, Gemini, Notion, Docs) -> stored + proposed, every 5 min
+    ./otter-sync.nix # Otter.ai conversations -> capture/meetings/transcripts via Otter MCP, every 30 min (one-time auth)
     ./person-log-sync.nix # daily: meetings/emails/DMs/calls/calendar -> areas/relationships person files (person_log.py)
     ./finance-daily.nix # daily bank sync + finance status/dashboard/audits/alerts (scripts/finance/fin daily)
     ./sleep-check.nix # each morning: did last night slip (bed after 21:30 / up after 06:45)? sent to Jeremy; agent OFF since 2026-10-22
