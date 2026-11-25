@@ -113,11 +113,15 @@ in {
     # off by preference. `--no-quarantine` is the "no training wheels" rule:
     # a cask Matt installed on purpose should not need a Gatekeeper prompt on
     # first launch. Applied on macOS only — there is no brew on the laptop.
-    sessionVariables = lib.optionalAttrs isDarwin {
-      HOMEBREW_NO_AUTO_UPDATE = "1";
-      HOMEBREW_NO_ANALYTICS = "1";
-      HOMEBREW_CASK_OPTS = "--no-quarantine";
-    };
+    sessionVariables =
+      lib.optionalAttrs isDarwin {
+        HOMEBREW_NO_AUTO_UPDATE = "1";
+        HOMEBREW_NO_ANALYTICS = "1";
+      }
+      # Not on a work machine: there Gatekeeper's first-launch check stays on.
+      // lib.optionalAttrs (isDarwin && !config.my.work) {
+        HOMEBREW_CASK_OPTS = "--no-quarantine";
+      };
 
     oh-my-zsh = {
       enable = true;
@@ -253,25 +257,27 @@ in {
         function notec() {
           take-note -c "$*"
         }
-        function ntfy() {
-          local title="" priority="default" message=""
-          while [[ $# -gt 0 ]]; do
-            case "$1" in
-              -t|--title) title="$2"; shift 2 ;;
-              -p|--priority) priority="$2"; shift 2 ;;
-              *) message="$*"; shift $# ;;
-            esac
-          done
-          if [[ -z "$message" ]]; then
-            echo "Usage: ntfy <message>"
-            echo "       ntfy -t <title> <message>"
-            echo "       ntfy -t <title> -p <priority> <message>"
-            return 1
-          fi
-          local cmd=(curl -s -H "Priority: $priority" -d "$message" "http://${sharedVariables.serverIpAddress}:8124/claude")
-          [[ -n "$title" ]] && cmd+=(-H "Title: $title")
-          "''${cmd[@]}" >/dev/null && echo "Sent: $message" || echo "ERROR: failed to send" >&2
-        }
+        ${lib.optionalString (!config.my.work) ''
+          function ntfy() {
+            local title="" priority="default" message=""
+            while [[ $# -gt 0 ]]; do
+              case "$1" in
+                -t|--title) title="$2"; shift 2 ;;
+                -p|--priority) priority="$2"; shift 2 ;;
+                *) message="$*"; shift $# ;;
+              esac
+            done
+            if [[ -z "$message" ]]; then
+              echo "Usage: ntfy <message>"
+              echo "       ntfy -t <title> <message>"
+              echo "       ntfy -t <title> -p <priority> <message>"
+              return 1
+            fi
+            local cmd=(curl -s -H "Priority: $priority" -d "$message" "http://${sharedVariables.serverIpAddress}:8124/claude")
+            [[ -n "$title" ]] && cmd+=(-H "Title: $title")
+            "''${cmd[@]}" >/dev/null && echo "Sent: $message" || echo "ERROR: failed to send" >&2
+          }
+        ''}
         # eval $(pay-respects --alias) # gets fuck command running
 
         # export TODOIST_API_KEY="$(cat /run/secrets/todoist_api_key)"
@@ -372,19 +378,26 @@ in {
         gcoe = "git config user.email";
         gcon = "git config user.name";
         glazy = "git add --all ; git commit -am \"This is an automated commit by $USER because they were too lazy\" ; git pull && git push";
+
+        # python
+        piv = "python -m venv .venv";
+        psv = "source .venv/bin/activate";
+      }
+      # Personal server, personal tools and browser control: never on a work machine.
+      // lib.optionalAttrs (!config.my.work) {
         server = "ssh -p 22 matth@server.matthandzel.com";
         serverfs = "sshfs matth@ssh.matthandzel.com:/home/matth/";
         # make transcribe available as a command
         transcribe = "${transcribe_file_script}";
         claude = "claude --permission-mode auto --chrome";
-
         # move folder to archive with the same name as the folder
         second-brain-archive = "${second-brain-archive-script}";
-
-        # python
-        piv = "python -m venv .venv";
-        psv = "source .venv/bin/activate";
         transcribe-meeting = "nix run /home/matth/Projects/KnowledgeOperatingSystem/MeetingTranscribe/ -- --diarize --noise-filter";
+      }
+      // lib.optionalAttrs config.my.work {
+        # Auto mode is what Redwood's agent guidance asks for; no --chrome, so
+        # Claude never drives a browser signed in to Redwood accounts.
+        claude = "claude --permission-mode auto";
       }
       // lib.optionalAttrs isLinux {
         record = "wf-recorder --audio=alsa_output.pci-0000_08_00.6.analog-stereo.monitor -f $HOME/Videos/$(date +'%Y%m%d%H%M%S_1.mp4')";
@@ -433,6 +446,14 @@ in {
         word-count = "clip-paste | wc";
         paste-image = "clip-paste -t image/png >";
         md2substack = "${md2html-clip-script}";
+      }
+      # The Redwood laptop is host redwood-mac and switches through the kit's
+      # switch.command (sudo darwin-rebuild for #redwood-mac), never #matts-mac,
+      # and its dotfiles clone only fast-forwards, so no `git add --all` there.
+      // lib.optionalAttrs config.my.work {
+        rebuild = "$HOME/redwood-kit/switch.command";
+        rebuildu = "echo 'flake updates happen on the personal Mac; run: rebuild'";
+        hm-switch = "echo 'not on the work laptop; run: rebuild'";
       };
   };
 
