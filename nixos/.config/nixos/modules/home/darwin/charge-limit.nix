@@ -1,6 +1,6 @@
 # charge-limit: the battery charge cap, owned by the flake.
 #
-# The cap that actually holds the battery at 80 % is macOS's own Charge Limit
+# The cap is macOS's own Charge Limit
 # (System Settings › Battery › Charge Limit, enforced by PowerUIAgent;
 # `pmset -g battlimit` shows it). AlDente is installed but is not started at
 # login, so its `chargeVal` (modules/darwin/system-defaults.nix) does nothing.
@@ -8,7 +8,8 @@
 # The agent sets the limit at login and at 00:05 every day, so the slider is
 # put back at the next run: change the cap here, not in System Settings.
 # Matt asked on 2026-10-11 for full charges until Oct 24 (Oops
-# 20261011-070711); the date line can go once it has passed.
+# 20261011-070711), then on 2026-11-07 for full charges with no end date
+# (Oops 20261107-114343): the cap is 100 % = off. Change `want` to re-cap.
 #
 # Manual: `charge-limit` prints the limit, `charge-limit 90` sets it.
 # Log: ~/Library/Logs/charge-limit.log (one line per change).
@@ -23,8 +24,7 @@
   '';
   # `date` comes from PATH, not the store, so a shim can test the cutover.
   apply = pkgs.writeShellScript "charge-limit-apply" ''
-    want=80
-    [ "$(date +%Y%m%d)" -le 20261024 ] && want=100
+    want=100
     have=$(${charge-limit}/bin/charge-limit) || exit 1
     if [ "$have" != "$want" ]; then
       ${charge-limit}/bin/charge-limit "$want" >/dev/null || exit 1
