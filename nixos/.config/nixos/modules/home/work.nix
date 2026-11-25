@@ -130,6 +130,7 @@ in {
     ./core.nix
     ./packages.nix # the full CLI/dev tool list, minus its personalOnly set (2026-11-24 red team: tig, gping, tdf, rust-analyzer... were missing)
     ./vscodium.nix # `code` alias + editor settings
+    ./darwin/fact-check.nix # fetch-text; the script itself arrives via claude-config-sync
     ./darwin/aerospace.nix # tiling WM config (~/.aerospace.toml)
     ./darwin/aerospace-watchdog.nix # relaunch AeroSpace when it crashes or hangs
     ./darwin/karabiner.nix # caps⇄esc swap + US/Polish toggle
