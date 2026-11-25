@@ -57,9 +57,8 @@
   forHost = text:
     if config.my.work
     then
-      # Chrome is the laptop's browser (Dia has no profile there): Alt-B and the
-      # workspace-1 rule follow it.
-      lib.replaceStrings [''open -a "Dia"'' "if.app-id = 'company.thebrowser.dia'"] [''open -a "Google Chrome"'' "if.app-id = 'com.google.Chrome'"]
+      # Alt-B opens Dia here too: Matt uses Dia on the laptop (2026-11-25; the
+      # Chrome swap from 11-24 was wrong).
       (lib.concatStringsSep "\n" (builtins.filter workAllowed (map workLine (lib.splitString "\n" text))))
     else text;
 
