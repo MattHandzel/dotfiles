@@ -89,6 +89,13 @@
       touch "$HOME/.claude/CLAUDE.md"
       grep -qxF "$line" "$HOME/.claude/CLAUDE.md" || printf '\n# Matt: own instructions, synced from his personal Mac\n%s\n' "$line" >> "$HOME/.claude/CLAUDE.md"
       rsync -a "$repo/context/" "$HOME/Obsidian/Main/"
+      # The same Redwood notes (meetings, people, project files) inside the work
+      # vault too, so they show up there (Matt, 2026-11-25: "In the work folder, I
+      # only see templates"). A copy that each pass refreshes from matts-mac: edits
+      # here are overwritten, and none of it syncs back (no classification: AL1).
+      mkdir -p "$HOME/Obsidian/Work/redwood"
+      rsync -a "$repo/context/" "$HOME/Obsidian/Work/redwood/"
+      printf '%s\n' "Copied from Matt's personal Mac by claude-config-sync every 15 min." "Edits here are overwritten; write new notes elsewhere in ~/Obsidian/Work." > "$HOME/Obsidian/Work/redwood/README.md"
       echo "$(date -Iseconds) ok $(git -C "$repo" rev-parse --short HEAD)"
     '';
   in {
