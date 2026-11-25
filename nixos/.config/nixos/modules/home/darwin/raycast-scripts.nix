@@ -26,9 +26,17 @@
 # script's process group, which a plain `sleep &` would not).
 {
   config,
+  lib,
   pkgs,
   ...
 }: let
+  # On the Redwood laptop (my.work) only these commands ship: the rest call the
+  # vault, lifelog, the phone or personal servers (2026-11-24 red team, G24).
+  workScripts = ["monitor-mode-toggle" "monitor-mode-single" "monitor-mode-split" "timer" "timer-list" "timer-cancel" "lid-awake" "toggle-focus-mode" "keybinds" "ocr-screenshot" "lofi"];
+  forHost = files:
+    if config.my.work or false
+    then lib.filterAttrs (n: _: n == ".local/bin/raycast-picks" || builtins.elem (lib.removeSuffix ".sh" (baseNameOf n)) workScripts) files
+    else files;
   # The same derivation scripts.nix builds (same name + content => same store
   # path). Referenced by store path, not PATH, so a home-manager-only
   # activation is enough: /etc/profiles/per-user is root-managed and only
@@ -122,7 +130,7 @@ in {
       ProgramArguments = [
         "/bin/sh"
         "-c"
-    ''
+        ''
           /bin/wait4path /nix/store || exit 1
           for delay in 15 60; do
             /bin/sleep "$delay"
@@ -130,14 +138,14 @@ in {
               [ -L "$f" ] && { /usr/bin/touch -ch "$f"; break; }
             done
           done
-    ''
+        ''
       ];
       RunAtLoad = true;
       KeepAlive = false;
     };
   };
 
-  home.file =
+  home.file = forHost (
     {".local/bin/raycast-picks".source = "${raycastPicks}/bin/raycast-picks";}
     // script "monitor-mode-toggle" ''
       #!/usr/bin/env bash
@@ -185,6 +193,23 @@ in {
       ${pathPreamble}
       ${timer} "$1" "''${2:-}" || exit
       echo "Timer set: $1 min''${2:+ — $2}"
+    ''
+    # Oops 20261030-093441: a timer that makes Matt stop. Its alarm is purple,
+    # gives 10 s to finish typing, then blocks keys and clicks for a breath
+    # (~/.hammerspoon/timer_alert.lua). Minutes default to 5.
+    // script "resolve-cycle" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Resolve Cycle
+      # @raycast.mode compact
+      # @raycast.icon 🧘
+      # @raycast.packageName Timer
+      # @raycast.argument1 { "type": "text", "placeholder": "minutes (5)", "optional": true }
+      # @raycast.argument2 { "type": "text", "placeholder": "what are you resolving", "optional": true }
+      # @raycast.description Resolve Cycle timer: when it ends you get 10 s to finish typing, then the screen makes you stop and breathe.
+      ${pathPreamble}
+      ${timer} --resolve "''${1:-5}" "''${2:-}" || exit
+      echo "Resolve Cycle: ''${1:-5} min''${2:+ — $2}"
     ''
     // script "lid-awake" ''
       #!/usr/bin/env bash
@@ -309,6 +334,39 @@ in {
       ${pathPreamble}
       exec "$HOME/Obsidian/Main/scripts/bugs/open-bug-board.sh"
     ''
+    // script "job-health" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Job Health
+      # @raycast.mode fullOutput
+      # @raycast.icon 🩺
+      # @raycast.packageName Vault
+      # @raycast.description Quiet failures the error collector watches: launchd jobs whose output went stale, aren't loaded or outlived their end date, and headless Claude runs that exited 0 but were blocked or wrote nothing.
+      ${pathPreamble}
+      exec error-collector health
+    ''
+    // script "matchmaker" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Matchmaker
+      # @raycast.mode fullOutput
+      # @raycast.icon 🤝
+      # @raycast.packageName Vault
+      # @raycast.description The draft Matchmaker put in Triage today: who it is for, who the other person is and why; what is held for you; the trial's numbers.
+      ${pathPreamble}
+      exec "$HOME/Obsidian/Main/scripts/matchmaker/matchmaker" status
+    ''
+    // script "server-claude" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Server Claude
+      # @raycast.mode silent
+      # @raycast.icon 🖥
+      # @raycast.packageName Vault
+      # @raycast.description Open a terminal attached to the always-on Claude Code session on matts-server (the one behind Slack and Remote Control).
+      ${pathPreamble}
+      exec "$HOME/Obsidian/Main/scripts/slack-channel/open-server-claude.sh"
+    ''
     // script "meeting-listener" ''
       #!/usr/bin/env bash
       # @raycast.schemaVersion 1
@@ -319,6 +377,42 @@ in {
       # @raycast.description Which finished Wispr meetings Claude is processing, queued, done or skipped (process-meeting skill).
       ${pathPreamble}
       exec python3 -I "$HOME/Obsidian/Main/scripts/meetings/meeting-listener" status
+    ''
+    // script "meet-prep" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Meet Prep
+      # @raycast.mode compact
+      # @raycast.icon 📋
+      # @raycast.packageName Vault
+      # @raycast.argument1 { "type": "text", "placeholder": "who or what (blank = pick from a list)", "optional": true }
+      # @raycast.description Opens the matching upcoming meeting's Google Doc (blank: pick it from a list). If its Prep is empty, Claude runs the meeting-prep skill in the background and writes the prep into the Doc (notification when done). scripts/meetings/meet prep
+      ${pathPreamble}
+      meet prep ''${1:-}
+    ''
+    // script "open-meeting-notes" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Open Meeting Notes
+      # @raycast.mode compact
+      # @raycast.icon 📝
+      # @raycast.packageName Vault
+      # @raycast.description Pick an upcoming meeting from a list; opens its notes to write in: the note in the notetaker neovim, its Google Doc, and a live sync between them for an hour. No prep run. scripts/meetings/meet open --pick
+      ${pathPreamble}
+      meet open --pick
+    ''
+    // script "new-meeting" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title New Meeting
+      # @raycast.mode compact
+      # @raycast.icon 🗓
+      # @raycast.packageName Vault
+      # @raycast.argument1 { "type": "text", "placeholder": "meeting title" }
+      # @raycast.argument2 { "type": "text", "placeholder": "minutes (45)", "optional": true }
+      # @raycast.description A meeting that starts now: calendar event with a Meet link, vault note + Google Doc, Wispr Flow notetaker, the Doc in the browser, the note in the notetaker neovim, live Doc sync for the meeting. Titles then stay in sync three ways. scripts/meetings/meet new
+      ${pathPreamble}
+      meet new "$1" ''${2:+--minutes "$2"}
     ''
     // script "app-watch" ''
       #!/usr/bin/env bash
@@ -363,6 +457,17 @@ in {
       # @raycast.description Open Rabbithole (127.0.0.1:8777), restarting its launchd agent if needed.
       ${pathPreamble}
       exec "$HOME/Obsidian/Main/scripts/raycast/open-launchd-ui.sh" http://127.0.0.1:8777/ org.nix-community.home.rabbithole
+    ''
+    // script "meeting-live" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Meeting Live
+      # @raycast.mode silent
+      # @raycast.icon 🎧
+      # @raycast.packageName Vault
+      # @raycast.description Claude live in your meeting: live transcript, lookups it runs on its own, Assist/Ask/Recap (127.0.0.1:47620) in a compact window; starts the agent if needed.
+      ${pathPreamble}
+      exec "$HOME/Obsidian/Main/scripts/meeting-live/open-meeting-live.sh"
     ''
     // script "finance-dashboard" ''
       #!/usr/bin/env bash
@@ -468,9 +573,10 @@ in {
       # @raycast.mode silent
       # @raycast.icon 🔍
       # @raycast.packageName Screenshots
-      ${pathPreamble}
-      ocr-screenshot
-      echo "OCR result in clipboard"
+      # Runs in Hammerspoon (~/.hammerspoon/ocr_screen.lua): Raycast has no
+      # Screen Recording grant, so its own screencapture -i captures nothing.
+      /usr/bin/open -g "hammerspoon://ocr-screenshot"
+      echo "Select an area to OCR"
     ''
     # `read-aloud` on this PATH is ~/.local/bin's ~/Projects/readaloud prototype,
     # not the nix one: bare = read selection → tab → clipboard in the floating
@@ -588,18 +694,31 @@ in {
       # @raycast.icon 🎙
       # @raycast.packageName Capture
       # @raycast.argument1 { "type": "text", "placeholder": "meeting name", "optional": true }
-      # @raycast.description Audio-only from the default mic (AVFoundation device :0) into ~/notes/capture/meetings; run again to stop.
+      # @raycast.description Audio-only from the default mic (AVFoundation device :0) into ~/notes/capture/meetings; run again to stop. Stops itself after 3 h; a red 🎙 REC pill shows in the bar while it runs.
       ${pathPreamble}
       label="com.matth.meeting-rec"; DIR="$HOME/notes/capture/meetings"; NAMEFILE="$HOME/.local/state/meeting-rec.name"
+      bar() { /opt/homebrew/bin/sketchybar --trigger meeting_rec_update >/dev/null 2>&1 || true; }
       if launchctl list "$label" >/dev/null 2>&1; then
         launchctl remove "$label"
-        echo "Stopped: $(cat "$NAMEFILE" 2>/dev/null)"; rm -f "$NAMEFILE"; exit 0
+        echo "Stopped: $(cat "$NAMEFILE" 2>/dev/null)"; rm -f "$NAMEFILE"; bar; exit 0
       fi
       mkdir -p "$DIR" "$(dirname "$NAMEFILE")"
       safe=$(printf '%s' "''${1:-meeting}" | tr -c '[:alnum:]._-' '_')
       out="$DIR/$(date +%Y-%m-%d_%H-%M-%S)_$safe.wav"
-      launchctl submit -l "$label" -- ${pkgs.ffmpeg}/bin/ffmpeg -hide_banner -loglevel error -f avfoundation -i ":0" -ac 1 -ar 16000 "$out" || exit
-      echo "$out" > "$NAMEFILE"; echo "Recording → $out"
+      # Auto-stop (Oops 20261102-201725): a forgotten recording ran 19 h. ffmpeg
+      # stops at MAX_SEC; the wrapper then clears the name file, updates the bar
+      # and removes its own launchd job, because `launchctl submit` jobs are kept
+      # alive and would otherwise restart ffmpeg. A toggle-off SIGTERMs the
+      # wrapper, which forwards TERM so ffmpeg closes the WAV properly.
+      MAX_SEC=10800
+      # shellcheck disable=SC2016
+      launchctl submit -l "$label" -- /bin/bash -c '
+        ${pkgs.ffmpeg}/bin/ffmpeg -nostdin -n -hide_banner -loglevel error -f avfoundation -i ":0" -ac 1 -ar 16000 -t "$1" "$2" & pid=$!
+        trap "kill -TERM $pid 2>/dev/null; wait $pid; exit 0" TERM
+        wait $pid
+        rm -f "$3"; /opt/homebrew/bin/sketchybar --trigger meeting_rec_update >/dev/null 2>&1
+        exec /bin/launchctl remove "$4"' meeting-rec "$MAX_SEC" "$out" "$NAMEFILE" "$label" || exit
+      echo "$out" > "$NAMEFILE"; bar; echo "Recording → $out (auto-stops after 3 h)"
     ''
     // script "dayflow-export" ''
       #!/usr/bin/env bash
@@ -815,6 +934,30 @@ in {
       echo
       python3 -I "$HOME/Obsidian/Main/scripts/sleep-check/sleep_check.py" backtest --days 14
     ''
+    // script "good-life" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Good Life
+      # @raycast.mode silent
+      # @raycast.icon 🌱
+      # @raycast.packageName Vault
+      # @raycast.description Is my life going how I want? Sleep, exercise, rest, meditation, friends, eating, room, outside: what's slipping and the minimum fix.
+      ${pathPreamble}
+      python3 -I "$HOME/Obsidian/Main/scripts/good-life/good_life.py" build >/dev/null 2>&1
+      open "$HOME/Obsidian/Main/areas/good-life/dashboard.html"
+    ''
+    // script "good-life-checkin" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Good Life Check-in
+      # @raycast.mode compact
+      # @raycast.icon 🌱
+      # @raycast.packageName Vault
+      # @raycast.argument1 { "type": "text", "placeholder": "what you did today: ran meditated clean friends ate rest (-word = didn't)" }
+      # @raycast.description Log today's levers in one line; the Good Life page rebuilds.
+      ${pathPreamble}
+      python3 -I "$HOME/Obsidian/Main/scripts/good-life/good_life.py" today "$1" 2>&1 | tail -n 1
+    ''
     // script "person-sync" ''
       #!/usr/bin/env bash
       # @raycast.schemaVersion 1
@@ -905,5 +1048,17 @@ in {
       # @raycast.argument1 { "type": "text", "placeholder": "id (see Reminders)" }
       ${pathPreamble}
       exec "$HOME/Obsidian/Main/scripts/ntfy/remind" off "$1"
-    '';
+    ''
+    // script "label-screens" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Label Screens
+      # @raycast.mode silent
+      # @raycast.icon 🏷
+      # @raycast.packageName Screen Redaction
+      # @raycast.description Review the sensitive items Claude found on real frames of my screen (127.0.0.1:47480).
+      ${pathPreamble}
+      exec "$HOME/Projects/screen-redaction/labeler/label"
+    ''
+  );
 }
