@@ -173,6 +173,12 @@
       - trigger: ";sg"
         replace: "Sounds great!"
 
+      # === Slack Claude model flags (MAT-5541): fast opus / fast sonnet ===
+      - trigger: ";scfo"
+        replace: "!fast !opus"
+      - trigger: ";scfs"
+        replace: "!fast !sonnet"
+
       # === clip2md (MAT-572): rich text on the clipboard -> Markdown, inline ===
       - trigger: ";md"
         ${script ["/bin/bash" "-c" "html=$(${bin}/wl-paste --type text/html 2>/dev/null); if [ -n \"$html\" ]; then printf '%s' \"$html\" | ${bin}/pandoc --from html --to gfm-raw_html --wrap=none; else ${bin}/wl-paste; fi"]}
