@@ -19,9 +19,9 @@
     ./zen-config.nix # Zen prefs, macOS profile root
     ./automations.nix # calendar-agenda / disk-space-alert (system services on NixOS)
     ./memory-guard.nix # end a runaway batch job before macOS pauses apps on swap exhaustion
-    ./systemstatus-guard.nix # warn to reboot before a slow systemstatusd breaks the camera in calls
+    # ./systemstatus-guard.nix # off 2026-11-15: Matt asked to delete the ntfy senders. Was: warn to reboot before a slow systemstatusd breaks the camera in calls
     ./claude-update-check.nix # every 30 min: new `claude --version`? run the after-update smoke test (hooks, CLAUDE.md, skills), ntfy on failure
-    ./charge-limit.nix # battery charge cap (macOS's own Charge Limit): 100 % through 2026-10-24, then 80 %
+    ./charge-limit.nix # battery charge cap (macOS's own Charge Limit): 100 % (no cap) since 2026-11-07
     ./dayflow-guard.nix # keep Dayflow's screenshot interval at 1 s; notify when frames stop or slow down
     ./phone-lifelog.nix # copy the phone's location, app/screen events and Sleep Guard home log for lifelog
     ./lifelog-transcribe.nix # transcribe the phone's recordings (every call, and talks) on the server's Whisper for lifelog
@@ -29,6 +29,7 @@
     ./newsletter-page.nix # republish the unlisted newsletter page when its vault note or images change
     ./display-arrangement.nix # keep the secondary display stacked above the built-in (alt-k/alt-j cross monitors)
     ./login-items.nix # Beeper + Hammerspoon at login (AeroSpace does its own)
+    ./hammerspoon-cli.nix # the `hs` CLI rebuilt without the abort/hang on a failed command (/opt/homebrew/bin/hs points here)
     ./bitwarden.nix # Bitwarden.app at login + Dia native-messaging bridge (Touch ID unlock in Dia)
     ./dia-extension-backup.nix # daily copy of Dia extension storage (logins) — net under dia-policy.nix
     ./no-app-resume.nix # kill "Reopen windows when logging back in", even after `sudo reboot`
@@ -59,17 +60,21 @@
     ./speaker-attribution.nix # daily rolling self-model of Matt + every 15 min: who said what in each unresolved transcript (speakers.py)
     ./shared-notes.nix # meeting notes/transcripts/docs people send Matt (Granola, Plaud, Gemini, Notion, Docs) -> stored + proposed, every 5 min
     ./otter-sync.nix # Otter.ai conversations -> capture/meetings/transcripts via Otter MCP, every 30 min (one-time auth)
+    ./wispr-audio-archive.nix # copy Wispr Flow meeting + dictation audio out before its ~14-day deletion, hourly
     ./person-log-sync.nix # daily: meetings/emails/DMs/calls/calendar -> areas/relationships person files (person_log.py)
     ./finance-daily.nix # daily bank sync + finance status/dashboard/audits/alerts (scripts/finance/fin daily)
+    ./good-life.nix # twice daily: good-life levers (sleep, exercise, guilt, meditation...) -> areas/good-life dashboard
     ./sleep-check.nix # each morning: did last night slip (bed after 21:30 / up after 06:45)? sent to Jeremy; agent OFF since 2026-10-22
     ./recall.nix # hourly: tag new notes with "useful when" cues, email a recall brief before each new situation on the calendar
     ./built-for-you.nix # 06:20: what Claude built for Matt -> changelog + morning email (Raycast "What's new" reads the same registry)
     ./ai-tips-radar.nix # 05:30: fetch AI-tips newsletters/feeds/skill repos; Sundays build the week's digest of tips to adopt
+    ./prompt-guide.nix # 04:40: Anthropic's prompting guidance -> audit CLAUDE.md/skills/agents every 14 days or on a new model; yes/no edits in AI Tips
     ./claude-work-sync.nix # every 15 min: work-safe skills/agents/instructions + Redwood notes -> private repo the Redwood laptop pulls
     ./references.nix # every 15 min: link new emails/chats/pages/meetings/captures to the projects, areas, resources they are about (refs tick)
     ./google-keep-sync.nix # every 30 min: Google Keep notes -> capture/google_keep/ (+ pointer notes like Gym Logs)
     ./retro-sweep.nix # Sun 04:15: weekly agent error sweep (retrospective-analyst over the week's transcripts -> learnings.json + Linear agent-error)
     ./voice-metrics.nix # Sun 05:00: every AI draft vs what Matt sent -> metrics, Haiku labels, findability probe, weekly report (voice loop)
+    ./matchmaker.nix # 08:30/11:30/14:30/17:30: people's wants x opportunities -> one ready-to-send draft a day in Triage (scripts/matchmaker)
     ./gdoc-claude.nix # every 60 s: "@claude ..." Doc comments -> headless Claude does it, replies in the thread
     ./fact-check.nix # `fetch-text URL`: a page's real text (trafilatura, headless Chrome for JS pages) for fact-checks, not WebFetch's summary
   ];
@@ -79,6 +84,15 @@
   # port 8384 is a slow, quiet failure. On the NixOS laptop this is a SYSTEM
   # service (hosts/laptop/default.nix), which is why it is declared here rather
   # than in the shared list.
+  # Home Manager's agent is ProcessType "Background" (darwinbg: CPU priority 4,
+  # throttled disk I/O). Whenever the Mac was busy or swapping, macOS starved
+  # Syncthing for 10+ minutes: the GUI on :8384 stopped answering and peers
+  # dropped it with "read timeout" (2026-11-11, 11-13; bug
+  # err-syncthing-20261111-124002). Measured: a tiny Python task took 0.10 s at
+  # normal priority and 125 s under `taskpolicy -b` on a fully loaded CPU. Same
+  # fix as lifelog-store.nix (2026-10-20).
+  launchd.agents.syncthing.config.ProcessType = lib.mkForce "Standard";
+
   services.syncthing = {
     enable = true;
     settings = {
