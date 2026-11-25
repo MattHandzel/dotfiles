@@ -97,6 +97,8 @@
 in {
   imports = [
     ./core.nix
+    ./packages.nix # the full CLI/dev tool list, minus its personalOnly set (2026-11-24 red team: tig, gping, tdf, rust-analyzer... were missing)
+    ./vscodium.nix # `code` alias + editor settings
     ./darwin/aerospace.nix # tiling WM config (~/.aerospace.toml)
     ./darwin/aerospace-watchdog.nix # relaunch AeroSpace when it crashes or hangs
     ./darwin/karabiner.nix # caps⇄esc swap + US/Polish toggle
@@ -114,43 +116,17 @@ in {
     ./darwin/espanso.nix # text expansion; vault/password-picker snippets skipped via my.work
   ];
 
-  # The subset of ./packages.nix that the shell config, Neovim and Redwood's
-  # own tooling call. Personal apps (Obsidian, Beeper, Zen, gdoc-sync) stay out.
+  # Extras on top of ./packages.nix (imported above, minus its personalOnly set).
   home.packages = with pkgs; [
+    # Language servers for the Claude Code LSP plugins enabled in settings.json
+    # (pyright-lsp, lua-lsp, rust-analyzer-lsp is covered by packages.nix, typescript-lsp).
+    pyright
+    lua-language-server
+    typescript-language-server
     # Ctrl-Opt-C (aerospace.nix) runs `calendar`: Google Calendar as its own Chrome app window on the
     # `calendar` workspace. It lives in the personal scripts bundle (scripts/scripts.nix), which this laptop
     # doesn't get, so `calendar` was macOS's /usr/bin/calendar and the key did nothing (Matt, 2026-11-24).
     (writeShellScriptBin "calendar" (builtins.readFile ./scripts/scripts/calendar.sh))
-    eza
-    fd
-    fzf
-    ripgrep
-    jq
-    duf
-    procs
-    unzip
-    zip
-    wget
-    yazi
-    lazygit
-    pandoc
-    gcc
-    gnumake
-    python3
-    uv
-    nodejs_22
-    go
-    awscli2
-    terraform
-    ssm-session-manager-plugin
-    alejandra
-    gitleaks
-    zoxide
-    pay-respects
-    trash-cli
-    gtrash
-    btop
-    tree
   ];
 
   # Apps that open at login, as on matts-mac (./darwin/login-items.nix), minus

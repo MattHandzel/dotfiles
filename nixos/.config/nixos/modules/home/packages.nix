@@ -1,4 +1,5 @@
 {
+  config,
   inputs,
   lib,
   pkgs,
@@ -271,6 +272,11 @@
   # modules/darwin/packages.nix. What is left for the user profile is nothing
   # yet — kept as an explicit empty list so the split is visible.
   darwinPkgs = [];
+
+  # Left off the Redwood laptop (my.work; modules/home/work.nix imports this file
+  # since 2026-11-24): tools tied to Matt's personal accounts or vault, and
+  # Gemini, which would send work text to Google outside Redwood's approved tools.
+  personalOnly = with pkgs; [gdoc-sync organize-core bitwarden-cli ntfy-sh gemini-cli taskwarrior3 vit];
 in {
   # sharedPkgs are the CLI/dev tools that build and behave the same on NixOS and
   # macOS. linuxPkgs are Wayland/Hyprland/systemd-bound tools, Linux-only
@@ -281,7 +287,11 @@ in {
   # `environment.systemPackages` for the /Applications/Nix Apps trampoline, so
   # they are declared in modules/darwin/packages.nix instead.
   home.packages =
-    sharedPkgs
+    (
+      if config.my.work or false
+      then builtins.filter (p: !(builtins.elem p personalOnly)) sharedPkgs
+      else sharedPkgs
+    )
     ++ lib.optionals isLinux linuxPkgs
     ++ lib.optionals isDarwin darwinPkgs;
 }
