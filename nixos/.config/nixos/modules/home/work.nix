@@ -248,6 +248,25 @@ in {
     }
   ];
 
+  # Dayflow (Matt, 2026-11-25: "marshall gave the ok fro dayflow", "please
+  # install dayflow on work computer"). Installed with Homebrew the first time the
+  # config is applied, with matts-mac's privacy settings: no analytics, password
+  # managers never captured, private windows and banking/government sites hidden,
+  # one screenshot a second. Its chat and Flow focus mode stay unused: the
+  # 2026-11-24 audit found chat runs Claude with permission checks off and Flow
+  # ignores the app blocklist. Frames go to the Redwood Claude seat.
+  home.activation.dayflow = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    if [ ! -d /Applications/Dayflow.app ] && [ -x /opt/homebrew/bin/brew ]; then
+      /opt/homebrew/bin/brew install --cask dayflow || echo "dayflow: brew install failed; run: brew install --cask dayflow" >&2
+    fi
+    d=teleportlabs.com.Dayflow
+    /usr/bin/defaults write $d analyticsOptIn -bool false
+    /usr/bin/defaults write $d browserPrivacyHidePrivateWindows -bool true
+    /usr/bin/defaults write $d recordingPrivacyBlockedApplicationIdentifiers -array com.1password.1password com.bitwarden.desktop com.apple.passwords
+    /usr/bin/defaults write $d browserPrivacyBlockedSiteCategories -array bankingAndFinance governmentAndTax
+    /usr/bin/defaults write $d screenshotIntervalSeconds -float 1
+  '';
+
   # Marks this as the work machine for configs Nix doesn't build: Hammerspoon's
   # init.lua skips its personal modules when this file exists.
   home.file.".config/work-machine".text = "redwood-mac: personal Hammerspoon modules and bar items are skipped\n";
