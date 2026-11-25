@@ -10,6 +10,7 @@
   ...
 }: {
   imports = [
+    ./dotfiles-autopush.nix # push quiet dotfiles changes so the Redwood laptop gets them (Matt approved 2026-11-25)
     ./work-vault.nix # ~/Obsidian/Work: AL1-tagged notes sync with the Redwood laptop
     ./aerospace.nix # tiling WM config (~/.aerospace.toml)
     ./aerospace-watchdog.nix # relaunch AeroSpace when it crashes or hangs (upstream #1311)
