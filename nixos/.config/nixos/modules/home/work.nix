@@ -12,6 +12,37 @@
   lib,
   ...
 }: let
+  genericScripts = [
+    "calendar"
+    "superhuman"
+    "linear"
+    "zoom-web"
+    "claude.ai"
+    "com.anthropic.Claude"
+    "open-website-as-standalone-app"
+    "maxfetch"
+    "compress"
+    "extract"
+    "ascii"
+    "tmux-sessionizer"
+    "run-nix-shell-on-new-tmux-session"
+    "notify-if-command-is-successful"
+    "copy-to-clipboard"
+    "clip2md"
+    "screenshot-search"
+    "leader-timer"
+    "focus_app"
+    "brightness"
+    "switch-workspace-to-other-monitor"
+    "run-command-based-on-type-of-workspace"
+    "kill-window-and-switch"
+    "btop-gui"
+    "yazi-gui"
+    "runbg"
+    "lofi"
+    "take-note"
+  ];
+  ocrScreenshot = import ./scripts/scripts/ocr-screenshot/default.nix {inherit pkgs;};
   # Claude Code setup from the personal Mac (Matt, 2026-11-24: "the same skills,
   # context when I'm doing anything work related"). The personal Mac's
   # scripts/claude-work-sync builds a private repo, MattHandzel/claude-work-config,
@@ -116,22 +147,28 @@ in {
   ];
 
   # Extras on top of ./packages.nix (imported above, minus its personalOnly set).
-  home.packages = with pkgs; [
-    # Language servers for the Claude Code LSP plugins enabled in settings.json
-    # (pyright-lsp, lua-lsp, rust-analyzer-lsp is covered by packages.nix, typescript-lsp).
-    pyright
-    lua-language-server
-    typescript-language-server
-    # Redwood devbox `rw` CLI prerequisites. Also in packages.nix's working copy
-    # (uncommitted there on 2026-11-24); listing them here too keeps them on the laptop.
-    awscli2
-    terraform
-    ssm-session-manager-plugin
-    # Ctrl-Opt-C (aerospace.nix) runs `calendar`: Google Calendar as its own Chrome app window on the
-    # `calendar` workspace. It lives in the personal scripts bundle (scripts/scripts.nix), which this laptop
-    # doesn't get, so `calendar` was macOS's /usr/bin/calendar and the key did nothing (Matt, 2026-11-24).
-    (writeShellScriptBin "calendar" (builtins.readFile ./scripts/scripts/calendar.sh))
-  ];
+  home.packages = with pkgs;
+    [
+      # Language servers for the Claude Code LSP plugins enabled in settings.json
+      # (pyright-lsp, lua-lsp, rust-analyzer-lsp is covered by packages.nix, typescript-lsp).
+      pyright
+      lua-language-server
+      typescript-language-server
+      # Redwood devbox `rw` CLI prerequisites. Also in packages.nix's working copy
+      # (uncommitted there on 2026-11-24); listing them here too keeps them on the laptop.
+      awscli2
+      terraform
+      ssm-session-manager-plugin
+      # The generic part of the personal scripts bundle (scripts/scripts.nix, which
+      # also holds vault/ntfy/lifelog tools and so isn't imported here). Without
+      # these, hotkeys that call them did nothing: Ctrl-Opt-C ran macOS's
+      # /usr/bin/calendar, leader+digit timers, screenshot OCR, tmux Alt-N
+      # (2026-11-24 red team, gap G26).
+      ocrScreenshot
+    ]
+    ++ map (n: writeShellScriptBin n (builtins.readFile (./scripts/scripts + "/${n}.sh"))) genericScripts
+    ++ [
+    ];
 
   # Apps that open at login, as on matts-mac (./darwin/login-items.nix), minus
   # the personal ones (Beeper, Claude desktop).
