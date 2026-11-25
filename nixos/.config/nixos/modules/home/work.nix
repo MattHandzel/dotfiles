@@ -155,6 +155,7 @@ in {
     ./darwin/memory-guard.nix # end runaway batch processes before macOS starts pausing apps
     ./darwin/claude-api-resume.nix # wake Claude Code sessions that stopped on an API error
     ./darwin/charge-limit.nix # macOS's own battery charge cap
+    ./darwin/work-vault.nix # ~/Obsidian/Work: AL1-tagged notes sync with matts-mac
     ./darwin/espanso.nix # text expansion; vault/password-picker snippets skipped via my.work
   ];
 

@@ -10,6 +10,7 @@
   ...
 }: {
   imports = [
+    ./work-vault.nix # ~/Obsidian/Work: AL1-tagged notes sync with the Redwood laptop
     ./aerospace.nix # tiling WM config (~/.aerospace.toml)
     ./aerospace-watchdog.nix # relaunch AeroSpace when it crashes or hangs (upstream #1311)
     ./karabiner.nix # caps⇄esc swap + US/Polish toggle

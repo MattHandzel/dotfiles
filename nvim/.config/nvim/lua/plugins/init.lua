@@ -499,6 +499,12 @@ return {
 					name = "main",
 					path = "~/Obsidian/Main",
 				},
+				-- Synced with the Redwood laptop; only `classification: AL1`
+				-- notes leave the Mac (work-vault-sync, 2026-11-25).
+				{
+					name = "work",
+					path = "~/Obsidian/Work",
+				},
 			},
 			-- The defaults minus <cr>. obsidian.nvim re-sets these on EVERY
 			-- BufEnter, so its <cr> (follow link, else toggle a checkbox) used to
