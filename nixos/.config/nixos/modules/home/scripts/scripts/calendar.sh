@@ -11,7 +11,7 @@ if [[ "$(uname)" == Darwin ]]; then
   command -v aerospace >/dev/null || exit 0
   for _ in $(seq 40); do
     id=$(aerospace list-windows --all --format '%{window-id}|%{app-name}|%{window-title}' 2>/dev/null \
-      | awk -F'|' '$2 == "Google Chrome" && tolower($3) ~ /google calendar/ && $3 !~ / - Google Chrome$/ {print $1; exit}')
+      | awk -F'|' '$2 == "Google Chrome" && tolower($3) ~ /^google calendar|^[^:]+ - calendar - / && $3 !~ / - Google Chrome$/ {print $1; exit}')
     [[ -n "$id" ]] && break
     sleep 0.5
   done

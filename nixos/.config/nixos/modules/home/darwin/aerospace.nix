@@ -340,7 +340,7 @@ in {
     # App hotkeys, ported 1:1 from the laptop (SUPER ALT <key> = focus_app <app> name:<workspace>)
     # Google Calendar as a Chrome --app window (calendar.sh), like the laptop's
     # Chromium one; "^google calendar" skips Dia tabs ("Work: ...").
-    alt-ctrl-c = 'exec-and-forget ${helpers.focus-app}/bin/focus-app --title "^google calendar" calendar -- calendar'
+    alt-ctrl-c = 'exec-and-forget ${helpers.focus-app}/bin/focus-app --title "^google calendar|^[^:]+ - calendar - " calendar -- calendar'
     alt-ctrl-u = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "UltiMaker Cura" cura'
     alt-ctrl-o = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Obsidian" obsidian'
     alt-ctrl-k = 'exec-and-forget ${helpers.focus-app}/bin/focus-app "Slack" slack'
