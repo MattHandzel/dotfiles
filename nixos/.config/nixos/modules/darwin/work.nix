@@ -27,6 +27,9 @@
   # The kit installs apps and CLIs with Homebrew (brew, op, aerospace, borders,
   # sketchybar). Without this the nix-darwin shell drops /opt/homebrew/bin.
   environment.systemPath = lib.mkBefore ["/opt/homebrew/bin"];
+  # Display sleep matches the personal Mac (5 min; macOS default here was 2).
+  # System sleep is left alone: this is a laptop on battery.
+  power.sleep.display = 5;
   environment.systemPackages = with pkgs; [kitty coreutils gnused gnugrep findutils terminal-notifier choose-gui pngpaste];
 
   home-manager = {
