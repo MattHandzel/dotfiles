@@ -211,6 +211,26 @@ in {
       ${timer} --resolve "''${1:-5}" "''${2:-}" || exit
       echo "Resolve Cycle: ''${1:-5} min''${2:+ — $2}"
     ''
+    # mhzl.dev short links (website repo scripts/link; table in the vault at
+    # areas/personal-brand/website/shortlinks.md). Blank URL = the clipboard.
+    // script "short-link" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Short Link
+      # @raycast.mode compact
+      # @raycast.icon 🔗
+      # @raycast.packageName Website
+      # @raycast.argument1 { "type": "text", "placeholder": "slug (e.g. talk)" }
+      # @raycast.argument2 { "type": "text", "placeholder": "URL (blank = clipboard)", "optional": true }
+      # @raycast.description Make mhzl.dev/<slug> point at a URL (live in seconds, no deploy) and copy the short link.
+      ${pathPreamble}
+      dest="''${2:-$(pbpaste)}"
+      if [ -z "$dest" ]; then echo "No URL given and the clipboard is empty"; exit 1; fi
+      out=$("$HOME/Projects/website/scripts/link" add "$1" "$dest" 2>&1) || { echo "$out" | tail -n 1; exit 1; }
+      slug=$(printf '%s' "$out" | sed -n 's|^/\([^ ]*\) -> .*|\1|p' | head -n 1)
+      printf 'https://mhzl.dev/%s' "''${slug:-$1}" | pbcopy
+      echo "Copied mhzl.dev/''${slug:-$1}"
+    ''
     // script "lid-awake" ''
       #!/usr/bin/env bash
       # @raycast.schemaVersion 1
