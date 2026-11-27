@@ -197,6 +197,7 @@ in {
     ./darwin/work-vault.nix # ~/Obsidian/Work: AL1-tagged notes sync with matts-mac
     ./darwin/espanso.nix # text expansion; vault/password-picker snippets skipped via my.work
     ./darwin/dayflow-guard.nix # keep Dayflow's screenshot interval at 1 s; notify when frames stop (Dayflow runs here since 11-25)
+    ./darwin/wispr-clipboard-sync.nix # every Wispr Flow dictation also lands on the clipboard (Raycast history); reads Wispr's local log only
   ];
 
   # Extras on top of ./packages.nix (imported above, minus its personalOnly set).
