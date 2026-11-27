@@ -247,7 +247,10 @@ ocrScreen = require("ocr_screen")
 
 -- ── Focus Mode: distracting workspaces take 15 s to reach ───────────────────
 -- Added 2026-09-14; see focus_gate.lua.
-focusGate = personal(function() return require("focus_gate") end)
+-- Loaded on the Redwood laptop too since 2026-11-27 (Matt: "the focused mode
+-- scripts ... not been synchronized"): it only reads /tmp/focus_mode and the
+-- focus-distracting-apps list, nothing personal.
+focusGate = require("focus_gate")
 
 -- ── AeroSpace monitor mode follows plug/unplug and lid open/close ────────────
 -- Added 2026-09-14; see monitor_mode.lua.

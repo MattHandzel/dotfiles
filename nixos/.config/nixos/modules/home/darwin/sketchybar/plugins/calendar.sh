@@ -16,6 +16,14 @@ AGENDA="$HOME/.local/state/focus/agenda.json"
 ICALBUDDY=/opt/homebrew/bin/icalBuddy
 # Same calendars as agendaIncludeCalendars in modules/home/darwin/automations.nix.
 ICAL_CALENDARS="handzelmatthew@gmail.com,Generator Extension Calendar Core,Generator Extension Calendar Unofficial/Social,Life Scheduler,The Mil,Swapcard calendar"
+# The Redwood laptop (SKETCHYBAR_WORK=1, sketchybar.nix) has no agenda file and
+# none of those calendars. It reads every calendar in Calendar.app except the
+# built-in feeds, so the work Google account shows once it is added in System
+# Settings -> Internet Accounts (2026-11-27: the item was always hidden there).
+ICAL_FILTER=(-ic "$ICAL_CALENDARS")
+if [ -n "${SKETCHYBAR_WORK:-}" ]; then
+  ICAL_FILTER=(-ec "Birthdays,Facebook Birthdays,US Holidays,Found in Mail,Found in Natural Language,Scheduled Reminders,Siri Suggestions")
+fi
 
 # Each title is clipped on its own so the next event always survives the item's
 # label.max_chars — clipping the joined string would drop it entirely.
@@ -87,7 +95,7 @@ if [ -z "$now_title" ] && [ -z "$next_title" ] && [ -x "$ICALBUDDY" ]; then
       next_when="$t"
       next_title="$title"
     fi
-  done < <($ICALBUDDY -ic "$ICAL_CALENDARS" -n -nc -nrd -npn -ea -li 3 -b '' -ps '| |' -iep 'datetime,title' \
+  done < <($ICALBUDDY "${ICAL_FILTER[@]}" -n -nc -nrd -npn -ea -li 3 -b '' -ps '| |' -iep 'datetime,title' \
              -po 'datetime,title' -df '' -tf '%H:%M' eventsToday 2>/dev/null)
 fi
 

@@ -51,6 +51,14 @@
     "shutdown-script"
     "wallpaper-picker"
     "wall-change"
+    # Focus Mode (Matt, 2026-11-27: "the focused mode scripts, timers ... that's
+    # not been synchronized to my work laptop"). The Raycast "Toggle Focus Mode"
+    # command shipped on 11-24 without these, so it did nothing here.
+    "toggle-focus-mode"
+    "focus-distracting-apps"
+    "focus-delay-gate"
+    "quick-capture" # Raycast "Quick Capture": text/clipboard/audio/screenshot into ~/notes
+    "lid-awake"
   ];
   ocrScreenshot = import ./scripts/scripts/ocr-screenshot/default.nix {inherit pkgs;};
   # Claude Code setup from the personal Mac (Matt, 2026-11-24: "the same skills,
@@ -177,6 +185,7 @@ in {
     ./darwin/charge-limit.nix # macOS's own battery charge cap
     ./darwin/work-vault.nix # ~/Obsidian/Work: AL1-tagged notes sync with matts-mac
     ./darwin/espanso.nix # text expansion; vault/password-picker snippets skipped via my.work
+    ./darwin/dayflow-guard.nix # keep Dayflow's screenshot interval at 1 s; notify when frames stop (Dayflow runs here since 11-25)
   ];
 
   # Extras on top of ./packages.nix (imported above, minus its personalOnly set).
@@ -200,6 +209,14 @@ in {
       ocrScreenshot
       (import ./scripts/scripts/kbshot/default.nix {inherit pkgs;})
       (import ./scripts/scripts/link-search/default.nix {inherit pkgs;})
+      # 2026-11-27 full diff against matts-mac: tools the shipped commands call
+      # that were never installed here. mpv plays "Lofi Stream" and "Brown
+      # Noise" (both Raycast commands failed without it); gum is what
+      # run-nix-shell-on-new-tmux-session draws its picker with.
+      mpv
+      gum
+      # Raycast "Writing Session: Start/Stop" (words per hour); stdlib Python.
+      (writeShellScriptBin "writing-session" "exec ${python3}/bin/python3 ${./scripts/scripts/writing-session.py} \"$@\"")
     ]
     ++ map (n: writeShellScriptBin n (builtins.readFile (./scripts/scripts + "/${n}.sh"))) genericScripts
     ++ [
@@ -230,6 +247,20 @@ in {
     {
       dotfiles-sync = dotfilesSync;
       claude-config-sync = claudeConfigSync;
+      # Hourly "Focus check" banner, as on matts-mac (./services.nix, which also
+      # holds vault jobs and so isn't imported here).
+      focus-reflection-reminder = {
+        enable = true;
+        config = {
+          ProgramArguments = [
+            "${(import ./lib/platform-scripts.nix {inherit pkgs;}).notify}/bin/notify"
+            "Focus check"
+            "Make sure you're focused on a task and have done your reflection for it!"
+          ];
+          StartInterval = 3600;
+          RunAtLoad = false;
+        };
+      };
       # Login codes from Matt's personal Gmail and Beeper texts onto the
       # clipboard, as on matts-mac (Matt, 2026-11-25: "put it on the work
       # laptop", after being told it needs his personal Gmail app password in
@@ -265,7 +296,7 @@ in {
         source = ./darwin/raycast-hand + "/${n}.sh";
         executable = true;
       };
-    }) ["clip2md" "grammar-check" "link-search" "screenshot-search" "tmux-sessionizer" "genpass"])
+    }) ["clip2md" "grammar-check" "link-search" "screenshot-search" "tmux-sessionizer" "genpass" "focus-distracting-apps"])
     // {
       ".local/bin/genpass" = {
         source = ./darwin/raycast-hand/genpass.py;
@@ -275,6 +306,18 @@ in {
       # Marks this as the work machine (Hammerspoon's init.lua skips its personal modules).
       ".config/work-machine".text = "redwood-mac: personal Hammerspoon modules and bar items are skipped\n";
     };
+
+  # Focus Mode's list of apps that take 15 s to reach. On matts-mac it is the
+  # vault note resources/focus-mode-apps.md; here ~/notes is ~/Obsidian/Work, so
+  # the same path lands in the work vault. Copied once and never overwritten:
+  # Matt edits it there. It has no classification tag, so it stays on this laptop.
+  home.activation.focusModeApps = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    f="$HOME/Obsidian/Work/resources/focus-mode-apps.md"
+    if [ ! -e "$f" ]; then
+      mkdir -p "$(dirname "$f")"
+      cp ${./darwin/focus-mode-apps.work.md} "$f" && chmod 644 "$f"
+    fi
+  '';
 
   # Dayflow (Matt, 2026-11-25: "marshall gave the ok fro dayflow", "please
   # install dayflow on work computer"). Installed with Homebrew the first time the

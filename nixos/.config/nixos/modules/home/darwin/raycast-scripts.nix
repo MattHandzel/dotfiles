@@ -32,7 +32,15 @@
 }: let
   # On the Redwood laptop (my.work) only these commands ship: the rest call the
   # vault, lifelog, the phone or personal servers (2026-11-24 red team, G24).
-  workScripts = ["monitor-mode-toggle" "monitor-mode-single" "monitor-mode-split" "timer" "timer-list" "timer-cancel" "lid-awake" "toggle-focus-mode" "keybinds" "ocr-screenshot" "lofi"];
+  # 2026-11-27 (Matt: "I'm missing a lot of scripts, such as the brown noise
+  # script"): every command was re-sorted. Added the ones that only touch this
+  # machine: brown noise, the Resolve Cycle timer, screen and meeting recording,
+  # writing sessions, Dayflow video export, and notes/captures (they write to
+  # ~/notes, which is the work vault there).
+  workScripts = [
+    "monitor-mode-toggle" "monitor-mode-single" "monitor-mode-split" "timer" "timer-list" "timer-cancel" "lid-awake" "toggle-focus-mode" "keybinds" "ocr-screenshot" "lofi"
+    "white-noise" "resolve-cycle" "record-screen" "record-meeting" "writing-session" "writing-report" "dayflow-export" "take-note" "quick-capture"
+  ];
   forHost = files:
     if config.my.work or false
     then lib.filterAttrs (n: _: n == ".local/bin/raycast-picks" || builtins.elem (lib.removeSuffix ".sh" (baseNameOf n)) workScripts) files

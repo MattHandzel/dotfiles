@@ -199,9 +199,11 @@ sketchybar --add item cpu right \
     click_script="$PLUGIN_DIR/bfy_click.sh; open -na kitty --args --title btop -e btop" \
     script="$PLUGIN_DIR/cpu.sh"
 
-# Personal-only items (Claude repair sessions, background-job health, focus
-# mode, leader timers, meeting recorder). The Redwood laptop sets
-# SKETCHYBAR_WORK=1 (sketchybar.nix, my.work) and skips them.
+# Personal-only items (Claude repair sessions, background-job health: both read
+# vault tools). The Redwood laptop sets SKETCHYBAR_WORK=1 (sketchybar.nix,
+# my.work) and skips them. Focus mode, leader timers and the meeting recorder
+# below are machine-local and show on both Macs (they were wrongly skipped on
+# the laptop until 2026-11-27).
 if [ -z "${SKETCHYBAR_WORK:-}" ]; then
 
 # Oops: red life-ring + count while a Claude repair session runs (tmux -L oops);
@@ -233,6 +235,8 @@ sketchybar --add item jobs_down right \
     click_script="$PLUGIN_DIR/bfy_click.sh; $PLUGIN_DIR/jobs_down.sh click" \
     script="$PLUGIN_DIR/jobs_down.sh" \
   --subscribe jobs_down jobs_down_update
+
+fi # SKETCHYBAR_WORK
 
 # Focus Mode pill: peach "󱫠 Focus" when on, a dim glyph when off. Click to
 # toggle. Its 60 s timer also turns focus on during Deep work calendar blocks
@@ -286,8 +290,6 @@ sketchybar --add item meeting_rec right \
     label.max_chars=28 \
     script="$PLUGIN_DIR/meeting_rec.sh" \
   --subscribe meeting_rec meeting_rec_update system_woke
-
-fi # SKETCHYBAR_WORK
 
 # ── go ────────────────────────────────────────────────────────────────────
 sketchybar --update
