@@ -700,17 +700,35 @@ local make_reflection = function()
 
 	-- 2. Get the timestamp from the shell
 	--    vim.fn.system() does NOT have the same '%' problem as '!'
-	local timestamp = vim.fn.system(date_cmd)
-	timestamp = vim.fn.trim(timestamp) -- Remove the trailing newline
+	-- Timestamp in Lua, not `date`: BSD date (the work laptop) has no %N.
+	local _ = date_cmd
+	local sec, usec = vim.loop.gettimeofday()
+	local timestamp = os.date("!%Y-%m-%dT%H:%M:%S", sec) .. string.format(".%06d+00:00", usec)
 
-	-- 3. Define your source and destination paths
-	local template = vim.fn.expand("~/notes/templates/task-template.md")
-	local destination_dir = vim.fn.expand("~/notes/capture/raw_capture/")
+	-- 3. Source and destination. The vault is ~/notes on the personal Mac but only
+	--    ~/Obsidian/Main on the work laptop (2026-11-27: <leader>or opened an empty file there).
+	local vault
+	for _, v in ipairs({ "~/Obsidian/Main", "~/notes" }) do
+		if vim.fn.filereadable(vim.fn.expand(v .. "/templates/task-template.md")) == 1 then
+			vault = vim.fn.expand(v)
+			break
+		end
+	end
+	if not vault then
+		vim.notify("task-template.md not found in ~/Obsidian/Main/templates or ~/notes/templates", vim.log.levels.ERROR)
+		return
+	end
+	local template = vault .. "/templates/task-template.md"
+	local destination_dir = vault .. "/capture/raw_capture/"
+	vim.fn.mkdir(destination_dir, "p")
 	local destination_file = destination_dir .. timestamp .. ".md"
 
 	-- 4. Use NeoVim's built-in file copy
-	--    This is better than shelling out to 'cp'
-	vim.loop.fs_copyfile(template, destination_file)
+	local ok, err = vim.loop.fs_copyfile(template, destination_file)
+	if not ok then
+		vim.notify("Could not copy the template: " .. tostring(err), vim.log.levels.ERROR)
+		return
+	end
 
 	print("Template copied to: " .. destination_file)
 
