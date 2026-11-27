@@ -124,9 +124,20 @@
       branch="''${DOTFILES_BRANCH:-$(git -C "$repo" rev-parse --abbrev-ref HEAD)}"
       notify() { /usr/bin/osascript -e "display notification \"$1\" with title \"Dotfiles sync\""; }
       before=$(git -C "$repo" rev-parse HEAD) || exit 1
-      if ! git -C "$repo" fetch -q origin "$branch" || ! git -C "$repo" merge -q --ff-only FETCH_HEAD; then
-        echo "$(date -Iseconds) pull failed (local edits or diverged history in $repo?)" >&2
-        notify "Pull failed: check ~/dotfiles (local edits?)"
+      if ! git -C "$repo" fetch -q origin "$branch"; then
+        echo "$(date -Iseconds) fetch failed" >&2
+        notify "Pull failed: could not reach GitHub"
+        exit 1
+      fi
+      # Commits and edits made on this laptop are kept: they are replayed on
+      # top of what came from GitHub (rebase, uncommitted edits stashed and put
+      # back). Until 2026-11-27 this was a fast-forward-only merge, so three
+      # commits Matt made here stopped every later pull, and nothing new from
+      # matts-mac arrived. Only a real conflict fails now, and it is undone.
+      if ! git -C "$repo" -c rebase.autoStash=true rebase -q FETCH_HEAD >>"$HOME/.local/state/dotfiles-sync.err.log" 2>&1; then
+        git -C "$repo" rebase --abort >/dev/null 2>&1 || true
+        echo "$(date -Iseconds) pull failed: a change made here conflicts with one from matts-mac (cd $repo && git status)" >&2
+        notify "Pull failed: an edit here conflicts with one from the personal Mac. Check ~/dotfiles"
         exit 1
       fi
       after=$(git -C "$repo" rev-parse HEAD)
@@ -346,7 +357,8 @@ in {
   # of the public dotfiles repo; every 15 min this pulls (fast-forward only),
   # reloads Hammerspoon when its files changed, and posts a notification when
   # the Nix config changed, since applying that needs the admin password
-  # (~/redwood-kit/switch.command). One-way: nothing on this laptop is pushed.
+  # (~/redwood-kit/switch.command). One-way: nothing on this laptop is pushed;
+  # commits made here stay local and are replayed on top of each pull.
   # Exits non-zero when a pull fails, so launchd records it.
   # Tells the shared modules to leave out personal servers, accounts and tools
   # (see ./work-flag.nix for what reads it).
