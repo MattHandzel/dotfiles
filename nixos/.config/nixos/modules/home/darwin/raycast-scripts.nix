@@ -327,6 +327,17 @@ in {
       ${pathPreamble}
       exec "$HOME/Obsidian/Main/scripts/entity-graph/open-entity-graph.sh"
     ''
+    // script "redwood-hours" ''
+      #!/usr/bin/env bash
+      # @raycast.schemaVersion 1
+      # @raycast.title Redwood Hours
+      # @raycast.mode silent
+      # @raycast.icon 🌲
+      # @raycast.packageName Vault
+      # @raycast.description Open the Redwood hours calendar: each block of the week, what the records show for it, and Yes / No per block (127.0.0.1:47490).
+      ${pathPreamble}
+      exec "$HOME/Obsidian/Main/scripts/redwood-hours/open-redwood-hours.sh"
+    ''
     // script "recall" ''
       #!/usr/bin/env bash
       # @raycast.schemaVersion 1
